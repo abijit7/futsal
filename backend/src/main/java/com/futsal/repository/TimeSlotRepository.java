@@ -16,10 +16,10 @@ public interface TimeSlotRepository extends JpaRepository<TimeSlot, Long> {
 
     List<TimeSlot> findBySlotDateAndAvailableTrue(LocalDate date);
 
-    boolean existsByDateAndStartTimeLessThanAndEndTimeGreaterThan(
-            LocalDate date,
-            LocalTime newEndTime,
-            LocalTime newStartTime
+    boolean existsBySlotDateAndStartTimeLessThanAndEndTimeGreaterThan(
+            LocalDate slotDate,
+            LocalTime endTime,
+            LocalTime startTime
     );
     List<TimeSlot> findBySlotDateGreaterThanEqualOrderBySlotDateAscStartTimeAsc(LocalDate date);
 }

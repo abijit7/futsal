@@ -52,7 +52,7 @@ public class TimeSlotService {
             throw new RuntimeException("End time must be after start time.");
         }
         boolean exists = timeSlotRepository
-                .existsByDateAndStartTimeLessThanAndEndTimeGreaterThan(
+                .existsBySlotDateAndStartTimeLessThanAndEndTimeGreaterThan(
                         slot.getSlotDate(),
                         slot.getEndTime(),
                         slot.getStartTime()
