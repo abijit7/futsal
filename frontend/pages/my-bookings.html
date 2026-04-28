@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Bookings — FutsalBook</title>
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<nav class="navbar" id="navbar"></nav>
+
+<div class="page-header">
+  <div class="container">
+    <h1>MY <span>BOOKINGS</span></h1>
+    <p>Track and manage all your futsal bookings</p>
+  </div>
+</div>
+
+<div class="container page-wrap">
+
+  <!-- Filter Tabs -->
+  <div class="tabs-nav mb-3">
+    <button class="tab-btn active" onclick="filterBookings('ALL', this)">All</button>
+    <button class="tab-btn" onclick="filterBookings('PENDING', this)">Pending</button>
+    <button class="tab-btn" onclick="filterBookings('APPROVED', this)">Approved</button>
+    <button class="tab-btn" onclick="filterBookings('REJECTED', this)">Rejected</button>
+    <button class="tab-btn" onclick="filterBookings('CANCELLED', this)">Cancelled</button>
+  </div>
+
+  <div id="loadingBookings" class="loading-wrap">
+    <div class="spinner"></div>
+    <p>Loading your bookings...</p>
+  </div>
+
+  <div id="bookingsContent" class="hidden">
+    <div id="emptyBookings" class="empty-state hidden">
+      <div class="icon">📭</div>
+      <h3>No bookings found</h3>
+      <p><a href="slots.html">Browse available slots →</a></p>
+    </div>
+    <div id="bookingsGrid" class="slots-grid"></div>
+  </div>
+
+</div>
+
+<script src="../js/app.js"></script>
+<script>
+  if (!Auth.requireLogin()) {}
+  renderNavbar('bookings');
+
+  const user = Auth.get();
+  let allBookings = [];
+
+  async function loadBookings() {
+    try {
+      allBookings = await BookingAPI.getByUser(user.userId);
+      renderBookings(allBookings);
+    } catch (err) {
+      showToast(err.message, 'error');
+    } finally {
+      document.getElementById('loadingBookings').classList.add('hidden');
+      document.getElementById('bookingsContent').classList.remove('hidden');
+    }
+  }
+
+  function filterBookings(status, btn) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const filtered = status === 'ALL' ? allBookings : allBookings.filter(b => b.status === status);
+    renderBookings(filtered);
+  }
+
+  function renderBookings(bookings) {
+    const grid = document.getElementById('bookingsGrid');
+    const empty = document.getElementById('emptyBookings');
+
+    if (bookings.length === 0) {
+      empty.classList.remove('hidden');
+      grid.innerHTML = '';
+      return;
+    }
+    empty.classList.add('hidden');
+
+    grid.innerHTML = bookings.map(b => {
+      const canCancel = b.status === 'PENDING' || b.status === 'APPROVED';
+      const statusColors = {
+        PENDING:   'var(--warning)',
+        APPROVED:  'var(--green)',
+        REJECTED:  'var(--danger)',
+        CANCELLED: 'var(--muted)',
+      };
+      return `
+        <div class="slot-card" style="border-top:3px solid ${statusColors[b.status]}">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+            <div class="slot-date">📅 ${formatDate(b.timeSlot.slotDate)}</div>
+            ${statusBadge(b.status)}
+          </div>
+          <div class="slot-time">${formatTime(b.timeSlot.startTime)} – ${formatTime(b.timeSlot.endTime)}</div>
+          <div class="slot-duration">⏱ ${calculateDuration(b.timeSlot.startTime, b.timeSlot.endTime)}</div>
+          <div class="slot-price">NPR ${b.timeSlot.price} <span>/ session</span></div>
+          ${b.notes ? `<div class="text-muted text-sm mb-1">📝 ${b.notes}</div>` : ''}
+          <div class="text-muted text-sm mb-2">Booked: ${formatDateTime(b.bookedAt)}</div>
+          ${canCancel ? `
+            <button class="btn btn-danger btn-full btn-sm" onclick="cancelBooking(${b.bookingId})">
+              ❌ Cancel Booking
+            </button>` : ''}
+        </div>
+      `;
+    }).join('');
+  }
+
+  async function cancelBooking(bookingId) {
+    showConfirm('Are you sure you want to cancel this booking?', async () => {
+      try {
+        await BookingAPI.updateStatus(bookingId, 'CANCELLED');
+        showToast('Booking cancelled successfully', 'success');
+        loadBookings();
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    });
+  }
+
+  loadBookings();
+</script>
+</body>
+</html>

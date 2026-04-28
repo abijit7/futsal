@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manage Bookings — FutsalBook Admin</title>
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<nav class="navbar" id="navbar"></nav>
+
+<div class="page-header">
+  <div class="container">
+    <h1>MANAGE <span>BOOKINGS</span></h1>
+    <p>Review, approve, reject, and track all bookings</p>
+  </div>
+</div>
+
+<div class="container page-wrap">
+
+  <!-- Filter Tabs -->
+  <div class="tabs-nav mb-3">
+    <button class="tab-btn active" onclick="filterBy('ALL', this)">All</button>
+    <button class="tab-btn" onclick="filterBy('PENDING', this)">⏳ Pending</button>
+    <button class="tab-btn" onclick="filterBy('APPROVED', this)">✅ Approved</button>
+    <button class="tab-btn" onclick="filterBy('REJECTED', this)">❌ Rejected</button>
+    <button class="tab-btn" onclick="filterBy('CANCELLED', this)">🚫 Cancelled</button>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h2 id="tableTitle">All Bookings</h2>
+      <button onclick="loadBookings()" class="btn btn-secondary btn-sm">🔄 Refresh</button>
+    </div>
+
+    <div id="loadingBookings" class="loading-wrap">
+      <div class="spinner"></div>
+      <p>Loading bookings...</p>
+    </div>
+
+    <div id="bookingsContent" class="hidden">
+      <div id="emptyBookings" class="empty-state hidden">
+        <div class="icon">📭</div>
+        <h3>No bookings found</h3>
+        <p>No bookings in this category.</p>
+      </div>
+      <div class="table-wrap" id="bookingsTableWrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>User</th>
+              <th>Date</th>
+              <th>Time</th>
+              <th>Price</th>
+              <th>Notes</th>
+              <th>Status</th>
+              <th>Booked At</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="bookingsTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="../js/app.js"></script>
+<script>
+  if (!Auth.requireLogin(true)) {}
+  renderNavbar('bookings');
+
+  let allBookings = [];
+  let currentFilter = 'ALL';
+
+  async function loadBookings() {
+    document.getElementById('loadingBookings').classList.remove('hidden');
+    document.getElementById('bookingsContent').classList.add('hidden');
+    try {
+      allBookings = await BookingAPI.getAll();
+      applyFilter(currentFilter);
+    } catch (err) {
+      showToast(err.message, 'error');
+    } finally {
+      document.getElementById('loadingBookings').classList.add('hidden');
+      document.getElementById('bookingsContent').classList.remove('hidden');
+    }
+  }
+
+  function filterBy(status, btn) {
+    currentFilter = status;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    applyFilter(status);
+  }
+
+  function applyFilter(status) {
+    const filtered = status === 'ALL' ? allBookings : allBookings.filter(b => b.status === status);
+    renderBookings(filtered);
+  }
+
+  function renderBookings(bookings) {
+    const tbody = document.getElementById('bookingsTableBody');
+    const empty = document.getElementById('emptyBookings');
+    const tableWrap = document.getElementById('bookingsTableWrap');
+
+    if (bookings.length === 0) {
+      empty.classList.remove('hidden');
+      tableWrap.classList.add('hidden');
+      return;
+    }
+    empty.classList.add('hidden');
+    tableWrap.classList.remove('hidden');
+
+    tbody.innerHTML = bookings.map((b, i) => {
+      const isPending = b.status === 'PENDING';
+      return `
+        <tr>
+          <td class="text-muted text-sm">${i + 1}</td>
+          <td>
+            <div class="fw-bold">${b.user.name}</div>
+            <div class="text-muted text-sm">${b.user.phone}</div>
+          </td>
+          <td>${formatDate(b.timeSlot.slotDate)}</td>
+          <td>${formatTime(b.timeSlot.startTime)}<br><span class="text-muted text-sm">${formatTime(b.timeSlot.endTime)}</span></td>
+          <td style="color:var(--accent);font-weight:600">NPR ${b.timeSlot.price}</td>
+          <td class="text-muted text-sm">${b.notes || '—'}</td>
+          <td>${statusBadge(b.status)}</td>
+          <td class="text-muted text-sm">${formatDateTime(b.bookedAt)}</td>
+          <td>
+            <div style="display:flex;gap:5px;flex-wrap:wrap">
+              ${isPending ? `
+                <button class="btn btn-success btn-sm" onclick="updateStatus(${b.bookingId}, 'APPROVED')">✅</button>
+                <button class="btn btn-danger btn-sm" onclick="updateStatus(${b.bookingId}, 'REJECTED')">❌</button>
+              ` : ''}
+              <button class="btn btn-secondary btn-sm" onclick="deleteBooking(${b.bookingId})">🗑️</button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  async function updateStatus(bookingId, status) {
+    const label = status === 'APPROVED' ? 'approve' : 'reject';
+    showConfirm(`Are you sure you want to ${label} this booking?`, async () => {
+      try {
+        await BookingAPI.updateStatus(bookingId, status);
+        showToast(`Booking ${status.toLowerCase()} successfully`, 'success');
+        loadBookings();
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    });
+  }
+
+  async function deleteBooking(bookingId) {
+    showConfirm('Permanently delete this booking record?', async () => {
+      try {
+        await BookingAPI.delete(bookingId);
+        showToast('Booking deleted', 'success');
+        loadBookings();
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    });
+  }
+
+  loadBookings();
+</script>
+</body>
+</html>

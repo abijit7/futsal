@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Book a Slot — FutsalBook</title>
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<nav class="navbar" id="navbar"></nav>
+
+<div class="page-header">
+  <div class="container">
+    <h1>BOOK A <span>SLOT</span></h1>
+    <p>Browse available time slots and book your game</p>
+  </div>
+</div>
+
+<div class="container page-wrap">
+
+  <!-- Filter -->
+  <div class="card mb-3">
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+      <div style="flex:1;min-width:200px">
+        <label class="form-label">Filter by Date</label>
+        <input type="date" id="dateFilter" class="form-control" style="max-width:220px">
+      </div>
+      <div style="align-self:flex-end">
+        <button onclick="clearFilter()" class="btn btn-secondary">Show All</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Slots -->
+  <div id="loadingSlots" class="loading-wrap">
+    <div class="spinner"></div>
+    <p>Loading available slots...</p>
+  </div>
+
+  <div id="slotsContent" class="hidden">
+    <div id="emptySlots" class="empty-state hidden">
+      <div class="icon">📭</div>
+      <h3>No slots available</h3>
+      <p>There are no available slots at the moment. Please check back later.</p>
+    </div>
+    <div id="slotsGrid" class="slots-grid"></div>
+  </div>
+
+</div>
+
+<!-- Booking Modal -->
+<div id="bookingModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Confirm Booking</h3>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="slotSummary" class="card mb-2" style="background:var(--surface2)"></div>
+      <div class="form-group">
+        <label class="form-label">Notes (optional)</label>
+        <textarea id="bookingNotes" class="form-control" placeholder="Any special requests?"></textarea>
+      </div>
+      <div id="bookingAlert" class="alert alert-error">
+        <span>⚠️</span><span id="bookingAlertText"></span>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button onclick="closeModal()" class="btn btn-secondary">Cancel</button>
+      <button onclick="confirmBooking()" id="confirmBookBtn" class="btn btn-primary">⚽ Book Now</button>
+    </div>
+  </div>
+</div>
+
+<script src="../js/app.js"></script>
+<script>
+  renderNavbar('slots');
+
+  let allSlots = [];
+  let selectedSlotId = null;
+
+  async function loadSlots() {
+    try {
+      allSlots = await SlotAPI.getAvailable();
+      renderSlots(allSlots);
+    } catch (err) {
+      showToast('Failed to load slots: ' + err.message, 'error');
+    } finally {
+      document.getElementById('loadingSlots').classList.add('hidden');
+      document.getElementById('slotsContent').classList.remove('hidden');
+    }
+  }
+
+  function renderSlots(slots) {
+    const grid = document.getElementById('slotsGrid');
+    const empty = document.getElementById('emptySlots');
+    if (slots.length === 0) {
+      empty.classList.remove('hidden');
+      grid.innerHTML = '';
+      return;
+    }
+    empty.classList.add('hidden');
+    grid.innerHTML = slots.map(slot => `
+      <div class="slot-card">
+        <div class="slot-date">📅 ${formatDate(slot.slotDate)}</div>
+        <div class="slot-time">${formatTime(slot.startTime)} – ${formatTime(slot.endTime)}</div>
+        <div class="slot-duration">⏱ ${calculateDuration(slot.startTime, slot.endTime)} session</div>
+        <div class="slot-price">NPR ${slot.price} <span>/ session</span></div>
+        <button class="btn btn-primary btn-full" onclick="openBookingModal(${slot.slotId})">
+          Book This Slot
+        </button>
+      </div>
+    `).join('');
+  }
+
+  document.getElementById('dateFilter').addEventListener('change', (e) => {
+    const val = e.target.value;
+    if (!val) { renderSlots(allSlots); return; }
+    const filtered = allSlots.filter(s => s.slotDate === val);
+    renderSlots(filtered);
+  });
+
+  function clearFilter() {
+    document.getElementById('dateFilter').value = '';
+    renderSlots(allSlots);
+  }
+
+  function openBookingModal(slotId) {
+    if (!Auth.isLoggedIn()) {
+      showToast('Please login to book a slot', 'error');
+      setTimeout(() => window.location.href = 'login.html', 1200);
+      return;
+    }
+    selectedSlotId = slotId;
+    const slot = allSlots.find(s => s.slotId === slotId);
+    document.getElementById('slotSummary').innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div><div class="text-muted text-sm">Date</div><div class="fw-bold">${formatDate(slot.slotDate)}</div></div>
+        <div><div class="text-muted text-sm">Time</div><div class="fw-bold">${formatTime(slot.startTime)} – ${formatTime(slot.endTime)}</div></div>
+        <div><div class="text-muted text-sm">Duration</div><div class="fw-bold">${calculateDuration(slot.startTime, slot.endTime)}</div></div>
+        <div><div class="text-muted text-sm">Price</div><div class="fw-bold text-green">NPR ${slot.price}</div></div>
+      </div>
+    `;
+    document.getElementById('bookingNotes').value = '';
+    document.getElementById('bookingAlert').classList.remove('show');
+    document.getElementById('bookingModal').classList.add('show');
+  }
+
+  function closeModal() {
+    document.getElementById('bookingModal').classList.remove('show');
+    selectedSlotId = null;
+  }
+
+  async function confirmBooking() {
+    const btn = document.getElementById('confirmBookBtn');
+    const alertEl = document.getElementById('bookingAlert');
+    const alertText = document.getElementById('bookingAlertText');
+    alertEl.classList.remove('show');
+
+    btn.disabled = true;
+    btn.textContent = 'Booking...';
+
+    try {
+      const user = Auth.get();
+      const notes = document.getElementById('bookingNotes').value;
+      await BookingAPI.create(user.userId, selectedSlotId, notes);
+
+      showToast('Booking submitted! Awaiting admin approval. ✅', 'success');
+      closeModal();
+      loadSlots(); // Refresh
+
+    } catch (err) {
+      alertText.textContent = err.message;
+      alertEl.classList.add('show');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '⚽ Book Now';
+    }
+  }
+
+  loadSlots();
+</script>
+</body>
+</html>
