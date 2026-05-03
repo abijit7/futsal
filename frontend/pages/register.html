@@ -25,16 +25,19 @@
     <form id="registerForm">
       <div class="form-group">
         <label class="form-label">Full Name</label>
-        <input type="text" id="name" class="form-control" placeholder="John Doe" required>
+        <input type="text" id="name" class="form-control" placeholder="John Doe" required minlength="5" maxlength="50"
+               pattern="^[A-Za-z]{2,}(?: [A-Za-z]{2,})+$" title="Enter first and last name (letters only)">
       </div>
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">Email Address</label>
-          <input type="email" id="email" class="form-control" placeholder="you@example.com" required>
+          <input type="email" id="email" class="form-control" placeholder="you@gmail.com" required
+                 pattern="^[A-Za-z0-9._%+-]+@gmail\.com$" title="Enter a valid gmail.com address">
         </div>
         <div class="form-group">
           <label class="form-label">Phone Number</label>
-          <input type="tel" id="phone" class="form-control" placeholder="98XXXXXXXX" required>
+          <input type="tel" id="phone" class="form-control" placeholder="98XXXXXXXX" required inputmode="numeric"
+                 pattern="^(98|97|96)\d{8}$" maxlength="10" title="Nepal number: 10 digits starting with 98, 97, or 96">
         </div>
       </div>
       <div class="form-row">
@@ -73,8 +76,32 @@
     alertEl.classList.remove('show');
     successEl.classList.remove('show');
 
+    const name = document.getElementById('name').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const phone = document.getElementById('phone').value.trim();
     const password = document.getElementById('password').value;
     const confirmPw = document.getElementById('confirmPassword').value;
+
+    const nameOk = /^[A-Za-z]{2,}(?: [A-Za-z]{2,})+$/.test(name) && name.length >= 5 && name.length <= 50;
+    if (!nameOk) {
+      alertText.textContent = 'Name must include first and last name (letters only).';
+      alertEl.classList.add('show');
+      return;
+    }
+
+    const emailOk = /^[A-Za-z0-9._%+-]+@gmail\.com$/.test(email);
+    if (!emailOk) {
+      alertText.textContent = 'Email must be a gmail.com address.';
+      alertEl.classList.add('show');
+      return;
+    }
+
+    const phoneOk = /^(98|97|96)\d{8}$/.test(phone);
+    if (!phoneOk) {
+      alertText.textContent = 'Phone must be 10 digits and start with 98, 97, or 96.';
+      alertEl.classList.add('show');
+      return;
+    }
 
     if (password !== confirmPw) {
       alertText.textContent = 'Passwords do not match.';
@@ -87,9 +114,9 @@
 
     try {
       const user = {
-        name:     document.getElementById('name').value.trim(),
-        email:    document.getElementById('email').value.trim(),
-        phone:    document.getElementById('phone').value.trim(),
+        name:     name,
+        email:    email,
+        phone:    phone,
         password: password,
       };
 

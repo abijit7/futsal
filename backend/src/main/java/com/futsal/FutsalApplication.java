@@ -21,14 +21,15 @@ public class FutsalApplication {
     @Bean
     public CommandLineRunner seedAdmin(UserRepository userRepository, UserService userService) {
         return args -> {
-            String adminEmail = System.getenv().getOrDefault("ADMIN_EMAIL", "admin@example.com");
+            String adminEmail = System.getenv().getOrDefault("ADMIN_EMAIL", "admin@gmail.com");
             String adminPass  = System.getenv().getOrDefault("ADMIN_PASS", "admin123");
 
             if (!userRepository.existsByEmail(adminEmail)) {
                 User admin = new User();
-                admin.setName("Administrator");
+                admin.setName("Admin role");
                 admin.setEmail(adminEmail);
                 admin.setPassword(userService.hashPassword(adminPass));
+                admin.setPhone("9818100273");
                 admin.setRole(com.futsal.model.enums.Role.ADMIN);
                 userRepository.save(admin);
                 System.out.println("[BOOTSTRAP] Admin user created: " + adminEmail);

@@ -19,15 +19,28 @@ public class User {
     private Long userId;
 
     @NotBlank(message = "Name is required")
+    @Size(min = 5, max = 50, message = "Name must be 5-50 characters")
+    @jakarta.validation.constraints.Pattern(
+        regexp = "^[A-Za-z]{2,}(?: [A-Za-z]{2,})+$",
+        message = "Name must include first and last name (letters only)"
+    )
     @Column(nullable = false)
     private String name;
 
     @Email(message = "Invalid email format")
     @NotBlank(message = "Email is required")
+    @jakarta.validation.constraints.Pattern(
+        regexp = "^[A-Za-z0-9._%+-]+@gmail\\.com$",
+        message = "Email must be a gmail.com address"
+    )
     @Column(nullable = false, unique = true)
     private String email;
 
     @NotBlank(message = "Phone is required")
+    @jakarta.validation.constraints.Pattern(
+        regexp = "^(98|97|96)\\d{8}$",
+        message = "Phone must be 10 digits and start with 98, 97, or 96"
+    )
     @Column(nullable = false)
     private String phone;
 
