@@ -90,6 +90,7 @@
         REJECTED:  'var(--danger)',
         CANCELLED: 'var(--muted)',
       };
+      const paymentInfo = b.paymentMethod ? `${b.paymentMethod} • ${b.paymentRef}` : '—';
       return `
         <div class="slot-card" style="border-top:3px solid ${statusColors[b.status]}">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
@@ -99,6 +100,7 @@
           <div class="slot-time">${formatTime(b.timeSlot.startTime)} – ${formatTime(b.timeSlot.endTime)}</div>
           <div class="slot-duration">⏱ ${calculateDuration(b.timeSlot.startTime, b.timeSlot.endTime)}</div>
           <div class="slot-price">NPR ${b.timeSlot.price} <span>/ session</span></div>
+          <div class="text-muted text-sm mb-1">💳 ${paymentInfo}</div>
           ${b.notes ? `<div class="text-muted text-sm mb-1">📝 ${b.notes}</div>` : ''}
           <div class="text-muted text-sm mb-2">Booked: ${formatDateTime(b.bookedAt)}</div>
           ${canCancel ? `

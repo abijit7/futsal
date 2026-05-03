@@ -17,4 +17,6 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     List<Booking> findByUserOrderByBookedAtDesc(User user);
 
     List<Booking> findAllByOrderByBookedAtDesc();
+
+    boolean existsByTimeSlotAndStatusNotIn(com.futsal.model.TimeSlot timeSlot, java.util.Collection<com.futsal.model.enums.BookingStatus> statuses);
 }

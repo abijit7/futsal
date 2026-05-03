@@ -59,6 +59,14 @@
     <div class="modal-body">
       <div id="slotSummary" class="card mb-2" style="background:var(--surface2)"></div>
       <div class="form-group">
+        <label class="form-label">Payment Method</label>
+        <select id="paymentMethod" class="form-control">
+          <option value="ESEWA">eSewa</option>
+          <option value="KHALTI">Khalti</option>
+          <option value="CASH_IN_HAND">Cash in hand</option>
+        </select>
+      </div>
+      <div class="form-group">
         <label class="form-label">Notes (optional)</label>
         <textarea id="bookingNotes" class="form-control" placeholder="Any special requests?"></textarea>
       </div>
@@ -143,6 +151,7 @@
       </div>
     `;
     document.getElementById('bookingNotes').value = '';
+    document.getElementById('paymentMethod').value = 'ESEWA';
     document.getElementById('bookingAlert').classList.remove('show');
     document.getElementById('bookingModal').classList.add('show');
   }
@@ -159,14 +168,16 @@
     alertEl.classList.remove('show');
 
     btn.disabled = true;
-    btn.textContent = 'Booking...';
+    btn.textContent = 'Processing payment...';
 
     try {
       const user = Auth.get();
       const notes = document.getElementById('bookingNotes').value;
-      await BookingAPI.create(user.userId, selectedSlotId, notes);
+      const method = document.getElementById('paymentMethod').value;
 
-      showToast('Booking submitted! Awaiting admin approval. ✅', 'success');
+      await PaymentAPI.confirm(user.userId, selectedSlotId, notes, method);
+
+      showToast(`Payment successful via ${method}. Booking submitted! ✅`, 'success');
       closeModal();
       loadSlots(); // Refresh
 

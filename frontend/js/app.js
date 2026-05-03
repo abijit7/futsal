@@ -72,6 +72,14 @@ const BookingAPI = {
   delete:        (id) => apiFetch(`/bookings/${id}`, { method: 'DELETE' }),
 };
 
+// ── Payment API ─────────────────────────────────────────────
+const PaymentAPI = {
+  confirm: (userId, slotId, notes, method) => apiFetch('/payments/confirm', {
+    method: 'POST',
+    body: JSON.stringify({ userId, slotId, notes, method })
+  }),
+};
+
 // ── Toast Notifications ──────────────────────────────────────
 function showToast(message, type = 'success') {
   let container = document.getElementById('toastContainer');

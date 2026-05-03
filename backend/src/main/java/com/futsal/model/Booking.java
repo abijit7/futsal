@@ -1,6 +1,7 @@
 package com.futsal.model;
 
 import com.futsal.model.enums.BookingStatus;
+import com.futsal.model.enums.PaymentMethod;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
@@ -17,12 +18,22 @@ public class Booking {
     private User user;
 
     @OneToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "slot_id", nullable = false, unique = true)
+    @JoinColumn(name = "slot_id", nullable = false)
     private TimeSlot timeSlot;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private BookingStatus status = BookingStatus.PENDING;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private PaymentMethod paymentMethod;
+
+    @Column(nullable = false, length = 80)
+    private String paymentRef;
+
+    @Column(nullable = false)
+    private LocalDateTime paidAt = LocalDateTime.now();
 
     @Column(nullable = false)
     private LocalDateTime bookedAt = LocalDateTime.now();
@@ -33,10 +44,13 @@ public class Booking {
     // ── Constructors ──────────────────────────────────────────
     public Booking() {}
 
-    public Booking(User user, TimeSlot timeSlot, String notes) {
+    public Booking(User user, TimeSlot timeSlot, String notes, PaymentMethod paymentMethod, String paymentRef) {
         this.user = user;
         this.timeSlot = timeSlot;
         this.notes = notes;
+        this.paymentMethod = paymentMethod;
+        this.paymentRef = paymentRef;
+        this.paidAt = LocalDateTime.now();
     }
 
     // ── Getters & Setters ─────────────────────────────────────
@@ -51,6 +65,15 @@ public class Booking {
 
     public BookingStatus getStatus()                 { return status; }
     public void setStatus(BookingStatus status)      { this.status = status; }
+
+    public PaymentMethod getPaymentMethod()            { return paymentMethod; }
+    public void setPaymentMethod(PaymentMethod paymentMethod) { this.paymentMethod = paymentMethod; }
+
+    public String getPaymentRef()                      { return paymentRef; }
+    public void setPaymentRef(String paymentRef)       { this.paymentRef = paymentRef; }
+
+    public LocalDateTime getPaidAt()                   { return paidAt; }
+    public void setPaidAt(LocalDateTime paidAt)        { this.paidAt = paidAt; }
 
     public LocalDateTime getBookedAt()               { return bookedAt; }
     public void setBookedAt(LocalDateTime bookedAt)  { this.bookedAt = bookedAt; }

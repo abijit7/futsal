@@ -54,6 +54,7 @@
               <th>Date</th>
               <th>Time</th>
               <th>Price</th>
+              <th>Payment</th>
               <th>Notes</th>
               <th>Status</th>
               <th>Booked At</th>
@@ -116,8 +117,9 @@
     tableWrap.classList.remove('hidden');
 
     tbody.innerHTML = bookings.map((b, i) => {
-      const isPending = b.status === 'PENDING';
-      return `
+        const isPending = b.status === 'PENDING';
+        const paymentInfo = b.paymentMethod ? `${b.paymentMethod} • ${b.paymentRef}` : '—';
+        return `
         <tr>
           <td class="text-muted text-sm">${i + 1}</td>
           <td>
@@ -127,6 +129,7 @@
           <td>${formatDate(b.timeSlot.slotDate)}</td>
           <td>${formatTime(b.timeSlot.startTime)}<br><span class="text-muted text-sm">${formatTime(b.timeSlot.endTime)}</span></td>
           <td style="color:var(--accent);font-weight:600">NPR ${b.timeSlot.price}</td>
+          <td class="text-muted text-sm">${paymentInfo}</td>
           <td class="text-muted text-sm">${b.notes || '—'}</td>
           <td>${statusBadge(b.status)}</td>
           <td class="text-muted text-sm">${formatDateTime(b.bookedAt)}</td>
