@@ -31,7 +31,7 @@
         <input type="date" id="dateFilter" class="form-control" style="max-width:220px">
       </div>
       <div style="align-self:flex-end">
-        <button onclick="clearFilter()" class="btn btn-secondary">Show All</button>
+        <button onclick="clearFilter()" id="showAllBtn" class="btn btn-secondary">Show All</button>
       </div>
     </div>
   </div>
@@ -160,10 +160,12 @@
     const val = document.getElementById('dateFilter').value;
     if (!val) {
       renderSlots(allSlots);
+      document.getElementById('showAllBtn').textContent = 'Show Today';
       return;
     }
     const filtered = allSlots.filter(s => s.slotDate === val);
     renderSlots(filtered);
+    document.getElementById('showAllBtn').textContent = 'Show All';
   }
 
   function renderSlots(slots) {
@@ -207,7 +209,12 @@
   });
 
   function clearFilter() {
-    document.getElementById('dateFilter').value = '';
+    const dateInput = document.getElementById('dateFilter');
+    if (!dateInput.value) {
+      dateInput.value = todayStr;
+    } else {
+      dateInput.value = '';
+    }
     applyDateFilter();
   }
 
