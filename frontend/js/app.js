@@ -2,6 +2,7 @@
 // futsal-app.js — Shared Utilities & API Layer
 // ============================================================
 
+const API_BASE = 'http://localhost:8080';
 const API = 'http://localhost:8080/api';
 
 function withQuery(endpoint, params = {}) {
@@ -67,6 +68,22 @@ async function apiFetch(endpoint, options = {}) {
   }
 }
 
+async function apiUpload(endpoint, file) {
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch(`${API}${endpoint}`, {
+      method: 'POST',
+      body: formData
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Upload failed');
+    return data;
+  } catch (err) {
+    throw new Error(err.message || 'Upload failed');
+  }
+}
+
 // ── User API ─────────────────────────────────────────────────
 const UserAPI = {
   register: (user) => apiFetch('/users/register', { method: 'POST', body: JSON.stringify(user) }),
@@ -84,6 +101,7 @@ const FutsalAPI = {
   add:    (futsal) => apiFetch('/futsals', { method: 'POST', body: JSON.stringify(futsal) }),
   update: (id, futsal) => apiFetch(`/futsals/${id}`, { method: 'PUT', body: JSON.stringify(futsal) }),
   delete: (id) => apiFetch(`/futsals/${id}`, { method: 'DELETE' }),
+  uploadImage: (file) => apiUpload('/uploads/futsal-image', file)
 };
 
 // ── Slot API ─────────────────────────────────────────────────

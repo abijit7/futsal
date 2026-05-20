@@ -20,9 +20,14 @@ Open `frontend/index.html` in a browser, or serve the `frontend` folder with a l
 
 ## Core Flow
 
-1. Admin creates futsal venues in the Admin UI (set hourly price and opening time).
+1. Admin creates futsal venues in the Admin UI (set hourly price, opening time, and photo).
 2. Hourly slots are auto-generated from the next full hour through 11:00 PM.
 3. Users choose a futsal and then book available slots.
+
+## Uploads
+
+- Futsal photos are uploaded via `POST /api/uploads/futsal-image`.
+- Files are stored in the local `uploads/` folder and served at `/uploads/*`.
 
 ## API Highlights
 

@@ -57,6 +57,14 @@
           </div>
         </div>
         <div class="form-group">
+          <label class="form-label">Photo</label>
+          <input type="file" id="futsalImage" class="form-control" accept="image/*">
+          <input type="hidden" id="futsalImageUrl">
+          <div style="margin-top:10px">
+            <img id="futsalImagePreview" src="" alt="" style="display:none;width:100%;max-width:280px;border-radius:12px;border:1px solid var(--border)">
+          </div>
+        </div>
+        <div class="form-group">
           <label class="form-label">Description (optional)</label>
           <textarea id="futsalDescription" class="form-control" placeholder="Parking, turf type, amenities..."></textarea>
         </div>
@@ -104,16 +112,47 @@
 
 <script src="../js/app.js"></script>
 <script>
-  if (!Auth.requireLogin(true)) {}
-  renderNavbar('futsals');
+  const apiBase = (typeof API_BASE !== 'undefined') ? API_BASE : 'http://localhost:8080';
+  const API_FUTSALS = `${apiBase}/api/futsals`;
+
+  if (typeof showToast !== 'function') {
+    window.showToast = (msg) => console.error(msg);
+  }
+  if (typeof formatTime !== 'function') {
+    window.formatTime = (timeStr) => timeStr || '-';
+  }
+  if (typeof resolveImageUrl !== 'function') {
+    window.resolveImageUrl = (url) => url || '';
+  }
+  if (typeof renderNavbar === 'function') {
+    renderNavbar('futsals');
+  }
 
   let editingId = null;
+
+  function withTimeout(promise, ms) {
+    let timer;
+    const timeout = new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error('Request timed out')), ms);
+    });
+    return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+  }
+
+  async function fetchFutsalsFallback() {
+    const res = await fetch(API_FUTSALS);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Request failed');
+    return data;
+  }
 
   async function loadFutsals() {
     document.getElementById('loadingFutsals').classList.remove('hidden');
     document.getElementById('futsalsContent').classList.add('hidden');
     try {
-      const futsals = await FutsalAPI.getAll();
+      const fetcher = (typeof FutsalAPI !== 'undefined' && FutsalAPI.getAll)
+        ? FutsalAPI.getAll()
+        : fetchFutsalsFallback();
+      const futsals = await withTimeout(fetcher, 10000);
       document.getElementById('loadingFutsals').classList.add('hidden');
       document.getElementById('futsalsContent').classList.remove('hidden');
 
@@ -144,6 +183,7 @@
     } catch (err) {
       showToast(err.message, 'error');
       document.getElementById('loadingFutsals').classList.add('hidden');
+      document.getElementById('futsalsContent').classList.remove('hidden');
     }
   }
 
@@ -157,6 +197,25 @@
     btn.disabled = true;
     btn.textContent = editingId ? 'Saving...' : 'Adding...';
 
+    const fileInput = document.getElementById('futsalImage');
+    const selectedFile = fileInput.files[0];
+    const existingUrl = document.getElementById('futsalImageUrl').value;
+
+    let imageUrl = existingUrl;
+    if (selectedFile) {
+      try {
+        const res = await FutsalAPI.uploadImage(selectedFile);
+        imageUrl = res.url;
+        document.getElementById('futsalImageUrl').value = imageUrl;
+      } catch (err) {
+        alertText.textContent = err.message;
+        alertEl.classList.add('show');
+        btn.disabled = false;
+        btn.textContent = editingId ? 'Save Changes' : 'Add Futsal';
+        return;
+      }
+    }
+
     const futsalData = {
       name: document.getElementById('futsalName').value.trim(),
       address: document.getElementById('futsalAddress').value.trim(),
@@ -164,6 +223,7 @@
       phone: document.getElementById('futsalPhone').value.trim(),
       hourlyPrice: parseFloat(document.getElementById('futsalPrice').value),
       openingTime: document.getElementById('futsalOpening').value + ':00',
+      imageUrl: imageUrl || null,
       description: document.getElementById('futsalDescription').value.trim() || null
     };
 
@@ -197,6 +257,15 @@
     document.getElementById('futsalPhone').value = futsal.phone || '';
     document.getElementById('futsalPrice').value = futsal.hourlyPrice || '';
     document.getElementById('futsalOpening').value = futsal.openingTime ? futsal.openingTime.substring(0,5) : '';
+    document.getElementById('futsalImageUrl').value = futsal.imageUrl || '';
+    const preview = document.getElementById('futsalImagePreview');
+    if (futsal.imageUrl) {
+      preview.src = resolveImageUrl(futsal.imageUrl);
+      preview.style.display = 'block';
+    } else {
+      preview.src = '';
+      preview.style.display = 'none';
+    }
     document.getElementById('futsalDescription').value = futsal.description || '';
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -204,6 +273,8 @@
   function resetForm() {
     editingId = null;
     document.getElementById('futsalForm').reset();
+    document.getElementById('futsalImageUrl').value = '';
+    document.getElementById('futsalImagePreview').style.display = 'none';
     document.getElementById('formTitle').textContent = 'Add New Futsal';
     document.getElementById('submitFutsalBtn').textContent = 'Add Futsal';
     document.getElementById('formAlert').classList.remove('show');

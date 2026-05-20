@@ -34,6 +34,7 @@ public class FutsalService {
         existing.setPhone(updated.getPhone());
         existing.setHourlyPrice(updated.getHourlyPrice());
         existing.setOpeningTime(updated.getOpeningTime());
+        existing.setImageUrl(updated.getImageUrl());
         existing.setDescription(updated.getDescription());
         return futsalRepository.save(existing);
     }

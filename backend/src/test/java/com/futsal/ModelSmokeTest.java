@@ -15,7 +15,7 @@ public class ModelSmokeTest {
 
     @Test
     void canCreateFutsalAndSlot() {
-        Futsal futsal = new Futsal("Kick Arena", "Baneshwor", "Kathmandu", "9812345678", new BigDecimal("1500.00"), LocalTime.of(6, 0), "Indoor turf");
+        Futsal futsal = new Futsal("Kick Arena", "Baneshwor", "Kathmandu", "9812345678", new BigDecimal("1500.00"), LocalTime.of(6, 0), null, "Indoor turf");
         TimeSlot slot = new TimeSlot();
         slot.setFutsal(futsal);
         slot.setSlotDate(LocalDate.now().plusDays(1));

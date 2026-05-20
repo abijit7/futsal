@@ -50,6 +50,9 @@ public class Futsal {
     @Column(nullable = false)
     private LocalTime openingTime;
 
+    @Column(length = 300)
+    private String imageUrl;
+
     @Size(max = 250, message = "Description must be up to 250 characters")
     @Column(length = 250)
     private String description;
@@ -63,13 +66,14 @@ public class Futsal {
 
     public Futsal() {}
 
-    public Futsal(String name, String address, String city, String phone, java.math.BigDecimal hourlyPrice, LocalTime openingTime, String description) {
+    public Futsal(String name, String address, String city, String phone, java.math.BigDecimal hourlyPrice, LocalTime openingTime, String imageUrl, String description) {
         this.name = name;
         this.address = address;
         this.city = city;
         this.phone = phone;
         this.hourlyPrice = hourlyPrice;
         this.openingTime = openingTime;
+        this.imageUrl = imageUrl;
         this.description = description;
     }
 
@@ -93,6 +97,9 @@ public class Futsal {
 
     public LocalTime getOpeningTime()          { return openingTime; }
     public void setOpeningTime(LocalTime openingTime){ this.openingTime = openingTime; }
+
+    public String getImageUrl()                { return imageUrl; }
+    public void setImageUrl(String imageUrl)   { this.imageUrl = imageUrl; }
 
     public String getDescription()               { return description; }
     public void setDescription(String description){ this.description = description; }
