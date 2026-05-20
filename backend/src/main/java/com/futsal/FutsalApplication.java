@@ -12,6 +12,7 @@ import org.springframework.context.annotation.Bean;
 public class FutsalApplication {
     public static void main(String[] args) {
         SpringApplication.run(FutsalApplication.class, args);
+        System.out.println("git test");
     }
 
     // Bootstrap an admin account on startup for development convenience.
