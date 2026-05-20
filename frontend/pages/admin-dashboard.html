@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Dashboard — FutsalBook</title>
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<nav class="navbar" id="navbar"></nav>
+
+<div class="page-header">
+  <div class="container">
+    <h1>ADMIN <span>DASHBOARD</span></h1>
+    <p>Manage your futsal venue — slots, bookings, and users</p>
+  </div>
+</div>
+
+<div class="container page-wrap">
+
+  <!-- Stats -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-value" id="statTotalSlots">—</div>
+      <div class="stat-label">Total Slots</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="statAvailSlots" style="color:var(--green)">—</div>
+      <div class="stat-label">Available Slots</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="statTotalBookings">—</div>
+      <div class="stat-label">Total Bookings</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="statPending" style="color:var(--warning)">—</div>
+      <div class="stat-label">Pending Approval</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="statApproved" style="color:var(--green)">—</div>
+      <div class="stat-label">Approved</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="statTotalUsers">—</div>
+      <div class="stat-label">Registered Users</div>
+    </div>
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="card mb-3">
+    <div class="card-header"><h2>Quick Actions</h2></div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap">
+      <a href="admin-slots.html" class="btn btn-primary">⏰ Manage Slots</a>
+      <a href="admin-bookings.html" class="btn btn-secondary">📋 Review Bookings</a>
+      <a href="admin-users.html" class="btn btn-secondary">👥 View Users</a>
+    </div>
+  </div>
+
+  <!-- Recent Pending Bookings -->
+  <div class="card">
+    <div class="card-header">
+      <h2>Pending Bookings</h2>
+      <a href="admin-bookings.html" class="btn btn-secondary btn-sm">View All</a>
+    </div>
+
+    <div id="loadingPending" class="loading-wrap">
+      <div class="spinner"></div>
+      <p>Loading...</p>
+    </div>
+
+    <div id="pendingContent" class="hidden">
+      <div id="emptyPending" class="empty-state hidden">
+        <div class="icon">✅</div>
+        <h3>No pending bookings</h3>
+        <p>All bookings have been reviewed.</p>
+      </div>
+      <div class="table-wrap" id="pendingTableWrap">
+        <table>
+          <thead>
+            <tr>
+              <th>User</th><th>Date</th><th>Time</th><th>Price</th><th>Notes</th><th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="pendingTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="../js/app.js"></script>
+<script>
+  if (!Auth.requireLogin(true)) {}
+  renderNavbar('admin');
+
+  async function loadDashboard() {
+    try {
+      const [slots, bookings, users] = await Promise.all([
+        SlotAPI.getAll(),
+        BookingAPI.getAll(),
+        UserAPI.getAll(),
+      ]);
+
+      document.getElementById('statTotalSlots').textContent    = slots.length;
+      document.getElementById('statAvailSlots').textContent    = slots.filter(s => s.available).length;
+      document.getElementById('statTotalBookings').textContent = bookings.length;
+      document.getElementById('statPending').textContent       = bookings.filter(b => b.status === 'PENDING').length;
+      document.getElementById('statApproved').textContent      = bookings.filter(b => b.status === 'APPROVED').length;
+      document.getElementById('statTotalUsers').textContent    = users.filter(u => u.role === 'USER').length;
+
+      const pending = bookings.filter(b => b.status === 'PENDING').slice(0, 8);
+
+      document.getElementById('loadingPending').classList.add('hidden');
+      document.getElementById('pendingContent').classList.remove('hidden');
+
+      if (pending.length === 0) {
+        document.getElementById('emptyPending').classList.remove('hidden');
+        document.getElementById('pendingTableWrap').classList.add('hidden');
+        return;
+      }
+
+      document.getElementById('pendingTableBody').innerHTML = pending.map(b => `
+        <tr>
+          <td>
+            <div class="fw-bold">${b.user.name}</div>
+            <div class="text-muted text-sm">${b.user.email}</div>
+          </td>
+          <td>${formatDate(b.timeSlot.slotDate)}</td>
+          <td>${formatTime(b.timeSlot.startTime)} – ${formatTime(b.timeSlot.endTime)}</td>
+          <td style="color:var(--accent);font-weight:600">NPR ${b.timeSlot.price}</td>
+          <td class="text-muted text-sm">${b.notes || '—'}</td>
+          <td>
+            <div style="display:flex;gap:6px">
+              <button class="btn btn-success btn-sm" onclick="updateStatus(${b.bookingId}, 'APPROVED')">✅ Approve</button>
+              <button class="btn btn-danger btn-sm" onclick="updateStatus(${b.bookingId}, 'REJECTED')">❌ Reject</button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+
+    } catch (err) {
+      showToast(err.message, 'error');
+      document.getElementById('loadingPending').classList.add('hidden');
+    }
+  }
+
+  async function updateStatus(bookingId, status) {
+    try {
+      await BookingAPI.updateStatus(bookingId, status);
+      showToast(`Booking ${status.toLowerCase()} successfully`, 'success');
+      loadDashboard();
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  }
+
+  loadDashboard();
+</script>
+</body>
+</html>

@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manage Futsals — FutsalBook Admin</title>
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<nav class="navbar" id="navbar"></nav>
+
+<div class="page-header">
+  <div class="container">
+    <h1>MANAGE <span>FUTSALS</span></h1>
+    <p>Create, edit, and maintain futsal venues</p>
+  </div>
+</div>
+
+<div class="container page-wrap">
+
+  <div style="display:grid;grid-template-columns:1fr 2fr;gap:24px;align-items:start">
+
+    <!-- Add/Edit Form -->
+    <div class="card" style="position:sticky;top:80px">
+      <div class="card-header">
+        <h3 id="formTitle">Add New Futsal</h3>
+      </div>
+      <form id="futsalForm">
+        <input type="hidden" id="futsalId">
+        <div class="form-group">
+          <label class="form-label">Name</label>
+          <input type="text" id="futsalName" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Address</label>
+          <input type="text" id="futsalAddress" class="form-control" required>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">City</label>
+            <input type="text" id="futsalCity" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Phone</label>
+            <input type="text" id="futsalPhone" class="form-control" placeholder="98xxxxxxxx" required>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Opening Time</label>
+            <input type="time" id="futsalOpening" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Hourly Price (NPR)</label>
+            <input type="number" id="futsalPrice" class="form-control" placeholder="e.g. 1500" min="0" step="50" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Description (optional)</label>
+          <textarea id="futsalDescription" class="form-control" placeholder="Parking, turf type, amenities..."></textarea>
+        </div>
+        <div id="formAlert" class="alert alert-error">
+          <span>⚠️</span><span id="formAlertText"></span>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button type="submit" id="submitFutsalBtn" class="btn btn-primary" style="flex:1">Add Futsal</button>
+          <button type="button" onclick="resetForm()" class="btn btn-secondary">Reset</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Futsals Table -->
+    <div class="card">
+      <div class="card-header">
+        <h3>All Futsals</h3>
+        <button onclick="loadFutsals()" class="btn btn-secondary btn-sm">🔄 Refresh</button>
+      </div>
+
+      <div id="loadingFutsals" class="loading-wrap">
+        <div class="spinner"></div>
+        <p>Loading futsals...</p>
+      </div>
+
+      <div id="futsalsContent" class="hidden">
+        <div id="emptyFutsals" class="empty-state hidden">
+          <div class="icon">📭</div>
+          <h3>No futsals found</h3>
+          <p>Add your first futsal using the form.</p>
+        </div>
+        <div class="table-wrap" id="futsalsTableWrap">
+          <table>
+            <thead>
+              <tr><th>Name</th><th>Address</th><th>City</th><th>Phone</th><th>Open</th><th>Price/hr</th><th>Actions</th></tr>
+            </thead>
+            <tbody id="futsalsTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="../js/app.js"></script>
+<script>
+  if (!Auth.requireLogin(true)) {}
+  renderNavbar('futsals');
+
+  let editingId = null;
+
+  async function loadFutsals() {
+    document.getElementById('loadingFutsals').classList.remove('hidden');
+    document.getElementById('futsalsContent').classList.add('hidden');
+    try {
+      const futsals = await FutsalAPI.getAll();
+      document.getElementById('loadingFutsals').classList.add('hidden');
+      document.getElementById('futsalsContent').classList.remove('hidden');
+
+      if (futsals.length === 0) {
+        document.getElementById('emptyFutsals').classList.remove('hidden');
+        document.getElementById('futsalsTableWrap').classList.add('hidden');
+        return;
+      }
+      document.getElementById('emptyFutsals').classList.add('hidden');
+      document.getElementById('futsalsTableWrap').classList.remove('hidden');
+
+      document.getElementById('futsalsTableBody').innerHTML = futsals.map(f => `
+        <tr>
+          <td class="fw-bold">${f.name}</td>
+          <td class="text-muted text-sm">${f.address}</td>
+          <td>${f.city}</td>
+          <td>${f.phone}</td>
+          <td>${f.openingTime ? formatTime(f.openingTime) : '—'}</td>
+          <td>NPR ${f.hourlyPrice ?? '—'}</td>
+          <td>
+            <div style="display:flex;gap:6px">
+              <button class="btn btn-secondary btn-sm" onclick="editFutsal(${JSON.stringify(f).replace(/"/g, '&quot;')})">✏️ Edit</button>
+              <button class="btn btn-danger btn-sm" onclick="deleteFutsal(${f.futsalId})">🗑️</button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    } catch (err) {
+      showToast(err.message, 'error');
+      document.getElementById('loadingFutsals').classList.add('hidden');
+    }
+  }
+
+  document.getElementById('futsalForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('submitFutsalBtn');
+    const alertEl = document.getElementById('formAlert');
+    const alertText = document.getElementById('formAlertText');
+    alertEl.classList.remove('show');
+
+    btn.disabled = true;
+    btn.textContent = editingId ? 'Saving...' : 'Adding...';
+
+    const futsalData = {
+      name: document.getElementById('futsalName').value.trim(),
+      address: document.getElementById('futsalAddress').value.trim(),
+      city: document.getElementById('futsalCity').value.trim(),
+      phone: document.getElementById('futsalPhone').value.trim(),
+      hourlyPrice: parseFloat(document.getElementById('futsalPrice').value),
+      openingTime: document.getElementById('futsalOpening').value + ':00',
+      description: document.getElementById('futsalDescription').value.trim() || null
+    };
+
+    try {
+      if (editingId) {
+        await FutsalAPI.update(editingId, futsalData);
+        showToast('Futsal updated successfully ✅', 'success');
+        resetForm();
+      } else {
+        await FutsalAPI.add(futsalData);
+        showToast('Futsal added successfully ✅', 'success');
+        resetForm();
+      }
+      loadFutsals();
+    } catch (err) {
+      alertText.textContent = err.message;
+      alertEl.classList.add('show');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = editingId ? 'Save Changes' : 'Add Futsal';
+    }
+  });
+
+  function editFutsal(futsal) {
+    editingId = futsal.futsalId;
+    document.getElementById('formTitle').textContent = 'Edit Futsal';
+    document.getElementById('submitFutsalBtn').textContent = 'Save Changes';
+    document.getElementById('futsalName').value = futsal.name || '';
+    document.getElementById('futsalAddress').value = futsal.address || '';
+    document.getElementById('futsalCity').value = futsal.city || '';
+    document.getElementById('futsalPhone').value = futsal.phone || '';
+    document.getElementById('futsalPrice').value = futsal.hourlyPrice || '';
+    document.getElementById('futsalOpening').value = futsal.openingTime ? futsal.openingTime.substring(0,5) : '';
+    document.getElementById('futsalDescription').value = futsal.description || '';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function resetForm() {
+    editingId = null;
+    document.getElementById('futsalForm').reset();
+    document.getElementById('formTitle').textContent = 'Add New Futsal';
+    document.getElementById('submitFutsalBtn').textContent = 'Add Futsal';
+    document.getElementById('formAlert').classList.remove('show');
+  }
+
+  async function deleteFutsal(futsalId) {
+    showConfirm('Delete this futsal? Slots linked to it will also be removed.', async () => {
+      try {
+        await FutsalAPI.delete(futsalId);
+        showToast('Futsal deleted', 'success');
+        loadFutsals();
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    });
+  }
+
+  loadFutsals();
+</script>
+</body>
+</html>
+
