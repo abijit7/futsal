@@ -5,6 +5,7 @@ import com.futsal.repository.FutsalRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -23,6 +24,7 @@ public class FutsalService {
     }
 
     public Futsal add(Futsal futsal) {
+        syncImages(futsal, futsal);
         return futsalRepository.save(futsal);
     }
 
@@ -34,9 +36,31 @@ public class FutsalService {
         existing.setPhone(updated.getPhone());
         existing.setHourlyPrice(updated.getHourlyPrice());
         existing.setOpeningTime(updated.getOpeningTime());
-        existing.setImageUrl(updated.getImageUrl());
+        syncImages(existing, updated);
         existing.setDescription(updated.getDescription());
         return futsalRepository.save(existing);
+    }
+
+    private void syncImages(Futsal target, Futsal source) {
+        List<String> urls = source.getImageUrls();
+        String single = source.getImageUrl();
+
+        if (urls != null && !urls.isEmpty()) {
+            target.setImageUrls(new ArrayList<>(urls));
+            target.setImageUrl(urls.get(0));
+            return;
+        }
+
+        if (single != null && !single.isBlank()) {
+            List<String> list = new ArrayList<>();
+            list.add(single);
+            target.setImageUrls(list);
+            target.setImageUrl(single);
+            return;
+        }
+
+        target.setImageUrls(new ArrayList<>());
+        target.setImageUrl(null);
     }
 
     public void delete(Long id) {

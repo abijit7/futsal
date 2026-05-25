@@ -9,6 +9,7 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -52,6 +53,11 @@ public class Futsal {
 
     @Column(length = 300)
     private String imageUrl;
+
+    @ElementCollection
+    @CollectionTable(name = "futsal_images", joinColumns = @JoinColumn(name = "futsal_id"))
+    @Column(name = "image_url", length = 300)
+    private List<String> imageUrls = new ArrayList<>();
 
     @Size(max = 250, message = "Description must be up to 250 characters")
     @Column(length = 250)
@@ -100,6 +106,9 @@ public class Futsal {
 
     public String getImageUrl()                { return imageUrl; }
     public void setImageUrl(String imageUrl)   { this.imageUrl = imageUrl; }
+
+    public List<String> getImageUrls()               { return imageUrls; }
+    public void setImageUrls(List<String> imageUrls) { this.imageUrls = imageUrls; }
 
     public String getDescription()               { return description; }
     public void setDescription(String description){ this.description = description; }
