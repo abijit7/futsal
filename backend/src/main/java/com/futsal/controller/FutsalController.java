@@ -9,6 +9,9 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.futsal.dto.DtoMapper;
+import com.futsal.dto.FutsalRequest;
+import com.futsal.dto.FutsalResponse;
 import com.futsal.dto.PagedResponse;
 
 import java.util.HashMap;
@@ -23,37 +26,57 @@ public class FutsalController {
     private FutsalService futsalService;
 
     @GetMapping
-    public ResponseEntity<PagedResponse<Futsal>> getAll(
+    public ResponseEntity<PagedResponse<FutsalResponse>> getAll(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "12") int size
     ) {
         Pageable pageable = PageRequest.of(page, size);
-        Page<Futsal> result = futsalService.getAll(pageable);
+        Page<FutsalResponse> result = futsalService.getAll(pageable).map(DtoMapper::toFutsalResponse);
         return ResponseEntity.ok(PagedResponse.fromPage(result));
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<?> getById(@PathVariable Long id) {
         try {
-            return ResponseEntity.ok(futsalService.getById(id));
+            return ResponseEntity.ok(DtoMapper.toFutsalResponse(futsalService.getById(id)));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(errorMap(e.getMessage()));
         }
     }
 
     @PostMapping
-    public ResponseEntity<?> add(@Valid @RequestBody Futsal futsal) {
+    public ResponseEntity<?> add(@Valid @RequestBody FutsalRequest futsal) {
         try {
-            return ResponseEntity.ok(futsalService.add(futsal));
+            Futsal entity = new Futsal();
+            entity.setName(futsal.getName());
+            entity.setAddress(futsal.getAddress());
+            entity.setCity(futsal.getCity());
+            entity.setPhone(futsal.getPhone());
+            entity.setHourlyPrice(futsal.getHourlyPrice());
+            entity.setOpeningTime(futsal.getOpeningTime());
+            entity.setImageUrl(futsal.getImageUrl());
+            entity.setImageUrls(futsal.getImageUrls());
+            entity.setDescription(futsal.getDescription());
+            return ResponseEntity.ok(DtoMapper.toFutsalResponse(futsalService.add(entity)));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(errorMap(e.getMessage()));
         }
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> update(@PathVariable Long id, @Valid @RequestBody Futsal futsal) {
+    public ResponseEntity<?> update(@PathVariable Long id, @Valid @RequestBody FutsalRequest futsal) {
         try {
-            return ResponseEntity.ok(futsalService.update(id, futsal));
+            Futsal entity = new Futsal();
+            entity.setName(futsal.getName());
+            entity.setAddress(futsal.getAddress());
+            entity.setCity(futsal.getCity());
+            entity.setPhone(futsal.getPhone());
+            entity.setHourlyPrice(futsal.getHourlyPrice());
+            entity.setOpeningTime(futsal.getOpeningTime());
+            entity.setImageUrl(futsal.getImageUrl());
+            entity.setImageUrls(futsal.getImageUrls());
+            entity.setDescription(futsal.getDescription());
+            return ResponseEntity.ok(DtoMapper.toFutsalResponse(futsalService.update(id, entity)));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(errorMap(e.getMessage()));
         }

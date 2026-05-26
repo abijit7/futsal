@@ -1,16 +1,17 @@
 package com.futsal.service;
 
+import com.futsal.dto.UserUpdateRequest;
 import com.futsal.model.User;
 import com.futsal.model.enums.Role;
 import com.futsal.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
-import java.util.List;
-import java.util.Optional;
 
 @Service
 public class UserService {
@@ -54,10 +55,8 @@ public class UserService {
     }
 
     // ── Get all users (admin) ─────────────────────────────────────────────────
-    public List<User> getAllUsers() {
-        List<User> users = userRepository.findAll();
-        users.forEach(u -> u.setPassword(null)); // hide passwords
-        return users;
+    public Page<User> getAllUsers(Pageable pageable) {
+        return userRepository.findAll(pageable);
     }
 
     // ── Get user by ID ────────────────────────────────────────────────────────
@@ -69,11 +68,15 @@ public class UserService {
     }
 
     // ── Update user profile ───────────────────────────────────────────────────
-    public User updateUser(Long id, User updatedUser) {
+    public User updateUser(Long id, UserUpdateRequest updatedUser) {
         User existing = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-        existing.setName(updatedUser.getName());
-        existing.setPhone(updatedUser.getPhone());
+        if (updatedUser.getName() != null && !updatedUser.getName().isBlank()) {
+            existing.setName(updatedUser.getName());
+        }
+        if (updatedUser.getPhone() != null && !updatedUser.getPhone().isBlank()) {
+            existing.setPhone(updatedUser.getPhone());
+        }
         if (updatedUser.getPassword() != null && !updatedUser.getPassword().isEmpty()) {
             existing.setPassword(hashPassword(updatedUser.getPassword()));
         }

@@ -10,7 +10,12 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.futsal.dto.PagedResponse;
+import com.futsal.dto.BookingCreateRequest;
+import com.futsal.dto.BookingResponse;
+import com.futsal.dto.BookingStatusRequest;
+import com.futsal.dto.DtoMapper;
 
+import jakarta.validation.Valid;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -24,14 +29,10 @@ public class BookingController {
 
     // POST /api/bookings — create booking
     @PostMapping
-    public ResponseEntity<?> createBooking(@RequestBody Map<String, Object> body) {
+    public ResponseEntity<?> createBooking(@Valid @RequestBody BookingCreateRequest body) {
         try {
-            Long userId = Long.parseLong(body.get("userId").toString());
-            Long slotId = Long.parseLong(body.get("slotId").toString());
-            String notes = body.containsKey("notes") ? body.get("notes").toString() : "";
-
-            Booking booking = bookingService.createBooking(userId, slotId, notes);
-            return ResponseEntity.ok(booking);
+            Booking booking = bookingService.createBooking(body.getUserId(), body.getSlotId(), body.getNotes());
+            return ResponseEntity.ok(DtoMapper.toBookingResponse(booking));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(errorMap(e.getMessage()));
         }
@@ -53,7 +54,8 @@ public class BookingController {
             } else {
                 result = bookingService.getAllBookings(pageable);
             }
-            return ResponseEntity.ok(PagedResponse.fromPage(result));
+            Page<BookingResponse> mapped = result.map(DtoMapper::toBookingResponse);
+            return ResponseEntity.ok(PagedResponse.fromPage(mapped));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(errorMap("Invalid status value"));
         }
@@ -68,7 +70,8 @@ public class BookingController {
     ) {
         try {
             Pageable pageable = PageRequest.of(page, size);
-            Page<Booking> result = bookingService.getBookingsByUser(userId, pageable);
+            Page<BookingResponse> result = bookingService.getBookingsByUser(userId, pageable)
+                    .map(DtoMapper::toBookingResponse);
             return ResponseEntity.ok(PagedResponse.fromPage(result));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(errorMap(e.getMessage()));
@@ -79,7 +82,7 @@ public class BookingController {
     @GetMapping("/{id}")
     public ResponseEntity<?> getBookingById(@PathVariable Long id) {
         try {
-            return ResponseEntity.ok(bookingService.getBookingById(id));
+            return ResponseEntity.ok(DtoMapper.toBookingResponse(bookingService.getBookingById(id)));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(errorMap(e.getMessage()));
         }
@@ -88,12 +91,12 @@ public class BookingController {
     // PUT /api/bookings/{id}/status — update status (admin: approve/reject, user: cancel)
     @PutMapping("/{id}/status")
     public ResponseEntity<?> updateStatus(@PathVariable Long id,
-                                           @RequestBody Map<String, String> body) {
+                                           @Valid @RequestBody BookingStatusRequest body) {
         try {
-            String statusStr = body.get("status");
+            String statusStr = body.getStatus();
             BookingStatus status = BookingStatus.valueOf(statusStr.toUpperCase());
             Booking updated = bookingService.updateStatus(id, status);
-            return ResponseEntity.ok(updated);
+            return ResponseEntity.ok(DtoMapper.toBookingResponse(updated));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(errorMap("Invalid status value"));
         } catch (RuntimeException e) {

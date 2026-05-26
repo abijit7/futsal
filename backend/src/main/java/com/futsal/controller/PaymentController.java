@@ -1,8 +1,11 @@
 package com.futsal.controller;
 
+import com.futsal.dto.DtoMapper;
+import com.futsal.dto.PaymentConfirmRequest;
 import com.futsal.model.Booking;
 import com.futsal.model.enums.PaymentMethod;
 import com.futsal.service.BookingService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,22 +23,18 @@ public class PaymentController {
 
     // POST /api/payments/confirm — dummy payment confirmation
     @PostMapping("/confirm")
-    public ResponseEntity<?> confirmPayment(@RequestBody Map<String, Object> body) {
+    public ResponseEntity<?> confirmPayment(@Valid @RequestBody PaymentConfirmRequest body) {
         try {
-            if (body.get("userId") == null || body.get("slotId") == null || body.get("method") == null) {
-                return ResponseEntity.badRequest().body(errorMap("User, slot, and payment method are required"));
-            }
-
-            Long userId = Long.parseLong(body.get("userId").toString());
-            Long slotId = Long.parseLong(body.get("slotId").toString());
-            String notes = body.containsKey("notes") ? body.get("notes").toString() : "";
-            String methodStr = body.get("method").toString();
+            Long userId = body.getUserId();
+            Long slotId = body.getSlotId();
+            String notes = body.getNotes() != null ? body.getNotes() : "";
+            String methodStr = body.getMethod();
 
             PaymentMethod method = PaymentMethod.valueOf(methodStr.toUpperCase());
             String paymentRef = generateRef(method);
 
             Booking booking = bookingService.createPaidBooking(userId, slotId, notes, method, paymentRef);
-            return ResponseEntity.ok(booking);
+            return ResponseEntity.ok(DtoMapper.toBookingResponse(booking));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(errorMap("Invalid payment method"));
         } catch (RuntimeException e) {

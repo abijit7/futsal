@@ -1,5 +1,6 @@
 package com.futsal.controller;
 
+import com.futsal.dto.DtoMapper;
 import com.futsal.dto.SlotRequest;
 import com.futsal.model.TimeSlot;
 import com.futsal.service.TimeSlotService;
@@ -11,6 +12,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.futsal.dto.PagedResponse;
+import com.futsal.dto.TimeSlotResponse;
 
 import java.time.LocalDate;
 import java.util.HashMap;
@@ -26,27 +28,29 @@ public class TimeSlotController {
 
     // GET /api/slots — available slots for users
     @GetMapping
-    public ResponseEntity<PagedResponse<TimeSlot>> getAvailableSlots(
+    public ResponseEntity<PagedResponse<TimeSlotResponse>> getAvailableSlots(
             @RequestParam(required = false) Long futsalId,
             @RequestParam(required = false) LocalDate slotDate,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "12") int size
     ) {
         Pageable pageable = PageRequest.of(page, size);
-        Page<TimeSlot> result = timeSlotService.getAvailableSlots(futsalId, slotDate, pageable);
+        Page<TimeSlotResponse> result = timeSlotService.getAvailableSlots(futsalId, slotDate, pageable)
+                .map(DtoMapper::toTimeSlotResponse);
         return ResponseEntity.ok(PagedResponse.fromPage(result));
     }
 
     // GET /api/slots/all — all slots (admin)
     @GetMapping("/all")
-    public ResponseEntity<PagedResponse<TimeSlot>> getAllSlots(
+    public ResponseEntity<PagedResponse<TimeSlotResponse>> getAllSlots(
             @RequestParam(required = false) Long futsalId,
             @RequestParam(required = false) LocalDate slotDate,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
         Pageable pageable = PageRequest.of(page, size);
-        Page<TimeSlot> result = timeSlotService.getAllSlots(futsalId, slotDate, pageable);
+        Page<TimeSlotResponse> result = timeSlotService.getAllSlots(futsalId, slotDate, pageable)
+                .map(DtoMapper::toTimeSlotResponse);
         return ResponseEntity.ok(PagedResponse.fromPage(result));
     }
 
@@ -54,7 +58,7 @@ public class TimeSlotController {
     @GetMapping("/{id}")
     public ResponseEntity<?> getSlotById(@PathVariable Long id) {
         try {
-            return ResponseEntity.ok(timeSlotService.getSlotById(id));
+            return ResponseEntity.ok(DtoMapper.toTimeSlotResponse(timeSlotService.getSlotById(id)));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(errorMap(e.getMessage()));
         }
@@ -71,7 +75,7 @@ public class TimeSlotController {
             if (req.getAvailable() != null) {
                 slot.setAvailable(req.getAvailable());
             }
-            return ResponseEntity.ok(timeSlotService.addSlot(slot, req.getFutsalId()));
+            return ResponseEntity.ok(DtoMapper.toTimeSlotResponse(timeSlotService.addSlot(slot, req.getFutsalId())));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(errorMap(e.getMessage()));
         }
@@ -86,7 +90,7 @@ public class TimeSlotController {
             slot.setStartTime(req.getStartTime());
             slot.setEndTime(req.getEndTime());
             slot.setAvailable(req.getAvailable() != null && req.getAvailable());
-            return ResponseEntity.ok(timeSlotService.updateSlot(id, slot, req.getFutsalId()));
+            return ResponseEntity.ok(DtoMapper.toTimeSlotResponse(timeSlotService.updateSlot(id, slot, req.getFutsalId())));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(errorMap(e.getMessage()));
         }
