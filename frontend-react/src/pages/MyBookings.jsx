@@ -5,6 +5,7 @@ import { calculateDuration, formatDate, formatDateTime, formatTime } from '../ut
 import StatusBadge from '../components/StatusBadge.jsx';
 import LoadingWrap from '../components/LoadingWrap.jsx';
 import EmptyState from '../components/EmptyState.jsx';
+import Pagination from '../components/Pagination.jsx';
 import { useToast } from '../components/ToastProvider.jsx';
 import { useConfirm } from '../components/ConfirmProvider.jsx';
 
@@ -17,11 +18,16 @@ export default function MyBookings() {
   const [loading, setLoading] = useState(true);
   const [bookings, setBookings] = useState([]);
   const [filter, setFilter] = useState('ALL');
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const pageSize = 6;
 
-  const loadBookings = async () => {
+  const loadBookings = async (targetPage = page) => {
     try {
-      const data = await BookingAPI.getByUser(user.userId);
-      setBookings(data || []);
+      const data = await BookingAPI.getByUser(user.userId, { page: targetPage, size: pageSize });
+      const items = data?.items ?? data ?? [];
+      setBookings(items);
+      setTotalPages(data?.totalPages ?? (items.length > 0 ? 1 : 0));
     } catch (err) {
       showToast(err.message, 'error');
     } finally {
@@ -30,8 +36,8 @@ export default function MyBookings() {
   };
 
   useEffect(() => {
-    loadBookings();
-  }, []);
+    loadBookings(page);
+  }, [page]);
 
   const filtered = filter === 'ALL' ? bookings : bookings.filter((b) => b.status === filter);
 
@@ -41,7 +47,7 @@ export default function MyBookings() {
     try {
       await BookingAPI.updateStatus(bookingId, 'CANCELLED');
       showToast('Booking cancelled successfully', 'success');
-      loadBookings();
+      loadBookings(page);
     } catch (err) {
       showToast(err.message, 'error');
     }
@@ -62,7 +68,10 @@ export default function MyBookings() {
             <button
               key={f}
               className={`tab-btn ${filter === f ? 'active' : ''}`}
-              onClick={() => setFilter(f)}
+              onClick={() => {
+                setFilter(f);
+                setPage(0);
+              }}
             >
               {f === 'ALL' ? 'All' : f}
             </button>
@@ -109,8 +118,10 @@ export default function MyBookings() {
             })}
           </div>
         )}
+        {!loading && filtered.length > 0 && (
+          <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+        )}
       </div>
     </>
   );
 }
-

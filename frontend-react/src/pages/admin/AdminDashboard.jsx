@@ -20,22 +20,32 @@ export default function AdminDashboard() {
 
   const loadDashboard = async () => {
     try {
-      const [slots, bookings, users] = await Promise.all([
-        SlotAPI.getAll(),
-        BookingAPI.getAll(),
+      const [slotPage, availablePage, bookingPage, pendingPage, approvedPage, users] = await Promise.all([
+        SlotAPI.getAll({ page: 0, size: 1 }),
+        SlotAPI.getAvailable({ page: 0, size: 1 }),
+        BookingAPI.getAll({ page: 0, size: 1 }),
+        BookingAPI.getAll({ page: 0, size: 8, status: 'PENDING' }),
+        BookingAPI.getAll({ page: 0, size: 1, status: 'APPROVED' }),
         UserAPI.getAll()
       ]);
 
+      const totalSlots = slotPage?.totalItems ?? slotPage?.items?.length ?? slotPage?.length ?? 0;
+      const availableSlots = availablePage?.totalItems ?? availablePage?.items?.length ?? availablePage?.length ?? 0;
+      const totalBookings = bookingPage?.totalItems ?? bookingPage?.items?.length ?? bookingPage?.length ?? 0;
+      const pending = pendingPage?.totalItems ?? pendingPage?.items?.length ?? pendingPage?.length ?? 0;
+      const approved = approvedPage?.totalItems ?? approvedPage?.items?.length ?? approvedPage?.length ?? 0;
+      const pendingItems = pendingPage?.items ?? pendingPage ?? [];
+
       setStats({
-        totalSlots: slots.length,
-        availableSlots: slots.filter((s) => s.available).length,
-        totalBookings: bookings.length,
-        pending: bookings.filter((b) => b.status === 'PENDING').length,
-        approved: bookings.filter((b) => b.status === 'APPROVED').length,
+        totalSlots,
+        availableSlots,
+        totalBookings,
+        pending,
+        approved,
         totalUsers: users.filter((u) => u.role === 'USER').length
       });
 
-      setPendingBookings(bookings.filter((b) => b.status === 'PENDING').slice(0, 8));
+      setPendingBookings(pendingItems.slice(0, 8));
     } catch (err) {
       showToast(err.message, 'error');
     } finally {
@@ -129,4 +139,3 @@ export default function AdminDashboard() {
     </>
   );
 }
-

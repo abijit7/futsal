@@ -10,6 +10,8 @@ import com.futsal.repository.TimeSlotRepository;
 import com.futsal.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -71,15 +73,20 @@ public class BookingService {
     }
 
     // ── Get all bookings (admin) ──────────────────────────────────────────────
-    public List<Booking> getAllBookings() {
-        return bookingRepository.findAllByOrderByBookedAtDesc();
+    public Page<Booking> getAllBookings(Pageable pageable) {
+        return bookingRepository.findAllByOrderByBookedAtDesc(pageable);
+    }
+
+    // ── Get bookings by status (admin) ────────────────────────────────────────
+    public Page<Booking> getBookingsByStatus(BookingStatus status, Pageable pageable) {
+        return bookingRepository.findByStatusOrderByBookedAtDesc(status, pageable);
     }
 
     // ── Get bookings by user ──────────────────────────────────────────────────
-    public List<Booking> getBookingsByUser(Long userId) {
+    public Page<Booking> getBookingsByUser(Long userId, Pageable pageable) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-        return bookingRepository.findByUserOrderByBookedAtDesc(user);
+        return bookingRepository.findByUserOrderByBookedAtDesc(user, pageable);
     }
 
     // ── Get booking by ID ─────────────────────────────────────────────────────

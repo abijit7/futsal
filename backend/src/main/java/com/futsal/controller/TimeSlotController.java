@@ -5,11 +5,15 @@ import com.futsal.model.TimeSlot;
 import com.futsal.service.TimeSlotService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.futsal.dto.PagedResponse;
 
+import java.time.LocalDate;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -22,14 +26,28 @@ public class TimeSlotController {
 
     // GET /api/slots — available slots for users
     @GetMapping
-    public ResponseEntity<List<TimeSlot>> getAvailableSlots(@RequestParam(required = false) Long futsalId) {
-        return ResponseEntity.ok(timeSlotService.getAvailableSlots(futsalId));
+    public ResponseEntity<PagedResponse<TimeSlot>> getAvailableSlots(
+            @RequestParam(required = false) Long futsalId,
+            @RequestParam(required = false) LocalDate slotDate,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "12") int size
+    ) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<TimeSlot> result = timeSlotService.getAvailableSlots(futsalId, slotDate, pageable);
+        return ResponseEntity.ok(PagedResponse.fromPage(result));
     }
 
     // GET /api/slots/all — all slots (admin)
     @GetMapping("/all")
-    public ResponseEntity<List<TimeSlot>> getAllSlots(@RequestParam(required = false) Long futsalId) {
-        return ResponseEntity.ok(timeSlotService.getAllSlots(futsalId));
+    public ResponseEntity<PagedResponse<TimeSlot>> getAllSlots(
+            @RequestParam(required = false) Long futsalId,
+            @RequestParam(required = false) LocalDate slotDate,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<TimeSlot> result = timeSlotService.getAllSlots(futsalId, slotDate, pageable);
+        return ResponseEntity.ok(PagedResponse.fromPage(result));
     }
 
     // GET /api/slots/{id}

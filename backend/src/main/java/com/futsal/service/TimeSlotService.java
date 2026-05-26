@@ -5,6 +5,8 @@ import com.futsal.model.TimeSlot;
 import com.futsal.repository.FutsalRepository;
 import com.futsal.repository.TimeSlotRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,7 +27,7 @@ public class TimeSlotService {
 
     // ── Get all available slots (from today onwards) ─────���────────────────────
     @Transactional
-    public List<TimeSlot> getAvailableSlots(Long futsalId) {
+    public Page<TimeSlot> getAvailableSlots(Long futsalId, LocalDate slotDate, Pageable pageable) {
         LocalDate today = LocalDate.now();
         LocalTime now = LocalTime.now();
         LocalTime minStartTime = now.getMinute() == 0 && now.getSecond() == 0
@@ -33,50 +35,59 @@ public class TimeSlotService {
                 : now.plusHours(1).withMinute(0).withSecond(0).withNano(0);
 
         if (futsalId != null) {
+            if (slotDate != null) {
+                LocalTime minTimeForDate = slotDate.equals(today) ? minStartTime : LocalTime.MIDNIGHT;
+                ensureHourlySlotsForDate(futsalId, slotDate, minTimeForDate);
+                return timeSlotRepository.findAvailableForFutsalOnDate(
+                        futsalId,
+                        slotDate,
+                        slotDate.equals(today),
+                        minStartTime,
+                        CLOSING_TIME,
+                        pageable
+                );
+            }
+
             for (int i = 0; i <= 7; i++) {
                 LocalDate date = today.plusDays(i);
                 LocalTime minTimeForDate = i == 0 ? minStartTime : LocalTime.MIDNIGHT;
                 ensureHourlySlotsForDate(futsalId, date, minTimeForDate);
             }
-            return timeSlotRepository
-                    .findByFutsal_FutsalIdAndSlotDateGreaterThanEqualAndAvailableTrueOrderBySlotDateAscStartTimeAsc(
-                            futsalId, today
-                    )
-                    .stream()
-                    .filter(slot -> {
-                        if (slot.getSlotDate().isAfter(today)) {
-                            return true;
-                        }
-                        return !slot.getStartTime().isBefore(minStartTime)
-                                && !slot.getEndTime().isAfter(CLOSING_TIME);
-                    })
-                    .toList();
+            return timeSlotRepository.findAvailableForFutsalAfter(
+                    futsalId, today, minStartTime, CLOSING_TIME, pageable
+            );
         }
-        return timeSlotRepository
-                .findBySlotDateGreaterThanEqualOrderBySlotDateAscStartTimeAsc(today)
-                .stream()
-                .filter(TimeSlot::isAvailable)
-                .filter(slot -> {
-                    if (slot.getSlotDate().isAfter(today)) {
-                        return true;
-                    }
-                    return !slot.getStartTime().isBefore(minStartTime)
-                            && !slot.getEndTime().isAfter(CLOSING_TIME);
-                })
-                .toList();
+
+        if (slotDate != null) {
+            return timeSlotRepository.findAvailableOnDate(
+                    slotDate,
+                    slotDate.equals(today),
+                    minStartTime,
+                    CLOSING_TIME,
+                    pageable
+            );
+        }
+
+        return timeSlotRepository.findAvailableAfter(today, minStartTime, CLOSING_TIME, pageable);
     }
 
     // ── Get all slots (admin view) ────────────────────────────────────────────
-    public List<TimeSlot> getAllSlots(Long futsalId) {
+    public Page<TimeSlot> getAllSlots(Long futsalId, LocalDate slotDate, Pageable pageable) {
         LocalDate today = LocalDate.now();
         if (futsalId != null) {
-            return timeSlotRepository
-                    .findByFutsal_FutsalIdAndSlotDateGreaterThanEqualOrderBySlotDateAscStartTimeAsc(
-                            futsalId, today
-                    );
+            if (slotDate != null) {
+                return timeSlotRepository.findByFutsal_FutsalIdAndSlotDateOrderBySlotDateAscStartTimeAsc(
+                        futsalId, slotDate, pageable
+                );
+            }
+            return timeSlotRepository.findByFutsal_FutsalIdAndSlotDateGreaterThanEqualOrderBySlotDateAscStartTimeAsc(
+                    futsalId, today, pageable
+            );
         }
-        return timeSlotRepository
-                .findBySlotDateGreaterThanEqualOrderBySlotDateAscStartTimeAsc(today);
+        if (slotDate != null) {
+            return timeSlotRepository.findBySlotDateOrderBySlotDateAscStartTimeAsc(slotDate, pageable);
+        }
+        return timeSlotRepository.findBySlotDateGreaterThanEqualOrderBySlotDateAscStartTimeAsc(today, pageable);
     }
 
     // ── Get slot by ID ────────────────────────────────────────────────────────

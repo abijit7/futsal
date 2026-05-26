@@ -3,6 +3,8 @@ package com.futsal.service;
 import com.futsal.model.Futsal;
 import com.futsal.repository.FutsalRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -14,8 +16,8 @@ public class FutsalService {
     @Autowired
     private FutsalRepository futsalRepository;
 
-    public List<Futsal> getAll() {
-        return futsalRepository.findAll();
+    public Page<Futsal> getAll(Pageable pageable) {
+        return futsalRepository.findAll(pageable);
     }
 
     public Futsal getById(Long id) {

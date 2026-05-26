@@ -16,8 +16,9 @@ export default function Dashboard() {
   useEffect(() => {
     const load = async () => {
       try {
-        const data = await BookingAPI.getByUser(user.userId);
-        setBookings(data || []);
+        const data = await BookingAPI.getByUser(user.userId, { page: 0, size: 200 });
+        const items = data?.items ?? data ?? [];
+        setBookings(items);
       } catch (err) {
         showToast(err.message, 'error');
       } finally {
@@ -105,4 +106,3 @@ export default function Dashboard() {
     </>
   );
 }
-

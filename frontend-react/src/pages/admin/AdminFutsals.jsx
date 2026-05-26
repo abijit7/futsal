@@ -4,6 +4,7 @@ import { formatTime } from '../../utils/format.js';
 import { resolveImageUrl } from '../../utils/image.js';
 import { useToast } from '../../components/ToastProvider.jsx';
 import { useConfirm } from '../../components/ConfirmProvider.jsx';
+import Pagination from '../../components/Pagination.jsx';
 
 const emptyForm = {
   name: '',
@@ -26,16 +27,21 @@ export default function AdminFutsals() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [newFiles, setNewFiles] = useState([]);
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const pageSize = 10;
 
   const previewUrls = [
     ...(form.imageUrls || []).map((url) => resolveImageUrl(url)),
     ...newFiles.map((file) => URL.createObjectURL(file))
   ];
 
-  const loadFutsals = async () => {
+  const loadFutsals = async (targetPage = page) => {
     try {
-      const data = await FutsalAPI.getAll();
-      setFutsals(data || []);
+      const data = await FutsalAPI.getAll({ page: targetPage, size: pageSize });
+      const items = data?.items ?? data ?? [];
+      setFutsals(items);
+      setTotalPages(data?.totalPages ?? (items.length > 0 ? 1 : 0));
     } catch (err) {
       showToast(err.message, 'error');
     } finally {
@@ -44,8 +50,8 @@ export default function AdminFutsals() {
   };
 
   useEffect(() => {
-    loadFutsals();
-  }, []);
+    loadFutsals(page);
+  }, [page]);
 
   const updateField = (key, value) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -91,7 +97,8 @@ export default function AdminFutsals() {
       }
 
       resetForm();
-      loadFutsals();
+      setPage(0);
+      loadFutsals(0);
     } catch (err) {
       setAlert(err.message);
     } finally {
@@ -120,7 +127,7 @@ export default function AdminFutsals() {
     try {
       await FutsalAPI.delete(id);
       showToast('Futsal deleted', 'success');
-      loadFutsals();
+      loadFutsals(page);
     } catch (err) {
       showToast(err.message, 'error');
     }
@@ -229,7 +236,7 @@ export default function AdminFutsals() {
           <div className="card">
             <div className="card-header">
               <h3>All Futsals</h3>
-              <button onClick={loadFutsals} className="btn btn-secondary btn-sm">🔄 Refresh</button>
+              <button onClick={() => loadFutsals(page)} className="btn btn-secondary btn-sm">🔄 Refresh</button>
             </div>
 
             {loading ? (
@@ -237,33 +244,36 @@ export default function AdminFutsals() {
             ) : futsals.length === 0 ? (
               <div className="empty-state"><div className="icon">📭</div><h3>No futsals found</h3><p>Add your first futsal using the form.</p></div>
             ) : (
-              <div className="table-wrap">
-                <table>
-                  <thead>
-                    <tr><th>Name</th><th>Address</th><th>City</th><th>Phone</th><th>Open</th><th>Price/hr</th><th>Actions</th></tr>
-                  </thead>
-                  <tbody>
-                    {futsals.map((f) => (
-                      <tr key={f.futsalId}>
-                        <td className="fw-bold">{f.name}</td>
-                        <td className="text-muted text-sm">{f.address}</td>
-                        <td>{f.city}</td>
-                        <td>{f.phone}</td>
-                        <td>{f.openingTime ? formatTime(f.openingTime) : '—'}</td>
-                        <td>NPR {f.hourlyPrice ?? '—'}</td>
-                        <td>
-                          <div style={{ display: 'flex', gap: 6 }}>
-                            <button className="btn btn-secondary btn-sm" onClick={() => editFutsal(f)}>✏️ Edit</button>
-                            <button className="btn btn-danger btn-sm" onClick={() => deleteFutsal(f.futsalId)}>🗑️</button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+               <div className="table-wrap">
+                 <table>
+                   <thead>
+                     <tr><th>Name</th><th>Address</th><th>City</th><th>Phone</th><th>Open</th><th>Price/hr</th><th>Actions</th></tr>
+                   </thead>
+                   <tbody>
+                     {futsals.map((f) => (
+                       <tr key={f.futsalId}>
+                         <td className="fw-bold">{f.name}</td>
+                         <td className="text-muted text-sm">{f.address}</td>
+                         <td>{f.city}</td>
+                         <td>{f.phone}</td>
+                         <td>{f.openingTime ? formatTime(f.openingTime) : '—'}</td>
+                         <td>NPR {f.hourlyPrice ?? '—'}</td>
+                         <td>
+                           <div style={{ display: 'flex', gap: 6 }}>
+                             <button className="btn btn-secondary btn-sm" onClick={() => editFutsal(f)}>✏️ Edit</button>
+                             <button className="btn btn-danger btn-sm" onClick={() => deleteFutsal(f.futsalId)}>🗑️</button>
+                           </div>
+                         </td>
+                       </tr>
+                     ))}
+                   </tbody>
+                 </table>
+               </div>
+             )}
+             {!loading && futsals.length > 0 && (
+              <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
             )}
-          </div>
+           </div>
         </div>
       </div>
     </>

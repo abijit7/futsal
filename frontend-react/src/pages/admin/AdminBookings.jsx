@@ -4,6 +4,7 @@ import { formatDate, formatDateTime, formatTime } from '../../utils/format.js';
 import StatusBadge from '../../components/StatusBadge.jsx';
 import { useToast } from '../../components/ToastProvider.jsx';
 import { useConfirm } from '../../components/ConfirmProvider.jsx';
+import Pagination from '../../components/Pagination.jsx';
 
 const filters = ['ALL', 'PENDING', 'APPROVED', 'REJECTED', 'CANCELLED'];
 
@@ -13,12 +14,21 @@ export default function AdminBookings() {
   const [loading, setLoading] = useState(true);
   const [bookings, setBookings] = useState([]);
   const [filter, setFilter] = useState('ALL');
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const pageSize = 10;
 
-  const loadBookings = async () => {
+  const loadBookings = async (targetPage = page, statusFilter = filter) => {
     setLoading(true);
     try {
-      const data = await BookingAPI.getAll();
-      setBookings(data || []);
+      const params = { page: targetPage, size: pageSize };
+      if (statusFilter && statusFilter !== 'ALL') {
+        params.status = statusFilter;
+      }
+      const data = await BookingAPI.getAll(params);
+      const items = data?.items ?? data ?? [];
+      setBookings(items);
+      setTotalPages(data?.totalPages ?? (items.length > 0 ? 1 : 0));
     } catch (err) {
       showToast(err.message, 'error');
     } finally {
@@ -27,8 +37,8 @@ export default function AdminBookings() {
   };
 
   useEffect(() => {
-    loadBookings();
-  }, []);
+    loadBookings(page, filter);
+  }, [page, filter]);
 
   const updateStatus = async (bookingId, status) => {
     const label = status === 'APPROVED' ? 'approve' : 'reject';
@@ -37,7 +47,7 @@ export default function AdminBookings() {
     try {
       await BookingAPI.updateStatus(bookingId, status);
       showToast(`Booking ${status.toLowerCase()} successfully`, 'success');
-      loadBookings();
+      loadBookings(page, filter);
     } catch (err) {
       showToast(err.message, 'error');
     }
@@ -49,13 +59,11 @@ export default function AdminBookings() {
     try {
       await BookingAPI.delete(bookingId);
       showToast('Booking deleted', 'success');
-      loadBookings();
+      loadBookings(page, filter);
     } catch (err) {
       showToast(err.message, 'error');
     }
   };
-
-  const filtered = filter === 'ALL' ? bookings : bookings.filter((b) => b.status === filter);
 
   return (
     <>
@@ -69,7 +77,10 @@ export default function AdminBookings() {
       <div className="container page-wrap">
         <div className="tabs-nav mb-3">
           {filters.map((f) => (
-            <button key={f} className={`tab-btn ${filter === f ? 'active' : ''}`} onClick={() => setFilter(f)}>
+            <button key={f} className={`tab-btn ${filter === f ? 'active' : ''}`} onClick={() => {
+              setFilter(f);
+              setPage(0);
+            }}>
               {f === 'ALL' ? 'All' : f}
             </button>
           ))}
@@ -78,12 +89,12 @@ export default function AdminBookings() {
         <div className="card">
           <div className="card-header">
             <h2>All Bookings</h2>
-            <button onClick={loadBookings} className="btn btn-secondary btn-sm">🔄 Refresh</button>
+            <button onClick={() => loadBookings(page, filter)} className="btn btn-secondary btn-sm">🔄 Refresh</button>
           </div>
 
           {loading ? (
             <div className="loading-wrap"><div className="spinner"></div><p>Loading bookings...</p></div>
-          ) : filtered.length === 0 ? (
+          ) : bookings.length === 0 ? (
             <div className="empty-state"><div className="icon">📭</div><h3>No bookings found</h3><p>No bookings in this category.</p></div>
           ) : (
             <div className="table-wrap">
@@ -104,7 +115,7 @@ export default function AdminBookings() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((b, i) => {
+                  {bookings.map((b, i) => {
                     const isPending = b.status === 'PENDING';
                     const paymentInfo = b.paymentMethod ? `${b.paymentMethod} • ${b.paymentRef}` : '—';
                     return (
@@ -140,9 +151,11 @@ export default function AdminBookings() {
               </table>
             </div>
           )}
+          {!loading && bookings.length > 0 && (
+            <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+          )}
         </div>
       </div>
     </>
   );
 }
-

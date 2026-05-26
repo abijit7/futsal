@@ -4,6 +4,7 @@ import { SlotAPI } from '../../api/slot.js';
 import { calculateDuration, formatDate, formatTime } from '../../utils/format.js';
 import { useToast } from '../../components/ToastProvider.jsx';
 import { useConfirm } from '../../components/ConfirmProvider.jsx';
+import Pagination from '../../components/Pagination.jsx';
 
 export default function AdminSlots() {
   const { showToast } = useToast();
@@ -16,27 +17,37 @@ export default function AdminSlots() {
   const [form, setForm] = useState({ slotDate: '', startTime: '', endTime: '', futsalId: '' });
   const [alert, setAlert] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const pageSize = 10;
 
   const todayStr = new Date().toISOString().split('T')[0];
 
   const loadFutsals = async () => {
     try {
-      const data = await FutsalAPI.getAll();
-      setFutsals(data || []);
-      if (data && data.length > 0 && !selectedFutsalId) {
-        setSelectedFutsalId(data[0].futsalId);
-        setForm((prev) => ({ ...prev, futsalId: data[0].futsalId }));
+      const data = await FutsalAPI.getAll({ page: 0, size: 200 });
+      const items = data?.items ?? data ?? [];
+      setFutsals(items);
+      if (items.length > 0 && !selectedFutsalId) {
+        setSelectedFutsalId(items[0].futsalId);
+        setForm((prev) => ({ ...prev, futsalId: items[0].futsalId }));
       }
     } catch (err) {
       showToast(`Failed to load futsals: ${err.message}`, 'error');
     }
   };
 
-  const loadSlots = async () => {
+  const loadSlots = async (targetPage = page) => {
     try {
       setLoading(true);
-      const data = await SlotAPI.getAll(selectedFutsalId);
-      setSlots(data || []);
+      const params = { page: targetPage, size: pageSize };
+      if (selectedFutsalId) {
+        params.futsalId = selectedFutsalId;
+      }
+      const data = await SlotAPI.getAll(params);
+      const items = data?.items ?? data ?? [];
+      setSlots(items);
+      setTotalPages(data?.totalPages ?? (items.length > 0 ? 1 : 0));
     } catch (err) {
       showToast(err.message, 'error');
     } finally {
@@ -50,9 +61,9 @@ export default function AdminSlots() {
 
   useEffect(() => {
     if (selectedFutsalId !== null) {
-      loadSlots();
+      loadSlots(page);
     }
-  }, [selectedFutsalId]);
+  }, [selectedFutsalId, page]);
 
   const resetForm = () => {
     setEditingId(null);
@@ -82,7 +93,8 @@ export default function AdminSlots() {
         showToast('Slot added successfully ✅', 'success');
       }
       resetForm();
-      loadSlots();
+      setPage(0);
+      loadSlots(0);
     } catch (err) {
       setAlert(err.message);
     } finally {
@@ -106,7 +118,7 @@ export default function AdminSlots() {
     try {
       await SlotAPI.delete(slotId);
       showToast('Slot deleted', 'success');
-      loadSlots();
+      loadSlots(page);
     } catch (err) {
       showToast(err.message, 'error');
     }
@@ -173,14 +185,17 @@ export default function AdminSlots() {
                   className="form-control"
                   style={{ minWidth: 220 }}
                   value={selectedFutsalId || ''}
-                  onChange={(e) => setSelectedFutsalId(e.target.value ? parseInt(e.target.value, 10) : null)}
+                  onChange={(e) => {
+                    setSelectedFutsalId(e.target.value ? parseInt(e.target.value, 10) : null);
+                    setPage(0);
+                  }}
                 >
                   <option value="">All Futsals</option>
                   {futsals.map((f) => (
                     <option key={f.futsalId} value={f.futsalId}>{f.name} — {f.city}</option>
                   ))}
                 </select>
-                <button onClick={loadSlots} className="btn btn-secondary btn-sm">🔄 Refresh</button>
+                <button onClick={() => loadSlots(page)} className="btn btn-secondary btn-sm">🔄 Refresh</button>
               </div>
             </div>
 
@@ -220,10 +235,12 @@ export default function AdminSlots() {
                 </table>
               </div>
             )}
+            {!loading && slots.length > 0 && (
+              <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+            )}
           </div>
         </div>
       </div>
     </>
   );
 }
-

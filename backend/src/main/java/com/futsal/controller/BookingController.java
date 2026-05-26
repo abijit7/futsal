@@ -4,11 +4,14 @@ import com.futsal.model.Booking;
 import com.futsal.model.enums.BookingStatus;
 import com.futsal.service.BookingService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.futsal.dto.PagedResponse;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -36,15 +39,37 @@ public class BookingController {
 
     // GET /api/bookings — all bookings (admin)
     @GetMapping
-    public ResponseEntity<List<Booking>> getAllBookings() {
-        return ResponseEntity.ok(bookingService.getAllBookings());
+    public ResponseEntity<?> getAllBookings(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String status
+    ) {
+        try {
+            Pageable pageable = PageRequest.of(page, size);
+            Page<Booking> result;
+            if (status != null && !status.isBlank() && !"ALL".equalsIgnoreCase(status)) {
+                BookingStatus parsed = BookingStatus.valueOf(status.toUpperCase());
+                result = bookingService.getBookingsByStatus(parsed, pageable);
+            } else {
+                result = bookingService.getAllBookings(pageable);
+            }
+            return ResponseEntity.ok(PagedResponse.fromPage(result));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(errorMap("Invalid status value"));
+        }
     }
 
     // GET /api/bookings/user/{userId} — bookings for a specific user
     @GetMapping("/user/{userId}")
-    public ResponseEntity<?> getBookingsByUser(@PathVariable Long userId) {
+    public ResponseEntity<?> getBookingsByUser(
+            @PathVariable Long userId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
         try {
-            return ResponseEntity.ok(bookingService.getBookingsByUser(userId));
+            Pageable pageable = PageRequest.of(page, size);
+            Page<Booking> result = bookingService.getBookingsByUser(userId, pageable);
+            return ResponseEntity.ok(PagedResponse.fromPage(result));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(errorMap(e.getMessage()));
         }

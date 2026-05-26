@@ -4,11 +4,14 @@ import com.futsal.model.Futsal;
 import com.futsal.service.FutsalService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.futsal.dto.PagedResponse;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -20,8 +23,13 @@ public class FutsalController {
     private FutsalService futsalService;
 
     @GetMapping
-    public ResponseEntity<List<Futsal>> getAll() {
-        return ResponseEntity.ok(futsalService.getAll());
+    public ResponseEntity<PagedResponse<Futsal>> getAll(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "12") int size
+    ) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Futsal> result = futsalService.getAll(pageable);
+        return ResponseEntity.ok(PagedResponse.fromPage(result));
     }
 
     @GetMapping("/{id}")
@@ -69,4 +77,3 @@ public class FutsalController {
         return map;
     }
 }
-

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FutsalAPI } from '../api/futsal.js';
 import { SlotAPI } from '../api/slot.js';
@@ -6,8 +6,8 @@ import { PaymentAPI } from '../api/payment.js';
 import { Auth } from '../utils/auth.js';
 import { FutsalStore } from '../utils/futsalStore.js';
 import { calculateDuration, formatDate, formatTime } from '../utils/format.js';
-import LoadingWrap from '../components/LoadingWrap.jsx';
 import EmptyState from '../components/EmptyState.jsx';
+import Pagination from '../components/Pagination.jsx';
 import { useToast } from '../components/ToastProvider.jsx';
 
 export default function Slots() {
@@ -21,6 +21,9 @@ export default function Slots() {
   const [slots, setSlots] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dateFilter, setDateFilter] = useState(todayStr);
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const pageSize = 12;
 
   const [bookingModalOpen, setBookingModalOpen] = useState(false);
   const [selectedSlotId, setSelectedSlotId] = useState(null);
@@ -32,14 +35,15 @@ export default function Slots() {
   useEffect(() => {
     const loadFutsals = async () => {
       try {
-        const data = await FutsalAPI.getAll();
-        setFutsals(data || []);
-        if (!data || data.length === 0) {
+        const data = await FutsalAPI.getAll({ page: 0, size: 200 });
+        const items = data?.items ?? data ?? [];
+        setFutsals(items);
+        if (items.length === 0) {
           setLoading(false);
           return;
         }
         const stored = FutsalStore.get();
-        const initialId = stored?.futsalId || data[0].futsalId;
+        const initialId = stored?.futsalId || items[0].futsalId;
         setSelectedFutsalId(initialId);
       } catch (err) {
         showToast(`Failed to load futsals: ${err.message}`, 'error');
@@ -54,8 +58,14 @@ export default function Slots() {
       if (!selectedFutsalId) return;
       try {
         setLoading(true);
-        const data = await SlotAPI.getAvailable(selectedFutsalId);
-        setSlots(data || []);
+        const params = { futsalId: selectedFutsalId, page, size: pageSize };
+        if (dateFilter) {
+          params.slotDate = dateFilter;
+        }
+        const data = await SlotAPI.getAvailable(params);
+        const items = data?.items ?? data ?? [];
+        setSlots(items);
+        setTotalPages(data?.totalPages ?? (items.length > 0 ? 1 : 0));
       } catch (err) {
         showToast(`Failed to load slots: ${err.message}`, 'error');
       } finally {
@@ -63,15 +73,11 @@ export default function Slots() {
       }
     };
     loadSlots();
-  }, [selectedFutsalId, showToast]);
-
-  const filteredSlots = useMemo(() => {
-    if (!dateFilter) return slots;
-    return slots.filter((s) => s.slotDate === dateFilter);
-  }, [slots, dateFilter]);
+  }, [selectedFutsalId, dateFilter, page, showToast]);
 
   const toggleShowAll = () => {
     setDateFilter((prev) => (prev ? '' : todayStr));
+    setPage(0);
   };
 
   const openBookingModal = (slotId) => {
@@ -101,8 +107,15 @@ export default function Slots() {
       await PaymentAPI.confirm(user.userId, selectedSlotId, bookingNotes, paymentMethod);
       showToast(`Payment successful via ${paymentMethod}. Booking submitted! ✅`, 'success');
       closeModal();
-      const data = await SlotAPI.getAvailable(selectedFutsalId);
-      setSlots(data || []);
+      const params = { futsalId: selectedFutsalId, page: 0, size: pageSize };
+      if (dateFilter) {
+        params.slotDate = dateFilter;
+      }
+      const data = await SlotAPI.getAvailable(params);
+      const items = data?.items ?? data ?? [];
+      setSlots(items);
+      setTotalPages(data?.totalPages ?? (items.length > 0 ? 1 : 0));
+      setPage(0);
     } catch (err) {
       setBookingError(err.message);
     } finally {
@@ -123,13 +136,13 @@ export default function Slots() {
 
       <div className="container page-wrap">
         {isGuest && (
-          <div className="card mb-3" style={{ borderColor: 'var(--border2)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+          <div className="card mb-3 guest-cta">
+            <div className="guest-cta__content">
               <div>
                 <div className="fw-bold">Login to book</div>
                 <div className="text-muted text-sm">You can browse slots as a guest, but booking requires an account.</div>
               </div>
-              <button className="btn btn-primary" onClick={() => navigate('/login')}>Login</button>
+              <button className="btn btn-primary btn-lg" onClick={() => navigate('/login')}>Login</button>
             </div>
           </div>
         )}
@@ -143,6 +156,7 @@ export default function Slots() {
                 onChange={(e) => {
                   const value = e.target.value ? parseInt(e.target.value, 10) : null;
                   setSelectedFutsalId(value);
+                  setPage(0);
                   if (value) {
                     const label = e.target.options[e.target.selectedIndex]?.text || '';
                     FutsalStore.save({ futsalId: value, name: label });
@@ -161,7 +175,10 @@ export default function Slots() {
                 type="date"
                 className="form-control"
                 value={dateFilter}
-                onChange={(e) => setDateFilter(e.target.value)}
+                onChange={(e) => {
+                  setDateFilter(e.target.value);
+                  setPage(0);
+                }}
                 style={{ maxWidth: 220 }}
               />
             </div>
@@ -177,15 +194,27 @@ export default function Slots() {
           <EmptyState icon="🏟️" title="Select a futsal to view slots" description="Choose a futsal to continue." />
         )}
 
-        {loading && <LoadingWrap message="Loading available slots..." />}
+        {loading && selectedFutsalId && (
+          <div className="slots-grid">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <div className="slot-card skeleton-card" key={`slot-skel-${index}`} aria-hidden="true">
+                <div className="skeleton skeleton-line lg"></div>
+                <div className="skeleton skeleton-line"></div>
+                <div className="skeleton skeleton-line sm"></div>
+                <div className="skeleton skeleton-line"></div>
+                <div className="skeleton skeleton-button"></div>
+              </div>
+            ))}
+          </div>
+        )}
 
-        {!loading && selectedFutsalId && filteredSlots.length === 0 && (
+        {!loading && selectedFutsalId && slots.length === 0 && (
           <EmptyState icon="📭" title="No slots available" description="There are no available slots at the moment. Please check back later." />
         )}
 
-        {!loading && filteredSlots.length > 0 && (
+        {!loading && slots.length > 0 && (
           <div className="slots-grid">
-            {filteredSlots.map((slot) => (
+            {slots.map((slot) => (
               <div className="slot-card" key={slot.slotId}>
                 <div className="slot-date">📅 {formatDate(slot.slotDate)}</div>
                 <div className="slot-time">{formatTime(slot.startTime)} – {formatTime(slot.endTime)}</div>
@@ -197,6 +226,10 @@ export default function Slots() {
               </div>
             ))}
           </div>
+        )}
+
+        {!loading && slots.length > 0 && (
+          <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
         )}
       </div>
 

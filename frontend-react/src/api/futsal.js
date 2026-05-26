@@ -1,7 +1,7 @@
-import { apiFetch, apiUpload, API_URL } from './client.js';
+import { apiFetch, apiUpload, API_URL, withQuery } from './client.js';
 
 export const FutsalAPI = {
-  getAll:  () => apiFetch('/futsals'),
+  getAll:  (params = {}) => apiFetch(withQuery('/futsals', params)),
   getById: (id) => apiFetch(`/futsals/${id}`),
   add:     (futsal) => apiFetch('/futsals', { method: 'POST', body: JSON.stringify(futsal) }),
   update:  (id, futsal) => apiFetch(`/futsals/${id}`, { method: 'PUT', body: JSON.stringify(futsal) }),
