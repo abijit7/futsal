@@ -13,6 +13,7 @@ public class FutsalApplication {
     public static void main(String[] args) {
         SpringApplication.run(FutsalApplication.class, args);
         System.out.println("git test");
+        System.out.println("added react");
     }
 
     // Bootstrap an admin account on startup for development convenience.
