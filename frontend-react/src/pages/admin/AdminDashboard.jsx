@@ -20,13 +20,13 @@ export default function AdminDashboard() {
 
   const loadDashboard = async () => {
     try {
-      const [slotPage, availablePage, bookingPage, pendingPage, approvedPage, users] = await Promise.all([
+      const [slotPage, availablePage, bookingPage, pendingPage, approvedPage, usersPage] = await Promise.all([
         SlotAPI.getAll({ page: 0, size: 1 }),
         SlotAPI.getAvailable({ page: 0, size: 1 }),
         BookingAPI.getAll({ page: 0, size: 1 }),
         BookingAPI.getAll({ page: 0, size: 8, status: 'PENDING' }),
         BookingAPI.getAll({ page: 0, size: 1, status: 'APPROVED' }),
-        UserAPI.getAll()
+        UserAPI.getAll({ page: 0, size: 1 })
       ]);
 
       const totalSlots = slotPage?.totalItems ?? slotPage?.items?.length ?? slotPage?.length ?? 0;
@@ -35,6 +35,7 @@ export default function AdminDashboard() {
       const pending = pendingPage?.totalItems ?? pendingPage?.items?.length ?? pendingPage?.length ?? 0;
       const approved = approvedPage?.totalItems ?? approvedPage?.items?.length ?? approvedPage?.length ?? 0;
       const pendingItems = pendingPage?.items ?? pendingPage ?? [];
+      const totalUsers = usersPage?.totalItems ?? usersPage?.items?.length ?? usersPage?.length ?? 0;
 
       setStats({
         totalSlots,
@@ -42,7 +43,7 @@ export default function AdminDashboard() {
         totalBookings,
         pending,
         approved,
-        totalUsers: users.filter((u) => u.role === 'USER').length
+        totalUsers
       });
 
       setPendingBookings(pendingItems.slice(0, 8));

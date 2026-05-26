@@ -1,5 +1,16 @@
+import { Auth } from '../utils/auth.js';
+
 export const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8080';
 export const API_URL = import.meta.env.VITE_API_URL || `${API_BASE}/api`;
+export const ADMIN_TOKEN = import.meta.env.VITE_ADMIN_TOKEN || '';
+
+function buildHeaders(extra = {}) {
+  const headers = { 'Content-Type': 'application/json', ...extra };
+  if (Auth.isAdmin() && ADMIN_TOKEN) {
+    headers['X-Admin-Token'] = ADMIN_TOKEN;
+  }
+  return headers;
+}
 
 export function withQuery(endpoint, params = {}) {
   const query = new URLSearchParams();
@@ -15,7 +26,7 @@ export function withQuery(endpoint, params = {}) {
 export async function apiFetch(endpoint, options = {}) {
   try {
     const res = await fetch(`${API_URL}${endpoint}`, {
-      headers: { 'Content-Type': 'application/json', ...options.headers },
+      headers: buildHeaders(options.headers),
       ...options
     });
     const text = await res.text();
@@ -33,6 +44,7 @@ export async function apiUpload(endpoint, file) {
     formData.append('file', file);
     const res = await fetch(`${API_URL}${endpoint}`, {
       method: 'POST',
+      headers: Auth.isAdmin() && ADMIN_TOKEN ? { 'X-Admin-Token': ADMIN_TOKEN } : undefined,
       body: formData
     });
     const data = await res.json();
@@ -42,4 +54,3 @@ export async function apiUpload(endpoint, file) {
     throw new Error(err.message || 'Upload failed');
   }
 }
-

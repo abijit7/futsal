@@ -3,6 +3,7 @@ import { UserAPI } from '../../api/user.js';
 import { formatDateTime } from '../../utils/format.js';
 import { useToast } from '../../components/ToastProvider.jsx';
 import { useConfirm } from '../../components/ConfirmProvider.jsx';
+import Pagination from '../../components/Pagination.jsx';
 
 export default function AdminUsers() {
   const { showToast } = useToast();
@@ -10,12 +11,17 @@ export default function AdminUsers() {
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState([]);
   const [query, setQuery] = useState('');
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const pageSize = 10;
 
-  const loadUsers = async () => {
+  const loadUsers = async (targetPage = page) => {
     setLoading(true);
     try {
-      const data = await UserAPI.getAll();
-      setUsers(data || []);
+      const data = await UserAPI.getAll({ page: targetPage, size: pageSize });
+      const items = data?.items ?? data ?? [];
+      setUsers(items);
+      setTotalPages(data?.totalPages ?? (items.length > 0 ? 1 : 0));
     } catch (err) {
       showToast(err.message, 'error');
     } finally {
@@ -24,8 +30,8 @@ export default function AdminUsers() {
   };
 
   useEffect(() => {
-    loadUsers();
-  }, []);
+    loadUsers(page);
+  }, [page]);
 
   const deleteUser = async (userId, name) => {
     const ok = await confirm(`Delete user "${name}"? This will also delete their bookings.`);
@@ -82,7 +88,7 @@ export default function AdminUsers() {
                 <tbody>
                   {filtered.map((u, i) => (
                     <tr key={u.userId}>
-                      <td className="text-muted text-sm">{i + 1}</td>
+                      <td className="text-muted text-sm">{page * pageSize + i + 1}</td>
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                           <div className="nav-avatar">{u.name.charAt(0).toUpperCase()}</div>
@@ -110,9 +116,11 @@ export default function AdminUsers() {
               </table>
             </div>
           )}
+          {!loading && filtered.length > 0 && (
+            <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+          )}
         </div>
       </div>
     </>
   );
 }
-
