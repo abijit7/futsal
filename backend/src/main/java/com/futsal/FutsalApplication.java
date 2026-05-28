@@ -14,6 +14,7 @@ public class FutsalApplication {
         SpringApplication.run(FutsalApplication.class, args);
         System.out.println("git test");
         System.out.println("added react");
+        System.out.println("project reset");
     }
 
     // Bootstrap an admin account on startup for development convenience.
