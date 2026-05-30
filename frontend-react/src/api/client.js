@@ -6,6 +6,10 @@ export const ADMIN_TOKEN = import.meta.env.VITE_ADMIN_TOKEN || '';
 
 function buildHeaders(extra = {}) {
   const headers = { 'Content-Type': 'application/json', ...extra };
+  const user = Auth.get();
+  if (user?.userId) {
+    headers['X-User-Id'] = String(user.userId);
+  }
   if (Auth.isAdmin() && ADMIN_TOKEN) {
     headers['X-Admin-Token'] = ADMIN_TOKEN;
   }
