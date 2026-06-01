@@ -1,8 +1,11 @@
 package com.futsal.dto;
 
 import com.futsal.model.Booking;
+import com.futsal.model.BookingStatusHistory;
 import com.futsal.model.Futsal;
+import com.futsal.model.FutsalImage;
 import com.futsal.model.TimeSlot;
+import com.futsal.model.TimeSlotStatusHistory;
 import com.futsal.model.User;
 
 public class DtoMapper {
@@ -24,6 +27,9 @@ public class DtoMapper {
         dto.setOpeningTime(futsal.getOpeningTime());
         dto.setImageUrl(futsal.getImageUrl());
         dto.setImageUrls(futsal.getImageUrls());
+        if (futsal.getImages() != null) {
+            dto.setImages(futsal.getImages().stream().map(DtoMapper::toFutsalImageResponse).toList());
+        }
         dto.setDescription(futsal.getDescription());
         dto.setCreatedAt(futsal.getCreatedAt());
         return dto;
@@ -51,6 +57,9 @@ public class DtoMapper {
         dto.setEndTime(slot.getEndTime());
         dto.setAvailable(slot.isAvailable());
         dto.setFutsal(toFutsalSummary(slot.getFutsal()));
+        if (slot.getStatusHistory() != null) {
+            dto.setStatusHistory(slot.getStatusHistory().stream().map(DtoMapper::toTimeSlotStatusHistoryResponse).toList());
+        }
         return dto;
     }
 
@@ -108,6 +117,47 @@ public class DtoMapper {
         dto.setNotes(booking.getNotes());
         dto.setUser(toUserSummary(booking.getUser()));
         dto.setTimeSlot(toTimeSlotSummary(booking.getTimeSlot()));
+        if (booking.getStatusHistory() != null) {
+            dto.setStatusHistory(booking.getStatusHistory().stream().map(DtoMapper::toBookingStatusHistoryResponse).toList());
+        }
+        return dto;
+    }
+
+    public static FutsalImageResponse toFutsalImageResponse(FutsalImage image) {
+        if (image == null) {
+            return null;
+        }
+        FutsalImageResponse dto = new FutsalImageResponse();
+        dto.setImageId(image.getImageId());
+        dto.setImageUrl(image.getImageUrl());
+        dto.setSortOrder(image.getSortOrder());
+        dto.setCover(image.isCover());
+        dto.setCaption(image.getCaption());
+        dto.setCreatedAt(image.getCreatedAt());
+        return dto;
+    }
+
+    public static BookingStatusHistoryResponse toBookingStatusHistoryResponse(BookingStatusHistory history) {
+        if (history == null) {
+            return null;
+        }
+        BookingStatusHistoryResponse dto = new BookingStatusHistoryResponse();
+        dto.setStatus(history.getStatus());
+        dto.setChangedAt(history.getChangedAt());
+        dto.setChangedBy(history.getChangedBy());
+        dto.setNote(history.getNote());
+        return dto;
+    }
+
+    public static TimeSlotStatusHistoryResponse toTimeSlotStatusHistoryResponse(TimeSlotStatusHistory history) {
+        if (history == null) {
+            return null;
+        }
+        TimeSlotStatusHistoryResponse dto = new TimeSlotStatusHistoryResponse();
+        dto.setAvailable(history.isAvailable());
+        dto.setChangedAt(history.getChangedAt());
+        dto.setChangedBy(history.getChangedBy());
+        dto.setNote(history.getNote());
         return dto;
     }
 }

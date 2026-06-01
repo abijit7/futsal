@@ -14,6 +14,7 @@ public class BookingResponse {
     private String notes;
     private UserSummary user;
     private TimeSlotSummary timeSlot;
+    private java.util.List<BookingStatusHistoryResponse> statusHistory;
 
     public Long getBookingId() { return bookingId; }
     public void setBookingId(Long bookingId) { this.bookingId = bookingId; }
@@ -41,5 +42,8 @@ public class BookingResponse {
 
     public TimeSlotSummary getTimeSlot() { return timeSlot; }
     public void setTimeSlot(TimeSlotSummary timeSlot) { this.timeSlot = timeSlot; }
+
+    public java.util.List<BookingStatusHistoryResponse> getStatusHistory() { return statusHistory; }
+    public void setStatusHistory(java.util.List<BookingStatusHistoryResponse> statusHistory) { this.statusHistory = statusHistory; }
 }
 

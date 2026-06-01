@@ -1,6 +1,7 @@
 package com.futsal.service;
 
 import com.futsal.model.Futsal;
+import com.futsal.model.FutsalImage;
 import com.futsal.repository.FutsalRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -46,23 +47,31 @@ public class FutsalService {
     private void syncImages(Futsal target, Futsal source) {
         List<String> urls = source.getImageUrls();
         String single = source.getImageUrl();
+        List<String> resolved = new ArrayList<>();
 
         if (urls != null && !urls.isEmpty()) {
-            target.setImageUrls(new ArrayList<>(urls));
-            target.setImageUrl(urls.get(0));
-            return;
+            resolved.addAll(urls);
+        } else if (single != null && !single.isBlank()) {
+            resolved.add(single);
         }
 
-        if (single != null && !single.isBlank()) {
-            List<String> list = new ArrayList<>();
-            list.add(single);
-            target.setImageUrls(list);
-            target.setImageUrl(single);
-            return;
+        target.getImages().clear();
+        int order = 0;
+        for (String url : resolved) {
+            if (url == null || url.isBlank()) {
+                continue;
+            }
+            boolean cover = order == 0;
+            FutsalImage image = new FutsalImage(target, url.trim(), order, cover);
+            target.getImages().add(image);
+            order++;
         }
 
-        target.setImageUrls(new ArrayList<>());
-        target.setImageUrl(null);
+        if (!target.getImages().isEmpty()) {
+            target.setImageUrl(target.getImages().get(0).getImageUrl());
+        } else {
+            target.setImageUrl(null);
+        }
     }
 
     public void delete(Long id) {

@@ -8,6 +8,7 @@ import com.futsal.dto.UserResponse;
 import com.futsal.dto.UserUpdateRequest;
 import com.futsal.model.User;
 import com.futsal.service.UserService;
+import com.futsal.security.SimpleAuth;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -57,44 +58,58 @@ public class UserController {
 
     // GET /api/users (admin)
     @GetMapping
-    public ResponseEntity<PagedResponse<UserResponse>> getAllUsers(
+    public ResponseEntity<?> getAllUsers(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size
+            @RequestParam(defaultValue = "10") int size,
+            @RequestHeader(value = "X-Admin-Token", required = false) String adminHeader
     ) {
-        Pageable pageable = PageRequest.of(page, size);
-        Page<UserResponse> result = userService.getAllUsers(pageable).map(DtoMapper::toUserResponse);
-        return ResponseEntity.ok(PagedResponse.fromPage(result));
+        try {
+            SimpleAuth.requireAdmin(adminHeader);
+            Pageable pageable = PageRequest.of(page, size);
+            Page<UserResponse> result = userService.getAllUsers(pageable).map(DtoMapper::toUserResponse);
+            return ResponseEntity.ok(PagedResponse.fromPage(result));
+        } catch (RuntimeException e) {
+            return toErrorResponse(e);
+        }
     }
 
     // GET /api/users/{id}
     @GetMapping("/{id}")
-    public ResponseEntity<?> getUserById(@PathVariable Long id) {
+    public ResponseEntity<?> getUserById(@PathVariable Long id,
+                                         @RequestHeader(value = "X-User-Id", required = false) String userHeader,
+                                         @RequestHeader(value = "X-Admin-Token", required = false) String adminHeader) {
         try {
+            SimpleAuth.requireUserOrAdmin(id, userHeader, adminHeader);
             return ResponseEntity.ok(DtoMapper.toUserResponse(userService.getUserById(id)));
         } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(errorMap(e.getMessage()));
+            return toErrorResponse(e);
         }
     }
 
     // PUT /api/users/{id}
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateUser(@PathVariable Long id, @Valid @RequestBody UserUpdateRequest user) {
+    public ResponseEntity<?> updateUser(@PathVariable Long id, @Valid @RequestBody UserUpdateRequest user,
+                                        @RequestHeader(value = "X-User-Id", required = false) String userHeader,
+                                        @RequestHeader(value = "X-Admin-Token", required = false) String adminHeader) {
         try {
+            SimpleAuth.requireUserOrAdmin(id, userHeader, adminHeader);
             User updated = userService.updateUser(id, user);
             return ResponseEntity.ok(DtoMapper.toUserResponse(updated));
         } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(errorMap(e.getMessage()));
+            return toErrorResponse(e);
         }
     }
 
     // DELETE /api/users/{id} (admin)
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteUser(@PathVariable Long id) {
+    public ResponseEntity<?> deleteUser(@PathVariable Long id,
+                                        @RequestHeader(value = "X-Admin-Token", required = false) String adminHeader) {
         try {
+            SimpleAuth.requireAdmin(adminHeader);
             userService.deleteUser(id);
             return ResponseEntity.ok(successMap("User deleted successfully"));
         } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(errorMap(e.getMessage()));
+            return toErrorResponse(e);
         }
     }
 
@@ -109,6 +124,13 @@ public class UserController {
         Map<String, String> map = new HashMap<>();
         map.put("message", message);
         return map;
+    }
+
+    private ResponseEntity<?> toErrorResponse(RuntimeException e) {
+        if ("Admin authorization required".equals(e.getMessage()) || "User authorization required".equals(e.getMessage())) {
+            return ResponseEntity.status(401).body(errorMap(e.getMessage()));
+        }
+        return ResponseEntity.badRequest().body(errorMap(e.getMessage()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

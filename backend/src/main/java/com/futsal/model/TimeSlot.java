@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "time_slots")
@@ -33,6 +35,10 @@ public class TimeSlot {
     @Column(nullable = false)
     private boolean available = true;
 
+    @OneToMany(mappedBy = "timeSlot", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("changedAt ASC")
+    private List<TimeSlotStatusHistory> statusHistory = new ArrayList<>();
+
     // ── Constructors ──────────────────────────────────────────
     public TimeSlot() {}
 
@@ -61,4 +67,11 @@ public class TimeSlot {
 
     public boolean isAvailable()               { return available; }
     public void setAvailable(boolean available){ this.available = available; }
+
+    public List<TimeSlotStatusHistory> getStatusHistory() { return statusHistory; }
+    public void setStatusHistory(List<TimeSlotStatusHistory> statusHistory) { this.statusHistory = statusHistory; }
+
+    public void addStatusHistory(TimeSlotStatusHistory history) {
+        this.statusHistory.add(history);
+    }
 }

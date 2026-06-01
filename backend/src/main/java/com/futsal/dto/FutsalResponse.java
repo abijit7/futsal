@@ -14,6 +14,7 @@ public class FutsalResponse {
     private LocalTime openingTime;
     private String imageUrl;
     private List<String> imageUrls;
+    private List<FutsalImageResponse> images;
     private String description;
     private LocalDateTime createdAt;
 
@@ -43,6 +44,9 @@ public class FutsalResponse {
 
     public List<String> getImageUrls() { return imageUrls; }
     public void setImageUrls(List<String> imageUrls) { this.imageUrls = imageUrls; }
+
+    public List<FutsalImageResponse> getImages() { return images; }
+    public void setImages(List<FutsalImageResponse> images) { this.images = images; }
 
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }

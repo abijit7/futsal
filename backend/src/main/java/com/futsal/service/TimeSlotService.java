@@ -2,6 +2,7 @@ package com.futsal.service;
 
 import com.futsal.model.Futsal;
 import com.futsal.model.TimeSlot;
+import com.futsal.model.TimeSlotStatusHistory;
 import com.futsal.repository.FutsalRepository;
 import com.futsal.repository.TimeSlotRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -135,6 +136,7 @@ public class TimeSlotService {
             throw new RuntimeException("Slot overlaps with an existing slot for this futsal.");
         }
         slot.setAvailable(true);
+        slot.addStatusHistory(new TimeSlotStatusHistory(slot, true, "admin", "Slot created"));
         return timeSlotRepository.save(slot);
     }
 
@@ -169,6 +171,7 @@ public class TimeSlotService {
         existing.setSlotDate(updatedSlot.getSlotDate());
         existing.setStartTime(updatedSlot.getStartTime());
         existing.setEndTime(updatedSlot.getEndTime());
+        boolean previousAvailable = existing.isAvailable();
         existing.setAvailable(updatedSlot.isAvailable());
 
         boolean exists = timeSlotRepository
@@ -181,6 +184,11 @@ public class TimeSlotService {
                 );
         if (exists) {
             throw new RuntimeException("Slot overlaps with an existing slot for this futsal.");
+        }
+
+        if (previousAvailable != existing.isAvailable()) {
+            String note = existing.isAvailable() ? "Slot marked available" : "Slot marked unavailable";
+            existing.addStatusHistory(new TimeSlotStatusHistory(existing, existing.isAvailable(), "admin", note));
         }
 
         return timeSlotRepository.save(existing);
@@ -230,6 +238,7 @@ public class TimeSlotService {
             slot.setStartTime(t);
             slot.setEndTime(slotEnd);
             slot.setAvailable(true);
+            slot.addStatusHistory(new TimeSlotStatusHistory(slot, true, "system", "Auto-generated slot"));
             timeSlotRepository.save(slot);
         }
     }

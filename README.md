@@ -6,7 +6,7 @@ This project supports multi-venue booking: users choose a futsal venue first, th
 
 ### Backend (Spring Boot)
 
-- Configure MySQL credentials in `backend/src/main/resources/application.properties`.
+- Set database credentials via environment variables (`DB_USERNAME`, `DB_PASSWORD`).
 - Run the backend:
 
 ```bash

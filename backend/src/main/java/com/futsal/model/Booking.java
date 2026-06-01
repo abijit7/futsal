@@ -4,6 +4,8 @@ import com.futsal.model.enums.BookingStatus;
 import com.futsal.model.enums.PaymentMethod;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "bookings")
@@ -40,6 +42,10 @@ public class Booking {
 
     @Column(length = 500)
     private String notes;
+
+    @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("changedAt ASC")
+    private List<BookingStatusHistory> statusHistory = new ArrayList<>();
 
     // ── Constructors ──────────────────────────────────────────
     public Booking() {}
@@ -80,4 +86,11 @@ public class Booking {
 
     public String getNotes()                         { return notes; }
     public void setNotes(String notes)               { this.notes = notes; }
+
+    public List<BookingStatusHistory> getStatusHistory() { return statusHistory; }
+    public void setStatusHistory(List<BookingStatusHistory> statusHistory) { this.statusHistory = statusHistory; }
+
+    public void addStatusHistory(BookingStatusHistory history) {
+        this.statusHistory.add(history);
+    }
 }

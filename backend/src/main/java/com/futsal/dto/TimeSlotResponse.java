@@ -10,6 +10,7 @@ public class TimeSlotResponse {
     private LocalTime endTime;
     private boolean available;
     private FutsalSummary futsal;
+    private java.util.List<TimeSlotStatusHistoryResponse> statusHistory;
 
     public Long getSlotId() { return slotId; }
     public void setSlotId(Long slotId) { this.slotId = slotId; }
@@ -28,5 +29,9 @@ public class TimeSlotResponse {
 
     public FutsalSummary getFutsal() { return futsal; }
     public void setFutsal(FutsalSummary futsal) { this.futsal = futsal; }
+
+    public java.util.List<TimeSlotStatusHistoryResponse> getStatusHistory() { return statusHistory; }
+    public void setStatusHistory(java.util.List<TimeSlotStatusHistoryResponse> statusHistory) { this.statusHistory = statusHistory; }
 }
+
 

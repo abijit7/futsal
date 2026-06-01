@@ -54,9 +54,11 @@ public class Futsal {
     @Column(length = 300)
     private String imageUrl;
 
-    @ElementCollection
-    @CollectionTable(name = "futsal_images", joinColumns = @JoinColumn(name = "futsal_id"))
-    @Column(name = "image_url", length = 300)
+    @OneToMany(mappedBy = "futsal", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("sortOrder ASC")
+    private List<FutsalImage> images = new ArrayList<>();
+
+    @Transient
     private List<String> imageUrls = new ArrayList<>();
 
     @Size(max = 250, message = "Description must be up to 250 characters")
@@ -107,8 +109,16 @@ public class Futsal {
     public String getImageUrl()                { return imageUrl; }
     public void setImageUrl(String imageUrl)   { this.imageUrl = imageUrl; }
 
-    public List<String> getImageUrls()               { return imageUrls; }
-    public void setImageUrls(List<String> imageUrls) { this.imageUrls = imageUrls; }
+    public List<FutsalImage> getImages()                  { return images; }
+    public void setImages(List<FutsalImage> images)       { this.images = images; }
+
+    public List<String> getImageUrls() {
+        if (images != null && !images.isEmpty()) {
+            return images.stream().map(FutsalImage::getImageUrl).toList();
+        }
+        return imageUrls;
+    }
+    public void setImageUrls(List<String> imageUrls)      { this.imageUrls = imageUrls; }
 
     public String getDescription()               { return description; }
     public void setDescription(String description){ this.description = description; }

@@ -1,7 +1,9 @@
 package com.futsal.service;
 
 import com.futsal.model.Booking;
+import com.futsal.model.BookingStatusHistory;
 import com.futsal.model.TimeSlot;
+import com.futsal.model.TimeSlotStatusHistory;
 import com.futsal.model.User;
 import com.futsal.model.enums.BookingStatus;
 import com.futsal.model.enums.PaymentMethod;
@@ -54,12 +56,14 @@ public class BookingService {
             throw new RuntimeException("This slot is no longer available. Please choose another slot.");
         }
 
-        // Mark slot as unavailable
+        // Mark slot as unavailable and record history
         slot.setAvailable(false);
+        slot.addStatusHistory(new TimeSlotStatusHistory(slot, false, "user:" + userId, "Booked"));
         timeSlotRepository.save(slot);
 
         try {
             Booking booking = new Booking(user, slot, notes, paymentMethod, paymentRef);
+            booking.addStatusHistory(new BookingStatusHistory(booking, booking.getStatus(), "user:" + userId, "Booking created"));
             return bookingRepository.save(booking);
         } catch (DataIntegrityViolationException ex) {
             throw new RuntimeException("This slot was just booked by someone else. Please choose another slot.");
@@ -97,7 +101,7 @@ public class BookingService {
 
     // ── Update booking status (admin: approve/reject, user: cancel) ───────────
     @Transactional
-    public Booking updateStatus(Long bookingId, BookingStatus newStatus) {
+    public Booking updateStatus(Long bookingId, BookingStatus newStatus, String changedBy) {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new RuntimeException("Booking not found"));
 
@@ -112,10 +116,13 @@ public class BookingService {
         if (newStatus == BookingStatus.REJECTED || newStatus == BookingStatus.CANCELLED) {
             TimeSlot slot = booking.getTimeSlot();
             slot.setAvailable(true);
+            String note = newStatus == BookingStatus.CANCELLED ? "Booking cancelled" : "Booking rejected";
+            slot.addStatusHistory(new TimeSlotStatusHistory(slot, true, changedBy, note));
             timeSlotRepository.save(slot);
         }
 
         booking.setStatus(newStatus);
+        booking.addStatusHistory(new BookingStatusHistory(booking, newStatus, changedBy, "Status updated"));
         return bookingRepository.save(booking);
     }
 
