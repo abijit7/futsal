@@ -244,21 +244,21 @@ export default function AdminFutsals() {
             ) : futsals.length === 0 ? (
               <div className="empty-state"><div className="icon">📭</div><h3>No futsals found</h3><p>Add your first futsal using the form.</p></div>
             ) : (
-               <div className="table-wrap">
-                 <table>
+                <div className="table-wrap">
+                  <table className="responsive-table">
                    <thead>
                      <tr><th>Name</th><th>Address</th><th>City</th><th>Phone</th><th>Open</th><th>Price/hr</th><th>Actions</th></tr>
                    </thead>
                    <tbody>
                      {futsals.map((f) => (
-                       <tr key={f.futsalId}>
-                         <td className="fw-bold">{f.name}</td>
-                         <td className="text-muted text-sm">{f.address}</td>
-                         <td>{f.city}</td>
-                         <td>{f.phone}</td>
-                         <td>{f.openingTime ? formatTime(f.openingTime) : '—'}</td>
-                         <td>NPR {f.hourlyPrice ?? '—'}</td>
-                         <td>
+                        <tr key={f.futsalId}>
+                          <td className="fw-bold" data-label="Name">{f.name}</td>
+                          <td className="text-muted text-sm" data-label="Address">{f.address}</td>
+                          <td data-label="City">{f.city}</td>
+                          <td data-label="Phone">{f.phone}</td>
+                          <td data-label="Open">{f.openingTime ? formatTime(f.openingTime) : '—'}</td>
+                          <td data-label="Price/hr">NPR {f.hourlyPrice ?? '—'}</td>
+                          <td className="table-actions" data-label="Actions">
                            <div style={{ display: 'flex', gap: 6 }}>
                              <button className="btn btn-secondary btn-sm" onClick={() => editFutsal(f)}>✏️ Edit</button>
                              <button className="btn btn-danger btn-sm" onClick={() => deleteFutsal(f.futsalId)}>🗑️</button>

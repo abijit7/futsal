@@ -16,6 +16,7 @@ export default function Futsals() {
   const [photoIndex, setPhotoIndex] = useState({});
   const [photoDir, setPhotoDir] = useState({});
   const touchStartRef = useRef({});
+  const mouseStartRef = useRef({});
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const pageSize = 12;
@@ -70,6 +71,24 @@ export default function Futsals() {
     stepPhoto(futsalId, total, dx < 0 ? 1 : -1);
   };
 
+  const handleMouseDown = (futsalId, event) => {
+    mouseStartRef.current[futsalId] = { x: event.clientX, y: event.clientY };
+  };
+
+  const handleMouseUp = (futsalId, total, event) => {
+    const start = mouseStartRef.current[futsalId];
+    if (!start) return;
+    const dx = event.clientX - start.x;
+    const dy = event.clientY - start.y;
+    delete mouseStartRef.current[futsalId];
+    if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy)) return;
+    stepPhoto(futsalId, total, dx < 0 ? 1 : -1);
+  };
+
+  const handleMouseLeave = (futsalId) => {
+    delete mouseStartRef.current[futsalId];
+  };
+
   return (
     <>
       <div className="page-header">
@@ -115,6 +134,9 @@ export default function Futsals() {
                         className="futsal-carousel"
                         onTouchStart={(event) => handleTouchStart(f.futsalId, event)}
                         onTouchEnd={(event) => handleTouchEnd(f.futsalId, images.length, event)}
+                        onMouseDown={(event) => handleMouseDown(f.futsalId, event)}
+                        onMouseUp={(event) => handleMouseUp(f.futsalId, images.length, event)}
+                        onMouseLeave={() => handleMouseLeave(f.futsalId)}
                       >
                         <img
                           key={`${f.futsalId}-${currentIndex}-${dir}`}

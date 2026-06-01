@@ -205,25 +205,25 @@ export default function AdminSlots() {
               <div className="empty-state"><div className="icon">📭</div><h3>No slots found</h3><p>Add your first slot using the form.</p></div>
             ) : (
               <div className="table-wrap">
-                <table>
+                <table className="responsive-table">
                   <thead>
                     <tr><th>Futsal</th><th>Date</th><th>Start</th><th>End</th><th>Duration</th><th>Price/hr</th><th>Status</th><th>Actions</th></tr>
                   </thead>
                   <tbody>
                     {slots.map((s) => (
                       <tr key={s.slotId}>
-                        <td className="text-muted text-sm">{s.futsal?.name || '—'}</td>
-                        <td>{formatDate(s.slotDate)}</td>
-                        <td>{formatTime(s.startTime)}</td>
-                        <td>{formatTime(s.endTime)}</td>
-                        <td className="text-muted text-sm">{calculateDuration(s.startTime, s.endTime)}</td>
-                        <td style={{ color: 'var(--accent)', fontWeight: 600 }}>NPR {s.futsal?.hourlyPrice ?? '—'}</td>
-                        <td>
+                        <td className="text-muted text-sm" data-label="Futsal">{s.futsal?.name || '—'}</td>
+                        <td data-label="Date">{formatDate(s.slotDate)}</td>
+                        <td data-label="Start">{formatTime(s.startTime)}</td>
+                        <td data-label="End">{formatTime(s.endTime)}</td>
+                        <td className="text-muted text-sm" data-label="Duration">{calculateDuration(s.startTime, s.endTime)}</td>
+                        <td data-label="Price/hr" style={{ color: 'var(--accent)', fontWeight: 600 }}>NPR {s.futsal?.hourlyPrice ?? '—'}</td>
+                        <td data-label="Status">
                           <span className={`badge ${s.available ? 'badge-available' : 'badge-booked'}`}>
                             {s.available ? 'Available' : 'Booked'}
                           </span>
                         </td>
-                        <td>
+                        <td className="table-actions" data-label="Actions">
                           <div style={{ display: 'flex', gap: 6 }}>
                             <button className="btn btn-secondary btn-sm" onClick={() => editSlot(s)}>✏️ Edit</button>
                             <button className="btn btn-danger btn-sm" onClick={() => deleteSlot(s.slotId)}>🗑️</button>

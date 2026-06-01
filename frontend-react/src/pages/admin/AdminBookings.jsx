@@ -98,7 +98,7 @@ export default function AdminBookings() {
             <div className="empty-state"><div className="icon">📭</div><h3>No bookings found</h3><p>No bookings in this category.</p></div>
           ) : (
             <div className="table-wrap">
-              <table>
+              <table className="responsive-table">
                 <thead>
                   <tr>
                     <th>#</th>
@@ -120,20 +120,20 @@ export default function AdminBookings() {
                     const paymentInfo = b.paymentMethod ? `${b.paymentMethod} • ${b.paymentRef}` : '—';
                     return (
                       <tr key={b.bookingId}>
-                        <td className="text-muted text-sm">{i + 1}</td>
-                        <td>
+                        <td className="text-muted text-sm" data-label="#">{i + 1}</td>
+                        <td data-label="User">
                           <div className="fw-bold">{b.user.name}</div>
                           <div className="text-muted text-sm">{b.user.phone}</div>
                         </td>
-                        <td className="text-muted text-sm">{b.timeSlot.futsal?.name || '—'}</td>
-                        <td>{formatDate(b.timeSlot.slotDate)}</td>
-                        <td>{formatTime(b.timeSlot.startTime)}<br /><span className="text-muted text-sm">{formatTime(b.timeSlot.endTime)}</span></td>
-                        <td style={{ color: 'var(--accent)', fontWeight: 600 }}>NPR {b.timeSlot.futsal?.hourlyPrice ?? '—'}</td>
-                        <td className="text-muted text-sm">{paymentInfo}</td>
-                        <td className="text-muted text-sm">{b.notes || '—'}</td>
-                        <td><StatusBadge status={b.status} /></td>
-                        <td className="text-muted text-sm">{formatDateTime(b.bookedAt)}</td>
-                        <td>
+                        <td className="text-muted text-sm" data-label="Futsal">{b.timeSlot.futsal?.name || '—'}</td>
+                        <td data-label="Date">{formatDate(b.timeSlot.slotDate)}</td>
+                        <td data-label="Time">{formatTime(b.timeSlot.startTime)}<br /><span className="text-muted text-sm">{formatTime(b.timeSlot.endTime)}</span></td>
+                        <td data-label="Price" style={{ color: 'var(--accent)', fontWeight: 600 }}>NPR {b.timeSlot.futsal?.hourlyPrice ?? '—'}</td>
+                        <td className="text-muted text-sm" data-label="Payment">{paymentInfo}</td>
+                        <td className="text-muted text-sm" data-label="Notes">{b.notes || '—'}</td>
+                        <td data-label="Status"><StatusBadge status={b.status} /></td>
+                        <td className="text-muted text-sm" data-label="Booked At">{formatDateTime(b.bookedAt)}</td>
+                        <td className="table-actions" data-label="Actions">
                           <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
                             {isPending && (
                               <>

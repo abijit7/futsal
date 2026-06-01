@@ -81,29 +81,29 @@ export default function AdminUsers() {
             <div className="empty-state"><div className="icon">👥</div><h3>No users found</h3></div>
           ) : (
             <div className="table-wrap">
-              <table>
+              <table className="responsive-table">
                 <thead>
                   <tr><th>#</th><th>Name</th><th>Email</th><th>Phone</th><th>Role</th><th>Joined</th><th>Actions</th></tr>
                 </thead>
                 <tbody>
                   {filtered.map((u, i) => (
                     <tr key={u.userId}>
-                      <td className="text-muted text-sm">{page * pageSize + i + 1}</td>
-                      <td>
+                      <td className="text-muted text-sm" data-label="#">{page * pageSize + i + 1}</td>
+                      <td data-label="Name">
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                           <div className="nav-avatar">{u.name.charAt(0).toUpperCase()}</div>
                           <span className="fw-bold">{u.name}</span>
                         </div>
                       </td>
-                      <td className="text-muted">{u.email}</td>
-                      <td className="text-muted">{u.phone}</td>
-                      <td>
+                      <td className="text-muted" data-label="Email">{u.email}</td>
+                      <td className="text-muted" data-label="Phone">{u.phone}</td>
+                      <td data-label="Role">
                         <span className={`badge ${u.role === 'ADMIN' ? 'badge-approved' : 'badge-pending'}`}>
                           {u.role}
                         </span>
                       </td>
-                      <td className="text-muted text-sm">{formatDateTime(u.createdAt)}</td>
-                      <td>
+                      <td className="text-muted text-sm" data-label="Joined">{formatDateTime(u.createdAt)}</td>
+                      <td className="table-actions" data-label="Actions">
                         {u.role !== 'ADMIN' ? (
                           <button className="btn btn-danger btn-sm" onClick={() => deleteUser(u.userId, u.name)}>🗑️ Delete</button>
                         ) : (
