@@ -2,7 +2,7 @@ package com.futsal.dto;
 
 import java.time.LocalDateTime;
 
-public class git FutsalImageResponse {
+public class FutsalImageResponse {
     private Long imageId;
     private String imageUrl;
     private Integer sortOrder;
