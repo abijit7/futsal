@@ -17,15 +17,17 @@ public class FutsalApplication {
         System.out.println("project reset");
     }
 
-    // Bootstrap an admin account on startup for development convenience.
-    // Reads ADMIN_EMAIL and ADMIN_PASS from environment variables. If not set,
-    // defaults to admin@example.com / admin123. Only creates the account if no
-    // user with that email exists.
+    // Bootstrap an admin account only when credentials are explicitly configured.
     @Bean
     public CommandLineRunner seedAdmin(UserRepository userRepository, UserService userService) {
         return args -> {
-            String adminEmail = System.getenv().getOrDefault("ADMIN_EMAIL", "admin@gmail.com");
-            String adminPass  = System.getenv().getOrDefault("ADMIN_PASS", "admin123");
+            String adminEmail = System.getenv("ADMIN_EMAIL");
+            String adminPass  = System.getenv("ADMIN_PASS");
+
+            if (adminEmail == null || adminEmail.isBlank() || adminPass == null || adminPass.isBlank()) {
+                System.out.println("[BOOTSTRAP] Admin user not created. Set ADMIN_EMAIL and ADMIN_PASS to seed one.");
+                return;
+            }
 
             if (!userRepository.existsByEmail(adminEmail)) {
                 User admin = new User();

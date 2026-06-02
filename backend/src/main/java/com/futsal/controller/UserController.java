@@ -50,7 +50,9 @@ public class UserController {
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest credentials) {
         try {
             User user = userService.login(credentials.getEmail(), credentials.getPassword());
-            return ResponseEntity.ok(DtoMapper.toUserResponse(user));
+            UserResponse response = DtoMapper.toUserResponse(user);
+            response.setAuthToken(SimpleAuth.createToken(user));
+            return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(errorMap(e.getMessage()));
         }
@@ -61,10 +63,10 @@ public class UserController {
     public ResponseEntity<?> getAllUsers(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
-            @RequestHeader(value = "X-Admin-Token", required = false) String adminHeader
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader
     ) {
         try {
-            SimpleAuth.requireAdmin(adminHeader);
+            SimpleAuth.requireAdmin(authorizationHeader);
             Pageable pageable = PageRequest.of(page, size);
             Page<UserResponse> result = userService.getAllUsers(pageable).map(DtoMapper::toUserResponse);
             return ResponseEntity.ok(PagedResponse.fromPage(result));
@@ -76,10 +78,9 @@ public class UserController {
     // GET /api/users/{id}
     @GetMapping("/{id}")
     public ResponseEntity<?> getUserById(@PathVariable Long id,
-                                         @RequestHeader(value = "X-User-Id", required = false) String userHeader,
-                                         @RequestHeader(value = "X-Admin-Token", required = false) String adminHeader) {
+                                         @RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
         try {
-            SimpleAuth.requireUserOrAdmin(id, userHeader, adminHeader);
+            SimpleAuth.requireUserOrAdmin(id, authorizationHeader);
             return ResponseEntity.ok(DtoMapper.toUserResponse(userService.getUserById(id)));
         } catch (RuntimeException e) {
             return toErrorResponse(e);
@@ -89,10 +90,9 @@ public class UserController {
     // PUT /api/users/{id}
     @PutMapping("/{id}")
     public ResponseEntity<?> updateUser(@PathVariable Long id, @Valid @RequestBody UserUpdateRequest user,
-                                        @RequestHeader(value = "X-User-Id", required = false) String userHeader,
-                                        @RequestHeader(value = "X-Admin-Token", required = false) String adminHeader) {
+                                        @RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
         try {
-            SimpleAuth.requireUserOrAdmin(id, userHeader, adminHeader);
+            SimpleAuth.requireUserOrAdmin(id, authorizationHeader);
             User updated = userService.updateUser(id, user);
             return ResponseEntity.ok(DtoMapper.toUserResponse(updated));
         } catch (RuntimeException e) {
@@ -103,9 +103,9 @@ public class UserController {
     // DELETE /api/users/{id} (admin)
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteUser(@PathVariable Long id,
-                                        @RequestHeader(value = "X-Admin-Token", required = false) String adminHeader) {
+                                        @RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
         try {
-            SimpleAuth.requireAdmin(adminHeader);
+            SimpleAuth.requireAdmin(authorizationHeader);
             userService.deleteUser(id);
             return ResponseEntity.ok(successMap("User deleted successfully"));
         } catch (RuntimeException e) {

@@ -31,10 +31,9 @@ public class BookingController {
     // POST /api/bookings — create booking
     @PostMapping
     public ResponseEntity<?> createBooking(@Valid @RequestBody BookingCreateRequest body,
-                                          @RequestHeader(value = "X-User-Id", required = false) String userHeader,
-                                          @RequestHeader(value = "X-Admin-Token", required = false) String adminHeader) {
+                                          @RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
         try {
-            SimpleAuth.requireUserOrAdmin(body.getUserId(), userHeader, adminHeader);
+            SimpleAuth.requireUserOrAdmin(body.getUserId(), authorizationHeader);
             Booking booking = bookingService.createBooking(body.getUserId(), body.getSlotId(), body.getNotes());
             return ResponseEntity.ok(DtoMapper.toBookingResponse(booking));
         } catch (RuntimeException e) {
@@ -48,10 +47,10 @@ public class BookingController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String status,
-            @RequestHeader(value = "X-Admin-Token", required = false) String adminHeader
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader
     ) {
         try {
-            SimpleAuth.requireAdmin(adminHeader);
+            SimpleAuth.requireAdmin(authorizationHeader);
             Pageable pageable = PageRequest.of(page, size);
             Page<Booking> result;
             if (status != null && !status.isBlank() && !"ALL".equalsIgnoreCase(status)) {
@@ -75,11 +74,10 @@ public class BookingController {
             @PathVariable Long userId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
-            @RequestHeader(value = "X-User-Id", required = false) String userHeader,
-            @RequestHeader(value = "X-Admin-Token", required = false) String adminHeader
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader
     ) {
         try {
-            SimpleAuth.requireUserOrAdmin(userId, userHeader, adminHeader);
+            SimpleAuth.requireUserOrAdmin(userId, authorizationHeader);
             Pageable pageable = PageRequest.of(page, size);
             Page<BookingResponse> result = bookingService.getBookingsByUser(userId, pageable)
                     .map(DtoMapper::toBookingResponse);
@@ -92,12 +90,11 @@ public class BookingController {
     // GET /api/bookings/{id} — get single booking
     @GetMapping("/{id}")
     public ResponseEntity<?> getBookingById(@PathVariable Long id,
-                                            @RequestHeader(value = "X-User-Id", required = false) String userHeader,
-                                            @RequestHeader(value = "X-Admin-Token", required = false) String adminHeader) {
+                                            @RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
         try {
             Booking booking = bookingService.getBookingById(id);
-            if (!SimpleAuth.isAdmin(adminHeader)) {
-                SimpleAuth.requireUserOrAdmin(booking.getUser().getUserId(), userHeader, adminHeader);
+            if (!SimpleAuth.isAdmin(authorizationHeader)) {
+                SimpleAuth.requireUserOrAdmin(booking.getUser().getUserId(), authorizationHeader);
             }
             return ResponseEntity.ok(DtoMapper.toBookingResponse(booking));
         } catch (RuntimeException e) {
@@ -109,20 +106,19 @@ public class BookingController {
     @PutMapping("/{id}/status")
     public ResponseEntity<?> updateStatus(@PathVariable Long id,
                                            @Valid @RequestBody BookingStatusRequest body,
-                                           @RequestHeader(value = "X-User-Id", required = false) String userHeader,
-                                           @RequestHeader(value = "X-Admin-Token", required = false) String adminHeader) {
+                                           @RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
         try {
             String statusStr = body.getStatus();
             BookingStatus status = BookingStatus.valueOf(statusStr.toUpperCase());
 
             Booking booking = bookingService.getBookingById(id);
             if (status == BookingStatus.CANCELLED) {
-                SimpleAuth.requireUserOrAdmin(booking.getUser().getUserId(), userHeader, adminHeader);
+                SimpleAuth.requireUserOrAdmin(booking.getUser().getUserId(), authorizationHeader);
             } else {
-                SimpleAuth.requireAdmin(adminHeader);
+                SimpleAuth.requireAdmin(authorizationHeader);
             }
 
-            String actor = SimpleAuth.isAdmin(adminHeader)
+            String actor = SimpleAuth.isAdmin(authorizationHeader)
                     ? "admin"
                     : "user:" + booking.getUser().getUserId();
             Booking updated = bookingService.updateStatus(id, status, actor);
@@ -137,9 +133,9 @@ public class BookingController {
     // DELETE /api/bookings/{id} — delete booking (admin)
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteBooking(@PathVariable Long id,
-                                           @RequestHeader(value = "X-Admin-Token", required = false) String adminHeader) {
+                                           @RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
         try {
-            SimpleAuth.requireAdmin(adminHeader);
+            SimpleAuth.requireAdmin(authorizationHeader);
             bookingService.deleteBooking(id);
             Map<String, String> res = new HashMap<>();
             res.put("message", "Booking deleted successfully");

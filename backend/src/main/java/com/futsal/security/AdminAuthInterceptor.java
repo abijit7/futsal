@@ -12,8 +12,7 @@ import java.util.regex.Pattern;
 @Component
 public class AdminAuthInterceptor implements HandlerInterceptor {
 
-    private static final String HEADER_NAME = "X-Admin-Token";
-    private static final String ENV_NAME = "ADMIN_TOKEN";
+    private static final String HEADER_NAME = "Authorization";
 
     private static final Pattern SLOT_ID = Pattern.compile("^/api/slots/\\d+$");
     private static final Pattern BOOKING_ID = Pattern.compile("^/api/bookings/\\d+$");
@@ -34,10 +33,9 @@ public class AdminAuthInterceptor implements HandlerInterceptor {
             return true;
         }
 
-        String expected = System.getenv().getOrDefault(ENV_NAME, "admin123");
         String provided = request.getHeader(HEADER_NAME);
 
-        if (expected != null && expected.equals(provided)) {
+        if (SimpleAuth.isAdmin(provided)) {
             return true;
         }
 
@@ -64,6 +62,9 @@ public class AdminAuthInterceptor implements HandlerInterceptor {
             return true;
         }
         if ("/api/bookings".equals(path) && "POST".equalsIgnoreCase(method)) {
+            return true;
+        }
+        if ("/api/payments/confirm".equals(path) && "POST".equalsIgnoreCase(method)) {
             return true;
         }
         if (BOOKING_USER.matcher(path).matches() && "GET".equalsIgnoreCase(method)) {

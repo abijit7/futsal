@@ -10,6 +10,7 @@ public class UserResponse {
     private String phone;
     private Role role;
     private LocalDateTime createdAt;
+    private String authToken;
 
     public Long getUserId() { return userId; }
     public void setUserId(Long userId) { this.userId = userId; }
@@ -28,5 +29,7 @@ public class UserResponse {
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
-}
 
+    public String getAuthToken() { return authToken; }
+    public void setAuthToken(String authToken) { this.authToken = authToken; }
+}

@@ -25,10 +25,9 @@ public class PaymentController {
     // POST /api/payments/confirm — dummy payment confirmation
     @PostMapping("/confirm")
     public ResponseEntity<?> confirmPayment(@Valid @RequestBody PaymentConfirmRequest body,
-                                            @RequestHeader(value = "X-User-Id", required = false) String userHeader,
-                                            @RequestHeader(value = "X-Admin-Token", required = false) String adminHeader) {
+                                            @RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
         try {
-            SimpleAuth.requireUserOrAdmin(body.getUserId(), userHeader, adminHeader);
+            SimpleAuth.requireUserOrAdmin(body.getUserId(), authorizationHeader);
             Long userId = body.getUserId();
             Long slotId = body.getSlotId();
             String notes = body.getNotes() != null ? body.getNotes() : "";
