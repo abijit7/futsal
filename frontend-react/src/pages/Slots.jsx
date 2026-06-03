@@ -234,15 +234,15 @@ export default function Slots() {
       </div>
 
       <div className={`modal-overlay ${bookingModalOpen ? 'show' : ''}`}>
-        <div className="modal">
+        <div className="modal" role="dialog" aria-modal="true" aria-labelledby="booking-dialog-title">
           <div className="modal-header">
-            <h3>Confirm Booking</h3>
-            <button className="modal-close" onClick={closeModal}>✕</button>
+            <h3 id="booking-dialog-title">Confirm Booking</h3>
+            <button className="modal-close" onClick={closeModal} aria-label="Close booking dialog">✕</button>
           </div>
           <div className="modal-body">
-            <div className="card mb-2" style={{ background: 'var(--surface2)' }}>
+            <div className="card modal-summary mb-2">
               {selectedSlot && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div className="booking-summary-grid">
                   <div><div className="text-muted text-sm">Futsal</div><div className="fw-bold">{selectedSlot.futsal?.name || '—'}</div></div>
                   <div><div className="text-muted text-sm">Date</div><div className="fw-bold">{formatDate(selectedSlot.slotDate)}</div></div>
                   <div><div className="text-muted text-sm">Time</div><div className="fw-bold">{formatTime(selectedSlot.startTime)} – {formatTime(selectedSlot.endTime)}</div></div>

@@ -23,10 +23,10 @@ export function ToastProvider({ children }) {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <div className="toast-container">
+      <div className="toast-container" aria-live="polite" aria-atomic="true">
         {toasts.map((toast) => (
-          <div key={toast.id} className={`toast ${toast.type} ${toast.hiding ? 'hiding' : ''}`}>
-            <span>{toast.type === 'success' ? '✅' : toast.type === 'error' ? '❌' : 'ℹ️'}</span>
+          <div key={toast.id} className={`toast ${toast.type} ${toast.hiding ? 'hiding' : ''}`} role="status">
+            <span aria-hidden="true">{toast.type === 'success' ? '✅' : toast.type === 'error' ? '❌' : 'ℹ️'}</span>
             <span>{toast.message}</span>
           </div>
         ))}
@@ -38,4 +38,3 @@ export function ToastProvider({ children }) {
 export function useToast() {
   return useContext(ToastContext);
 }
-

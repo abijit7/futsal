@@ -143,8 +143,8 @@ export default function AdminFutsals() {
       </div>
 
       <div className="container page-wrap">
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 24, alignItems: 'start' }}>
-          <div className="card" style={{ position: 'sticky', top: 80 }}>
+        <div className="admin-grid">
+          <div className="card admin-side">
             <div className="card-header"><h3>{editingId ? 'Edit Futsal' : 'Add New Futsal'}</h3></div>
             <form onSubmit={handleSubmit}>
               <div className="form-group">
@@ -189,14 +189,14 @@ export default function AdminFutsals() {
                   }}
                 />
                 {previewUrls.length > 0 && (
-                  <div style={{ marginTop: 10, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', gap: 8 }}>
+                  <div className="preview-grid">
                     {previewUrls.map((url, index) => (
-                      <div key={`${url}-${index}`} style={{ position: 'relative' }}>
-                        <img src={url} alt="Preview" style={{ width: '100%', height: 70, objectFit: 'cover', borderRadius: 10, border: '1px solid var(--border)' }} />
+                      <div key={`${url}-${index}`} className="preview-tile">
+                        <img src={url} alt="Preview" />
                         <button
                           type="button"
-                          className="btn btn-danger btn-sm"
-                          style={{ position: 'absolute', top: 6, right: 6, padding: '2px 6px' }}
+                          className="btn btn-danger btn-sm preview-remove"
+                          aria-label="Remove photo"
                           onClick={() => {
                             const existingCount = (form.imageUrls || []).length;
                             if (index < existingCount) {
@@ -224,7 +224,7 @@ export default function AdminFutsals() {
               <div className={`alert alert-error ${alert ? 'show' : ''}`}>
                 <span>⚠️</span><span>{alert}</span>
               </div>
-              <div style={{ display: 'flex', gap: 8 }}>
+              <div className="toolbar-inline">
                 <button type="submit" className="btn btn-primary" style={{ flex: 1 }} disabled={submitting}>
                   {submitting ? (editingId ? 'Saving...' : 'Adding...') : (editingId ? 'Save Changes' : 'Add Futsal')}
                 </button>

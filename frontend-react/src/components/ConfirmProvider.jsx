@@ -20,10 +20,16 @@ export function ConfirmProvider({ children }) {
     <ConfirmContext.Provider value={{ confirm }}>
       {children}
       <div className={`modal-overlay ${state.open ? 'show' : ''}`}>
-        <div className="modal" style={{ maxWidth: 380 }}>
+        <div
+          className="modal"
+          style={{ maxWidth: 380 }}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="confirm-dialog-title"
+        >
           <div className="modal-header">
-            <h3>Confirm Action</h3>
-            <button className="modal-close" onClick={() => handleClose(false)}>✕</button>
+            <h3 id="confirm-dialog-title">Confirm Action</h3>
+            <button className="modal-close" onClick={() => handleClose(false)} aria-label="Close confirmation dialog">✕</button>
           </div>
           <div className="modal-body">
             <p style={{ color: 'var(--muted)', fontSize: 15 }}>{state.message}</p>
@@ -41,4 +47,3 @@ export function ConfirmProvider({ children }) {
 export function useConfirm() {
   return useContext(ConfirmContext);
 }
-

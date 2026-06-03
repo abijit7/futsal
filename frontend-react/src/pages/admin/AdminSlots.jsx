@@ -140,8 +140,8 @@ export default function AdminSlots() {
       </div>
 
       <div className="container page-wrap">
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 24, alignItems: 'start' }}>
-          <div className="card" style={{ position: 'sticky', top: 80 }}>
+        <div className="admin-grid">
+          <div className="card admin-side">
             <div className="card-header"><h3>{editingId ? 'Edit Slot' : 'Add New Slot'}</h3></div>
             <form onSubmit={handleSubmit}>
               <div className="form-group">
@@ -176,7 +176,7 @@ export default function AdminSlots() {
               <div className={`alert alert-error ${alert ? 'show' : ''}`}>
                 <span>⚠️</span><span>{alert}</span>
               </div>
-              <div style={{ display: 'flex', gap: 8 }}>
+              <div className="toolbar-inline">
                 <button type="submit" className="btn btn-primary" style={{ flex: 1 }} disabled={submitting || !hasFutsals}>
                   {submitting ? (editingId ? 'Saving...' : 'Adding...') : (editingId ? 'Save Changes' : 'Add Slot')}
                 </button>
@@ -188,10 +188,9 @@ export default function AdminSlots() {
           <div className="card">
             <div className="card-header">
               <h3>All Slots</h3>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <div className="toolbar-inline">
                 <select
                   className="form-control"
-                  style={{ minWidth: 220 }}
                   value={selectedFutsalId || ''}
                   onChange={(e) => {
                     setSelectedFutsalId(e.target.value ? parseInt(e.target.value, 10) : null);
