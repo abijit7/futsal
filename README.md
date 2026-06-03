@@ -7,6 +7,7 @@ This project supports multi-venue booking: users choose a futsal venue first, th
 ### Backend (Spring Boot)
 
 - Set database credentials via environment variables (`DB_USERNAME`, `DB_PASSWORD`).
+- Optional: set `DB_URL` and `SPRING_PROFILES_ACTIVE` (defaults to `dev`).
 - Run the backend:
 
 ```bash

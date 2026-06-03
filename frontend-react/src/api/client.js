@@ -2,18 +2,18 @@ import { Auth } from '../utils/auth.js';
 
 export const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8080';
 export const API_URL = import.meta.env.VITE_API_URL || `${API_BASE}/api`;
-export const ADMIN_TOKEN = import.meta.env.VITE_ADMIN_TOKEN || '';
 
-function buildHeaders(extra = {}) {
-  const headers = { 'Content-Type': 'application/json', ...extra };
+export function authHeaders(extra = {}) {
+  const headers = { ...extra };
   const user = Auth.get();
-  if (user?.userId) {
-    headers['X-User-Id'] = String(user.userId);
-  }
-  if (Auth.isAdmin() && ADMIN_TOKEN) {
-    headers['X-Admin-Token'] = ADMIN_TOKEN;
+  if (user?.authToken) {
+    headers.Authorization = `Bearer ${user.authToken}`;
   }
   return headers;
+}
+
+function buildHeaders(extra = {}) {
+  return authHeaders({ 'Content-Type': 'application/json', ...extra });
 }
 
 export function withQuery(endpoint, params = {}) {
@@ -29,9 +29,10 @@ export function withQuery(endpoint, params = {}) {
 
 export async function apiFetch(endpoint, options = {}) {
   try {
+    const { headers, ...rest } = options;
     const res = await fetch(`${API_URL}${endpoint}`, {
-      headers: buildHeaders(options.headers),
-      ...options
+      ...rest,
+      headers: buildHeaders(headers)
     });
     const text = await res.text();
     const data = text ? JSON.parse(text) : null;
@@ -48,7 +49,7 @@ export async function apiUpload(endpoint, file) {
     formData.append('file', file);
     const res = await fetch(`${API_URL}${endpoint}`, {
       method: 'POST',
-      headers: Auth.isAdmin() && ADMIN_TOKEN ? { 'X-Admin-Token': ADMIN_TOKEN } : undefined,
+      headers: authHeaders(),
       body: formData
     });
     const data = await res.json();

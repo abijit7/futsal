@@ -1,4 +1,4 @@
-import { apiFetch, apiUpload, API_URL, withQuery } from './client.js';
+import { apiFetch, apiUpload, API_URL, authHeaders, withQuery } from './client.js';
 
 export const FutsalAPI = {
   getAll:  (params = {}) => apiFetch(withQuery('/futsals', params)),
@@ -12,6 +12,7 @@ export const FutsalAPI = {
     files.forEach((file) => formData.append('files', file));
     return fetch(`${API_URL}/uploads/futsal-images`, {
       method: 'POST',
+      headers: authHeaders(),
       body: formData
     }).then(async (res) => {
       const data = await res.json();

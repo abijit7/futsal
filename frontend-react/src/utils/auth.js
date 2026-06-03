@@ -14,7 +14,7 @@ export const Auth = {
     return raw ? JSON.parse(raw) : null;
   },
   isLoggedIn() {
-    return !!this.get();
+    return !!this.get()?.authToken;
   },
   isAdmin() {
     return this.get()?.role === 'ADMIN';
@@ -24,4 +24,3 @@ export const Auth = {
     emitAuthChange();
   }
 };
-
