@@ -57,8 +57,8 @@ export default function MyBookings() {
     <>
       <div className="page-header">
         <div className="container">
-          <h1>MY <span>BOOKINGS</span></h1>
-          <p>Track and manage all your futsal bookings</p>
+          <h1>Manage <span>bookings</span></h1>
+          <p>Track upcoming sessions, payment references, notes, and booking status.</p>
         </div>
       </div>
 
@@ -81,36 +81,30 @@ export default function MyBookings() {
         {loading && <LoadingWrap message="Loading your bookings..." />}
 
         {!loading && filtered.length === 0 && (
-          <EmptyState icon="📭" title="No bookings found" description="Browse available slots to get started." />
+          <EmptyState icon="0" title="No bookings found" description="Browse available slots to get started." />
         )}
 
         {!loading && filtered.length > 0 && (
           <div className="slots-grid">
             {filtered.map((b) => {
               const canCancel = b.status === 'PENDING' || b.status === 'APPROVED';
-              const statusColors = {
-                PENDING: 'var(--warning)',
-                APPROVED: 'var(--green)',
-                REJECTED: 'var(--danger)',
-                CANCELLED: 'var(--muted)'
-              };
-              const paymentInfo = b.paymentMethod ? `${b.paymentMethod} • ${b.paymentRef}` : '—';
+              const paymentInfo = b.paymentMethod ? `${b.paymentMethod} / ${b.paymentRef}` : '-';
               return (
-                <div key={b.bookingId} className="slot-card" style={{ borderTop: `3px solid ${statusColors[b.status]}` }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                    <div className="slot-date">📅 {formatDate(b.timeSlot.slotDate)}</div>
+                <div key={b.bookingId} className={`slot-card booking-card status-border-${b.status.toLowerCase()}`}>
+                  <div className="flex-between mb-1">
+                    <div className="slot-date">{formatDate(b.timeSlot.slotDate)}</div>
                     <StatusBadge status={b.status} />
                   </div>
-                  <div className="text-muted text-sm mb-1">🏟️ {b.timeSlot.futsal?.name || '—'}</div>
-                  <div className="slot-time">{formatTime(b.timeSlot.startTime)} – {formatTime(b.timeSlot.endTime)}</div>
-                  <div className="slot-duration">⏱ {calculateDuration(b.timeSlot.startTime, b.timeSlot.endTime)}</div>
-                  <div className="slot-price">NPR {b.timeSlot.futsal?.hourlyPrice ?? '—'} <span>/ hour</span></div>
-                  <div className="text-muted text-sm mb-1">💳 {paymentInfo}</div>
-                  {b.notes && <div className="text-muted text-sm mb-1">📝 {b.notes}</div>}
+                  <div className="text-muted text-sm mb-1">{b.timeSlot.futsal?.name || '-'}</div>
+                  <div className="slot-time">{formatTime(b.timeSlot.startTime)} - {formatTime(b.timeSlot.endTime)}</div>
+                  <div className="slot-duration">{calculateDuration(b.timeSlot.startTime, b.timeSlot.endTime)}</div>
+                  <div className="slot-price">NPR {b.timeSlot.futsal?.hourlyPrice ?? '-'} <span>/ hour</span></div>
+                  <div className="text-muted text-sm mb-1">Payment: {paymentInfo}</div>
+                  {b.notes && <div className="text-muted text-sm mb-1">Notes: {b.notes}</div>}
                   <div className="text-muted text-sm mb-2">Booked: {formatDateTime(b.bookedAt)}</div>
                   {canCancel && (
                     <button className="btn btn-danger btn-full btn-sm" onClick={() => cancelBooking(b.bookingId)}>
-                      ❌ Cancel Booking
+                      Cancel Booking
                     </button>
                   )}
                 </div>

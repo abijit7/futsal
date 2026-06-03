@@ -26,7 +26,7 @@ export default function Login() {
       const password = e.target.password.value;
       const user = await UserAPI.login(email, password);
       Auth.save(user);
-      showToast(`Welcome back, ${user.name}! 👋`, 'success');
+      showToast(`Welcome back, ${user.name}.`, 'success');
       setTimeout(() => {
         navigate(user.role === 'ADMIN' ? '/admin' : '/dashboard');
       }, 500);
@@ -40,13 +40,12 @@ export default function Login() {
     <div className="auth-page">
       <div className="auth-box">
         <div className="auth-logo">
-          <div className="ball">⚽</div>
           <h1>Futsal<span>Book</span></h1>
           <p>Sign in to your account</p>
         </div>
 
         <div className={`alert alert-error ${alert ? 'show' : ''}`}>
-          <span>⚠️</span><span>{alert}</span>
+          <span>Error</span><span>{alert}</span>
         </div>
 
         <form onSubmit={handleSubmit}>
@@ -56,22 +55,21 @@ export default function Login() {
           </div>
           <div className="form-group">
             <label className="form-label">Password</label>
-            <input type="password" name="password" className="form-control" placeholder="••••••••" required />
+            <input type="password" name="password" className="form-control" placeholder="Password" required />
           </div>
           <button type="submit" className="btn btn-primary btn-full btn-lg mt-2" disabled={loading}>
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
 
-        <div className="auth-divider">— or —</div>
-        <p style={{ textAlign: 'center', fontSize: 14, color: 'var(--muted)' }}>
+        <div className="auth-divider">or</div>
+        <p className="auth-copy">
           Don't have an account? <a href="/register">Create one</a>
         </p>
-        <p style={{ textAlign: 'center', fontSize: 13, color: 'var(--muted2)', marginTop: 16 }}>
+        <p className="auth-note">
           Admin? Use your admin credentials to log in above.
         </p>
       </div>
     </div>
   );
 }
-

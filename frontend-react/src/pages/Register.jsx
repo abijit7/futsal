@@ -62,18 +62,17 @@ export default function Register() {
 
   return (
     <div className="auth-page">
-      <div className="auth-box" style={{ maxWidth: 480 }}>
+      <div className="auth-box auth-box-wide">
         <div className="auth-logo">
-          <div className="ball">⚽</div>
           <h1>Futsal<span>Book</span></h1>
-          <p>Create your account — it's free</p>
+          <p>Create your account - it's free</p>
         </div>
 
         <div className={`alert alert-error ${alert ? 'show' : ''}`}>
-          <span>⚠️</span><span>{alert}</span>
+          <span>Error</span><span>{alert}</span>
         </div>
         <div className={`alert alert-success ${success ? 'show' : ''}`}>
-          <span>✅</span><span>Account created! Redirecting to login...</span>
+          <span>Done</span><span>Account created. Redirecting to login...</span>
         </div>
 
         <form onSubmit={handleSubmit}>
@@ -147,12 +146,11 @@ export default function Register() {
           </button>
         </form>
 
-        <div className="auth-divider">— or —</div>
-        <p style={{ textAlign: 'center', fontSize: 14, color: 'var(--muted)' }}>
+        <div className="auth-divider">or</div>
+        <p className="auth-copy">
           Already have an account? <a href="/login">Sign in</a>
         </p>
       </div>
     </div>
   );
 }
-

@@ -93,8 +93,8 @@ export default function Futsals() {
     <>
       <div className="page-header">
         <div className="container">
-          <h1>CHOOSE <span>FUTSAL</span></h1>
-          <p>Select a futsal venue to see its available time slots</p>
+          <h1>Find your <span>next court</span></h1>
+          <p>Compare futsal venues, prices, opening hours, and available booking slots.</p>
         </div>
       </div>
 
@@ -115,7 +115,7 @@ export default function Futsals() {
         )}
 
         {!loading && futsals.length === 0 && (
-          <EmptyState icon="📭" title="No futsals available" description="Please check back later." />
+          <EmptyState icon="0" title="No futsals available" description="Please check back later." />
         )}
 
         {!loading && futsals.length > 0 && (
@@ -127,7 +127,7 @@ export default function Futsals() {
               const dir = photoDir[f.futsalId] || 1;
               const slideClass = dir === 1 ? 'slide-left' : 'slide-right';
               return (
-                <div className="slot-card" key={f.futsalId}>
+                <article className="slot-card" key={f.futsalId}>
                   {images.length > 0 && (
                     <div className="futsal-gallery">
                       <div
@@ -153,7 +153,7 @@ export default function Futsals() {
                               onClick={() => stepPhoto(f.futsalId, images.length, -1)}
                               aria-label="Previous photo"
                             >
-                              ‹
+                              &lt;
                             </button>
                             <button
                               type="button"
@@ -161,23 +161,31 @@ export default function Futsals() {
                               onClick={() => stepPhoto(f.futsalId, images.length, 1)}
                               aria-label="Next photo"
                             >
-                              ›
+                              &gt;
                             </button>
                           </>
                         )}
                       </div>
                     </div>
                   )}
-                  <div className="slot-date">🏟️ {f.name}</div>
-                  <div className="text-muted text-sm mb-1">📍 {f.address}, {f.city}</div>
-                  <div className="text-muted text-sm mb-2">📞 {f.phone}</div>
-                  <div className="text-muted text-sm mb-1">🕒 Opens: {f.openingTime ? formatTime(f.openingTime) : '—'}</div>
-                  <div className="text-muted text-sm mb-2">💰 NPR {f.hourlyPrice ?? '—'} / hour</div>
+                  {images.length === 0 && (
+                    <div className="venue-placeholder">
+                      <span>{f.name?.charAt(0)?.toUpperCase() || 'F'}</span>
+                    </div>
+                  )}
+                  <div className="slot-date">Verified venue</div>
+                  <h2 className="venue-title">{f.name}</h2>
+                  <div className="text-muted text-sm mb-1">{f.address}, {f.city}</div>
+                  <div className="text-muted text-sm mb-2">{f.phone}</div>
+                  <div className="venue-meta">
+                    <span>Opens {f.openingTime ? formatTime(f.openingTime) : '-'}</span>
+                    <span>NPR {f.hourlyPrice ?? '-'} / hour</span>
+                  </div>
                   {f.description && <div className="text-muted text-sm mb-2">{f.description}</div>}
                   <button className="btn btn-primary btn-full" onClick={() => selectFutsal(f)}>
-                    Select & View Slots
+                    View Available Slots
                   </button>
-                </div>
+                </article>
               );
             })}
           </div>

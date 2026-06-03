@@ -53,17 +53,17 @@ export default function AdminUsers() {
     <>
       <div className="page-header">
         <div className="container">
-          <h1>MANAGE <span>USERS</span></h1>
-          <p>View all registered users on the platform</p>
+          <h1>Manage <span>users</span></h1>
+          <p>Search, review, and maintain registered customer accounts.</p>
         </div>
       </div>
 
       <div className="container page-wrap">
-        <div className="card mb-3">
+        <div className="card search-card mb-3">
           <input
             type="text"
             className="form-control"
-            placeholder="🔍 Search users by name or email..."
+            placeholder="Search users by name or email..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
@@ -72,13 +72,13 @@ export default function AdminUsers() {
         <div className="card">
           <div className="card-header">
             <h2>All Users</h2>
-            <button onClick={loadUsers} className="btn btn-secondary btn-sm">🔄 Refresh</button>
+            <button onClick={loadUsers} className="btn btn-secondary btn-sm">Refresh</button>
           </div>
 
           {loading ? (
             <div className="loading-wrap"><div className="spinner"></div><p>Loading users...</p></div>
           ) : filtered.length === 0 ? (
-            <div className="empty-state"><div className="icon">👥</div><h3>No users found</h3></div>
+            <div className="empty-state"><div className="icon">0</div><h3>No users found</h3></div>
           ) : (
             <div className="table-wrap">
               <table className="responsive-table">
@@ -90,7 +90,7 @@ export default function AdminUsers() {
                     <tr key={u.userId}>
                       <td className="text-muted text-sm" data-label="#">{page * pageSize + i + 1}</td>
                       <td data-label="Name">
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div className="actions-row">
                           <div className="nav-avatar">{u.name.charAt(0).toUpperCase()}</div>
                           <span className="fw-bold">{u.name}</span>
                         </div>
@@ -105,7 +105,7 @@ export default function AdminUsers() {
                       <td className="text-muted text-sm" data-label="Joined">{formatDateTime(u.createdAt)}</td>
                       <td className="table-actions" data-label="Actions">
                         {u.role !== 'ADMIN' ? (
-                          <button className="btn btn-danger btn-sm" onClick={() => deleteUser(u.userId, u.name)}>🗑️ Delete</button>
+                          <button className="btn btn-danger btn-sm" onClick={() => deleteUser(u.userId, u.name)}>Delete</button>
                         ) : (
                           <span className="text-muted text-sm">Protected</span>
                         )}

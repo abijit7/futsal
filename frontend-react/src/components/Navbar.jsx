@@ -6,6 +6,7 @@ export default function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
   const [user, setUser] = useState(Auth.get());
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
     const handleChange = () => setUser(Auth.get());
@@ -16,6 +17,10 @@ export default function Navbar() {
       window.removeEventListener('authchange', handleChange);
     };
   }, []);
+
+  useEffect(() => {
+    setOpen(false);
+  }, [location.pathname]);
 
   if (location.pathname === '/login' || location.pathname === '/register') {
     return null;
@@ -30,11 +35,25 @@ export default function Navbar() {
     <nav className="navbar">
       <div className="navbar-inner">
         <NavLink to="/" className="navbar-brand">
-          <div className="logo-icon">⚽</div>
-          Futsal<span>Book</span>
+          <span className="logo-mark" aria-hidden="true">
+            <span></span>
+          </span>
+          <span>Futsal<span>Book</span></span>
         </NavLink>
 
-        <div className="navbar-links">
+        <button
+          type="button"
+          className={`nav-toggle ${open ? 'open' : ''}`}
+          onClick={() => setOpen((value) => !value)}
+          aria-label="Toggle navigation"
+          aria-expanded={open}
+        >
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+
+        <div className={`navbar-links ${open ? 'show' : ''}`}>
           {user ? (
             user.role === 'ADMIN' ? (
               <>
@@ -62,8 +81,8 @@ export default function Navbar() {
           {user && (
             <div className="nav-user">
               <div className="nav-avatar">{user.name?.charAt(0)?.toUpperCase() || 'U'}</div>
-              <span>{user.name?.split(' ')[0]}</span>
-              <button onClick={logout} className="nav-link btn-secondary btn-sm">Logout</button>
+              <span className="nav-user-name">{user.name?.split(' ')[0]}</span>
+              <button onClick={logout} className="btn btn-secondary btn-sm">Logout</button>
             </div>
           )}
         </div>
@@ -71,4 +90,3 @@ export default function Navbar() {
     </nav>
   );
 }
-

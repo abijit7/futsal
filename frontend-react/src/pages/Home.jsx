@@ -6,29 +6,28 @@ export default function Home() {
       <section className="hero">
         <div className="container">
           <div className="hero-content">
-            <div className="hero-eyebrow">🏟️ Online Booking Platform</div>
+            <div className="hero-eyebrow">Venue discovery and slot booking</div>
             <h1>
-              BOOK YOUR<br />
-              <span className="accent">FUTSAL</span>
-              <br />SLOT NOW
+              Book futsal<br />
+              <span className="accent">courts faster</span>
             </h1>
-            <p>Skip the phone calls. Find available slots, book instantly, and get confirmed — all in one place.</p>
+            <p>Search nearby venues, compare available time slots, pay securely, and manage every booking from one clean workspace.</p>
             <div className="hero-cta">
-              <NavLink to="/futsals" className="btn btn-primary btn-lg">View Futsals →</NavLink>
+              <NavLink to="/futsals" className="btn btn-primary btn-lg">Explore Venues</NavLink>
               <NavLink to="/register" className="btn btn-secondary btn-lg">Create Account</NavLink>
             </div>
             <div className="hero-stats">
               <div>
-                <div className="hero-stat-num">24/7</div>
-                <div className="hero-stat-label">Online Booking</div>
-              </div>
-              <div>
-                <div className="hero-stat-num">100%</div>
-                <div className="hero-stat-label">Slot Visibility</div>
+                <div className="hero-stat-num">Live</div>
+                <div className="hero-stat-label">Availability</div>
               </div>
               <div>
                 <div className="hero-stat-num">Fast</div>
-                <div className="hero-stat-label">Confirmation</div>
+                <div className="hero-stat-label">Payment Flow</div>
+              </div>
+              <div>
+                <div className="hero-stat-num">Admin</div>
+                <div className="hero-stat-label">Operations</div>
               </div>
             </div>
           </div>
@@ -38,36 +37,36 @@ export default function Home() {
       <section className="features-section">
         <div className="container">
           <div className="section-eyebrow">Why FutsalBook</div>
-          <div className="section-title">EVERYTHING YOU NEED</div>
+          <div className="section-title">Everything teams and venues need</div>
           <div className="features-grid">
             <div className="feature-card">
-              <div className="feature-icon">🗓️</div>
-              <h3>Real-Time Availability</h3>
+              <div className="feature-icon">01</div>
+              <h3>Real-time availability</h3>
               <p>See exactly which slots are open right now. No guessing, no double-bookings.</p>
             </div>
             <div className="feature-card">
-              <div className="feature-icon">⚡</div>
-              <h3>Instant Booking</h3>
+              <div className="feature-icon">02</div>
+              <h3>Fast booking flow</h3>
               <p>Book your preferred time slot in seconds. Get status updates as admin reviews.</p>
             </div>
             <div className="feature-card">
-              <div className="feature-icon">📋</div>
-              <h3>Booking History</h3>
+              <div className="feature-icon">03</div>
+              <h3>Booking history</h3>
               <p>Track all your past and upcoming bookings in one organized view.</p>
             </div>
             <div className="feature-card">
-              <div className="feature-icon">❌</div>
-              <h3>Easy Cancellations</h3>
-              <p>Need to cancel? Do it yourself from your bookings dashboard — no calls needed.</p>
+              <div className="feature-icon">04</div>
+              <h3>Simple cancellations</h3>
+              <p>Need to cancel? Do it yourself from your bookings dashboard - no calls needed.</p>
             </div>
             <div className="feature-card">
-              <div className="feature-icon">🔐</div>
-              <h3>Secure Accounts</h3>
+              <div className="feature-icon">05</div>
+              <h3>Secure accounts</h3>
               <p>Your data is protected with hashed passwords and secure login.</p>
             </div>
             <div className="feature-card">
-              <div className="feature-icon">👨‍💼</div>
-              <h3>Admin Control</h3>
+              <div className="feature-icon">06</div>
+              <h3>Admin control</h3>
               <p>Venue managers can manage slots, approve bookings, and track everything.</p>
             </div>
           </div>
@@ -76,9 +75,9 @@ export default function Home() {
 
       <section className="cta-section">
         <div className="container">
-          <h2>READY TO PLAY?</h2>
+          <h2>Ready for kickoff?</h2>
           <p>Create your account and book your first slot today.</p>
-          <div style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap' }}>
+          <div className="actions-row flex-center">
             <NavLink to="/register" className="btn btn-primary btn-lg">Get Started Free</NavLink>
             <NavLink to="/login" className="btn btn-secondary btn-lg">Already have an account?</NavLink>
           </div>
@@ -86,9 +85,8 @@ export default function Home() {
       </section>
 
       <footer>
-        <span>FutsalBook</span> — BCA 4th Semester Project | Spring Boot + MySQL + React
+        <span>FutsalBook</span> - Sports venue booking and operations platform
       </footer>
     </>
   );
 }
-

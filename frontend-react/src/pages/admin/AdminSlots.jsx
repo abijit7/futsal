@@ -93,10 +93,10 @@ export default function AdminSlots() {
     try {
       if (editingId) {
         await SlotAPI.update(editingId, payload);
-        showToast('Slot updated successfully ✅', 'success');
+        showToast('Slot updated successfully.', 'success');
       } else {
         await SlotAPI.add(payload);
-        showToast('Slot added successfully ✅', 'success');
+        showToast('Slot added successfully.', 'success');
       }
       resetForm();
       setPage(0);
@@ -134,8 +134,8 @@ export default function AdminSlots() {
     <>
       <div className="page-header">
         <div className="container">
-          <h1>MANAGE <span>SLOTS</span></h1>
-          <p>Add, edit, and remove available time slots</p>
+          <h1>Manage <span>slots</span></h1>
+          <p>Create availability, adjust session times, and keep court inventory current.</p>
         </div>
       </div>
 
@@ -155,7 +155,7 @@ export default function AdminSlots() {
                 >
                   {!hasFutsals && <option value="">No futsals available</option>}
                   {futsals.map((f) => (
-                    <option key={f.futsalId} value={f.futsalId}>{f.name} — {f.city}</option>
+                    <option key={f.futsalId} value={f.futsalId}>{f.name} - {f.city}</option>
                   ))}
                 </select>
               </div>
@@ -174,10 +174,10 @@ export default function AdminSlots() {
                 </div>
               </div>
               <div className={`alert alert-error ${alert ? 'show' : ''}`}>
-                <span>⚠️</span><span>{alert}</span>
+                <span>Error</span><span>{alert}</span>
               </div>
               <div className="toolbar-inline">
-                <button type="submit" className="btn btn-primary" style={{ flex: 1 }} disabled={submitting || !hasFutsals}>
+                <button type="submit" className="btn btn-primary grow" disabled={submitting || !hasFutsals}>
                   {submitting ? (editingId ? 'Saving...' : 'Adding...') : (editingId ? 'Save Changes' : 'Add Slot')}
                 </button>
                 <button type="button" className="btn btn-secondary" onClick={resetForm} disabled={!hasFutsals}>Reset</button>
@@ -199,17 +199,17 @@ export default function AdminSlots() {
                 >
                   <option value="">All Futsals</option>
                   {futsals.map((f) => (
-                    <option key={f.futsalId} value={f.futsalId}>{f.name} — {f.city}</option>
+                    <option key={f.futsalId} value={f.futsalId}>{f.name} - {f.city}</option>
                   ))}
                 </select>
-                <button onClick={() => loadSlots(page)} className="btn btn-secondary btn-sm">🔄 Refresh</button>
+                <button onClick={() => loadSlots(page)} className="btn btn-secondary btn-sm">Refresh</button>
               </div>
             </div>
 
             {loading ? (
               <div className="loading-wrap"><div className="spinner"></div><p>Loading slots...</p></div>
             ) : slots.length === 0 ? (
-              <div className="empty-state"><div className="icon">📭</div><h3>No slots found</h3><p>Add your first slot using the form.</p></div>
+              <div className="empty-state"><div className="icon">0</div><h3>No slots found</h3><p>Add your first slot using the form.</p></div>
             ) : (
               <div className="table-wrap">
                 <table className="responsive-table">
@@ -219,21 +219,21 @@ export default function AdminSlots() {
                   <tbody>
                     {slots.map((s) => (
                       <tr key={s.slotId}>
-                        <td className="text-muted text-sm" data-label="Futsal">{s.futsal?.name || '—'}</td>
+                        <td className="text-muted text-sm" data-label="Futsal">{s.futsal?.name || '-'}</td>
                         <td data-label="Date">{formatDate(s.slotDate)}</td>
                         <td data-label="Start">{formatTime(s.startTime)}</td>
                         <td data-label="End">{formatTime(s.endTime)}</td>
                         <td className="text-muted text-sm" data-label="Duration">{calculateDuration(s.startTime, s.endTime)}</td>
-                        <td data-label="Price/hr" style={{ color: 'var(--accent)', fontWeight: 600 }}>NPR {s.futsal?.hourlyPrice ?? '—'}</td>
+                        <td data-label="Price/hr" className="text-accent fw-bold">NPR {s.futsal?.hourlyPrice ?? '-'}</td>
                         <td data-label="Status">
                           <span className={`badge ${s.available ? 'badge-available' : 'badge-booked'}`}>
                             {s.available ? 'Available' : 'Booked'}
                           </span>
                         </td>
                         <td className="table-actions" data-label="Actions">
-                          <div style={{ display: 'flex', gap: 6 }}>
-                            <button className="btn btn-secondary btn-sm" onClick={() => editSlot(s)}>✏️ Edit</button>
-                            <button className="btn btn-danger btn-sm" onClick={() => deleteSlot(s.slotId)}>🗑️</button>
+                          <div className="actions-row">
+                            <button className="btn btn-secondary btn-sm" onClick={() => editSlot(s)}>Edit</button>
+                            <button className="btn btn-danger btn-sm" onClick={() => deleteSlot(s.slotId)}>Delete</button>
                           </div>
                         </td>
                       </tr>

@@ -69,8 +69,8 @@ export default function AdminBookings() {
     <>
       <div className="page-header">
         <div className="container">
-          <h1>MANAGE <span>BOOKINGS</span></h1>
-          <p>Review, approve, reject, and track all bookings</p>
+          <h1>Review <span>bookings</span></h1>
+          <p>Approve requests, audit payment details, and keep booking records organized.</p>
         </div>
       </div>
 
@@ -89,13 +89,13 @@ export default function AdminBookings() {
         <div className="card">
           <div className="card-header">
             <h2>All Bookings</h2>
-            <button onClick={() => loadBookings(page, filter)} className="btn btn-secondary btn-sm">🔄 Refresh</button>
+            <button onClick={() => loadBookings(page, filter)} className="btn btn-secondary btn-sm">Refresh</button>
           </div>
 
           {loading ? (
             <div className="loading-wrap"><div className="spinner"></div><p>Loading bookings...</p></div>
           ) : bookings.length === 0 ? (
-            <div className="empty-state"><div className="icon">📭</div><h3>No bookings found</h3><p>No bookings in this category.</p></div>
+            <div className="empty-state"><div className="icon">0</div><h3>No bookings found</h3><p>No bookings in this category.</p></div>
           ) : (
             <div className="table-wrap">
               <table className="responsive-table">
@@ -117,7 +117,7 @@ export default function AdminBookings() {
                 <tbody>
                   {bookings.map((b, i) => {
                     const isPending = b.status === 'PENDING';
-                    const paymentInfo = b.paymentMethod ? `${b.paymentMethod} • ${b.paymentRef}` : '—';
+                    const paymentInfo = b.paymentMethod ? `${b.paymentMethod} / ${b.paymentRef}` : '-';
                     return (
                       <tr key={b.bookingId}>
                         <td className="text-muted text-sm" data-label="#">{i + 1}</td>
@@ -125,23 +125,23 @@ export default function AdminBookings() {
                           <div className="fw-bold">{b.user.name}</div>
                           <div className="text-muted text-sm">{b.user.phone}</div>
                         </td>
-                        <td className="text-muted text-sm" data-label="Futsal">{b.timeSlot.futsal?.name || '—'}</td>
+                        <td className="text-muted text-sm" data-label="Futsal">{b.timeSlot.futsal?.name || '-'}</td>
                         <td data-label="Date">{formatDate(b.timeSlot.slotDate)}</td>
                         <td data-label="Time">{formatTime(b.timeSlot.startTime)}<br /><span className="text-muted text-sm">{formatTime(b.timeSlot.endTime)}</span></td>
-                        <td data-label="Price" style={{ color: 'var(--accent)', fontWeight: 600 }}>NPR {b.timeSlot.futsal?.hourlyPrice ?? '—'}</td>
+                        <td data-label="Price" className="text-accent fw-bold">NPR {b.timeSlot.futsal?.hourlyPrice ?? '-'}</td>
                         <td className="text-muted text-sm" data-label="Payment">{paymentInfo}</td>
-                        <td className="text-muted text-sm" data-label="Notes">{b.notes || '—'}</td>
+                        <td className="text-muted text-sm" data-label="Notes">{b.notes || '-'}</td>
                         <td data-label="Status"><StatusBadge status={b.status} /></td>
                         <td className="text-muted text-sm" data-label="Booked At">{formatDateTime(b.bookedAt)}</td>
                         <td className="table-actions" data-label="Actions">
-                          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+                          <div className="actions-row">
                             {isPending && (
                               <>
-                                <button className="btn btn-success btn-sm" onClick={() => updateStatus(b.bookingId, 'APPROVED')}>✅</button>
-                                <button className="btn btn-danger btn-sm" onClick={() => updateStatus(b.bookingId, 'REJECTED')}>❌</button>
+                                <button className="btn btn-success btn-sm" onClick={() => updateStatus(b.bookingId, 'APPROVED')}>Approve</button>
+                                <button className="btn btn-danger btn-sm" onClick={() => updateStatus(b.bookingId, 'REJECTED')}>Reject</button>
                               </>
                             )}
-                            <button className="btn btn-secondary btn-sm" onClick={() => deleteBooking(b.bookingId)}>🗑️</button>
+                            <button className="btn btn-secondary btn-sm" onClick={() => deleteBooking(b.bookingId)}>Delete</button>
                           </div>
                         </td>
                       </tr>

@@ -90,10 +90,10 @@ export default function AdminFutsals() {
 
       if (editingId) {
         await FutsalAPI.update(editingId, payload);
-        showToast('Futsal updated successfully ✅', 'success');
+        showToast('Futsal updated successfully.', 'success');
       } else {
         await FutsalAPI.add(payload);
-        showToast('Futsal added successfully ✅', 'success');
+        showToast('Futsal added successfully.', 'success');
       }
 
       resetForm();
@@ -137,8 +137,8 @@ export default function AdminFutsals() {
     <>
       <div className="page-header">
         <div className="container">
-          <h1>MANAGE <span>FUTSALS</span></h1>
-          <p>Create, edit, and maintain futsal venues</p>
+          <h1>Manage <span>venues</span></h1>
+          <p>Create, edit, and maintain futsal venue details, media, and pricing.</p>
         </div>
       </div>
 
@@ -210,7 +210,7 @@ export default function AdminFutsals() {
                             }
                           }}
                         >
-                          ✕
+                          x
                         </button>
                       </div>
                     ))}
@@ -222,10 +222,10 @@ export default function AdminFutsals() {
                 <textarea className="form-control" value={form.description} onChange={(e) => updateField('description', e.target.value)} placeholder="Parking, turf type, amenities..."></textarea>
               </div>
               <div className={`alert alert-error ${alert ? 'show' : ''}`}>
-                <span>⚠️</span><span>{alert}</span>
+                <span>Error</span><span>{alert}</span>
               </div>
               <div className="toolbar-inline">
-                <button type="submit" className="btn btn-primary" style={{ flex: 1 }} disabled={submitting}>
+                <button type="submit" className="btn btn-primary grow" disabled={submitting}>
                   {submitting ? (editingId ? 'Saving...' : 'Adding...') : (editingId ? 'Save Changes' : 'Add Futsal')}
                 </button>
                 <button type="button" className="btn btn-secondary" onClick={resetForm}>Reset</button>
@@ -236,13 +236,13 @@ export default function AdminFutsals() {
           <div className="card">
             <div className="card-header">
               <h3>All Futsals</h3>
-              <button onClick={() => loadFutsals(page)} className="btn btn-secondary btn-sm">🔄 Refresh</button>
+              <button onClick={() => loadFutsals(page)} className="btn btn-secondary btn-sm">Refresh</button>
             </div>
 
             {loading ? (
               <div className="loading-wrap"><div className="spinner"></div><p>Loading futsals...</p></div>
             ) : futsals.length === 0 ? (
-              <div className="empty-state"><div className="icon">📭</div><h3>No futsals found</h3><p>Add your first futsal using the form.</p></div>
+              <div className="empty-state"><div className="icon">0</div><h3>No futsals found</h3><p>Add your first futsal using the form.</p></div>
             ) : (
                 <div className="table-wrap">
                   <table className="responsive-table">
@@ -256,12 +256,12 @@ export default function AdminFutsals() {
                           <td className="text-muted text-sm" data-label="Address">{f.address}</td>
                           <td data-label="City">{f.city}</td>
                           <td data-label="Phone">{f.phone}</td>
-                          <td data-label="Open">{f.openingTime ? formatTime(f.openingTime) : '—'}</td>
-                          <td data-label="Price/hr">NPR {f.hourlyPrice ?? '—'}</td>
+                          <td data-label="Open">{f.openingTime ? formatTime(f.openingTime) : '-'}</td>
+                          <td data-label="Price/hr">NPR {f.hourlyPrice ?? '-'}</td>
                           <td className="table-actions" data-label="Actions">
-                           <div style={{ display: 'flex', gap: 6 }}>
-                             <button className="btn btn-secondary btn-sm" onClick={() => editFutsal(f)}>✏️ Edit</button>
-                             <button className="btn btn-danger btn-sm" onClick={() => deleteFutsal(f.futsalId)}>🗑️</button>
+                           <div className="actions-row">
+                             <button className="btn btn-secondary btn-sm" onClick={() => editFutsal(f)}>Edit</button>
+                             <button className="btn btn-danger btn-sm" onClick={() => deleteFutsal(f.futsalId)}>Delete</button>
                            </div>
                          </td>
                        </tr>

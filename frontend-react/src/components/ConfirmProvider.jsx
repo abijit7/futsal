@@ -21,18 +21,17 @@ export function ConfirmProvider({ children }) {
       {children}
       <div className={`modal-overlay ${state.open ? 'show' : ''}`}>
         <div
-          className="modal"
-          style={{ maxWidth: 380 }}
+          className="modal confirm-modal"
           role="dialog"
           aria-modal="true"
           aria-labelledby="confirm-dialog-title"
         >
           <div className="modal-header">
             <h3 id="confirm-dialog-title">Confirm Action</h3>
-            <button className="modal-close" onClick={() => handleClose(false)} aria-label="Close confirmation dialog">✕</button>
+            <button className="modal-close" onClick={() => handleClose(false)} aria-label="Close confirmation dialog">x</button>
           </div>
           <div className="modal-body">
-            <p style={{ color: 'var(--muted)', fontSize: 15 }}>{state.message}</p>
+            <p className="confirm-message">{state.message}</p>
           </div>
           <div className="modal-footer">
             <button onClick={() => handleClose(false)} className="btn btn-secondary">Cancel</button>

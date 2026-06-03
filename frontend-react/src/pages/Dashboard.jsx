@@ -38,7 +38,7 @@ export default function Dashboard() {
     <>
       <div className="page-header">
         <div className="container">
-          <h1>MY <span>DASHBOARD</span></h1>
+          <h1>Your <span>booking hub</span></h1>
           <p>Welcome back, {user.name}! Here's your booking summary.</p>
         </div>
       </div>
@@ -46,16 +46,16 @@ export default function Dashboard() {
       <div className="container page-wrap">
         <div className="stats-grid">
           <div className="stat-card"><div className="stat-value">{statTotal}</div><div className="stat-label">Total Bookings</div></div>
-          <div className="stat-card"><div className="stat-value" style={{ color: 'var(--warning)' }}>{statPending}</div><div className="stat-label">Pending</div></div>
-          <div className="stat-card"><div className="stat-value" style={{ color: 'var(--green)' }}>{statApproved}</div><div className="stat-label">Approved</div></div>
-          <div className="stat-card"><div className="stat-value" style={{ color: 'var(--muted)' }}>{statCancelled}</div><div className="stat-label">Cancelled</div></div>
+          <div className="stat-card"><div className="stat-value text-warning">{statPending}</div><div className="stat-label">Pending</div></div>
+          <div className="stat-card"><div className="stat-value text-approved">{statApproved}</div><div className="stat-label">Approved</div></div>
+          <div className="stat-card"><div className="stat-value text-cancelled">{statCancelled}</div><div className="stat-label">Cancelled</div></div>
         </div>
 
         <div className="card mb-3">
           <div className="card-header"><h2>Quick Actions</h2></div>
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-            <a href="/slots" className="btn btn-primary">⚽ Book a Slot</a>
-            <a href="/my-bookings" className="btn btn-secondary">📋 View My Bookings</a>
+          <div className="actions-row">
+            <a href="/slots" className="btn btn-primary">Book a Slot</a>
+            <a href="/my-bookings" className="btn btn-secondary">View My Bookings</a>
           </div>
         </div>
 
@@ -70,7 +70,7 @@ export default function Dashboard() {
           {!loading && (
             <>
               {bookings.length === 0 ? (
-                <EmptyState icon="📭" title="No bookings yet" description="You haven't made any bookings. Book your first slot." />
+                <EmptyState icon="0" title="No bookings yet" description="You haven't made any bookings. Book your first slot." />
               ) : (
                 <div className="table-wrap">
                   <table>
@@ -89,8 +89,8 @@ export default function Dashboard() {
                         <tr key={b.bookingId}>
                           <td>{i + 1}</td>
                           <td>{formatDate(b.timeSlot.slotDate)}</td>
-                          <td>{formatTime(b.timeSlot.startTime)} – {formatTime(b.timeSlot.endTime)}</td>
-                          <td style={{ color: 'var(--accent)', fontWeight: 600 }}>NPR {b.timeSlot.futsal?.hourlyPrice ?? '—'}</td>
+                          <td>{formatTime(b.timeSlot.startTime)} - {formatTime(b.timeSlot.endTime)}</td>
+                          <td className="text-accent fw-bold">NPR {b.timeSlot.futsal?.hourlyPrice ?? '-'}</td>
                           <td><StatusBadge status={b.status} /></td>
                           <td className="text-muted text-sm">{formatDateTime(b.bookedAt)}</td>
                         </tr>

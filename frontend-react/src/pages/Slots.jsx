@@ -105,7 +105,7 @@ export default function Slots() {
     try {
       const user = Auth.get();
       await PaymentAPI.confirm(user.userId, selectedSlotId, bookingNotes, paymentMethod);
-      showToast(`Payment successful via ${paymentMethod}. Booking submitted! ✅`, 'success');
+      showToast(`Payment successful via ${paymentMethod}. Booking submitted.`, 'success');
       closeModal();
       const params = { futsalId: selectedFutsalId, page: 0, size: pageSize };
       if (dateFilter) {
@@ -129,8 +129,8 @@ export default function Slots() {
     <>
       <div className="page-header">
         <div className="container">
-          <h1>BOOK A <span>SLOT</span></h1>
-          <p>Browse available time slots and book your game</p>
+          <h1>Book a <span>game slot</span></h1>
+          <p>Filter by venue and date, then reserve the time that fits your team.</p>
         </div>
       </div>
 
@@ -146,9 +146,8 @@ export default function Slots() {
             </div>
           </div>
         )}
-        <div className="card mb-3">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-            <div style={{ flex: 1, minWidth: 220 }}>
+        <div className="filter-bar mb-3">
+            <div>
               <label className="form-label">Select Futsal</label>
               <select
                 className="form-control"
@@ -165,11 +164,11 @@ export default function Slots() {
               >
                 {futsals.length === 0 && <option value="">No futsals available</option>}
                 {futsals.map((f) => (
-                  <option key={f.futsalId} value={f.futsalId}>{f.name} — {f.city}</option>
+                  <option key={f.futsalId} value={f.futsalId}>{f.name} - {f.city}</option>
                 ))}
               </select>
             </div>
-            <div style={{ flex: 1, minWidth: 200 }}>
+            <div>
               <label className="form-label">Filter by Date</label>
               <input
                 type="date"
@@ -179,19 +178,18 @@ export default function Slots() {
                   setDateFilter(e.target.value);
                   setPage(0);
                 }}
-                style={{ maxWidth: 220 }}
               />
             </div>
-            <div style={{ alignSelf: 'flex-end' }}>
+            <div>
+              <label className="form-label">View</label>
               <button onClick={toggleShowAll} className="btn btn-secondary">
                 {dateFilter ? 'Show All' : 'Show Today'}
               </button>
             </div>
-          </div>
         </div>
 
         {!selectedFutsalId && !loading && (
-          <EmptyState icon="🏟️" title="Select a futsal to view slots" description="Choose a futsal to continue." />
+          <EmptyState icon="F" title="Select a futsal to view slots" description="Choose a futsal to continue." />
         )}
 
         {loading && selectedFutsalId && (
@@ -209,17 +207,17 @@ export default function Slots() {
         )}
 
         {!loading && selectedFutsalId && slots.length === 0 && (
-          <EmptyState icon="📭" title="No slots available" description="There are no available slots at the moment. Please check back later." />
+          <EmptyState icon="0" title="No slots available" description="There are no available slots at the moment. Please check back later." />
         )}
 
         {!loading && slots.length > 0 && (
           <div className="slots-grid">
             {slots.map((slot) => (
               <div className="slot-card" key={slot.slotId}>
-                <div className="slot-date">📅 {formatDate(slot.slotDate)}</div>
-                <div className="slot-time">{formatTime(slot.startTime)} – {formatTime(slot.endTime)}</div>
-                <div className="slot-duration">⏱ {calculateDuration(slot.startTime, slot.endTime)} session</div>
-                <div className="slot-price">NPR {slot.futsal?.hourlyPrice ?? '—'} <span>/ hour</span></div>
+                <div className="slot-date">{formatDate(slot.slotDate)}</div>
+                <div className="slot-time">{formatTime(slot.startTime)} - {formatTime(slot.endTime)}</div>
+                <div className="slot-duration">{calculateDuration(slot.startTime, slot.endTime)} session</div>
+                <div className="slot-price">NPR {slot.futsal?.hourlyPrice ?? '-'} <span>/ hour</span></div>
                 <button className="btn btn-primary btn-full" onClick={() => openBookingModal(slot.slotId)}>
                   Book This Slot
                 </button>
@@ -237,17 +235,17 @@ export default function Slots() {
         <div className="modal" role="dialog" aria-modal="true" aria-labelledby="booking-dialog-title">
           <div className="modal-header">
             <h3 id="booking-dialog-title">Confirm Booking</h3>
-            <button className="modal-close" onClick={closeModal} aria-label="Close booking dialog">✕</button>
+            <button className="modal-close" onClick={closeModal} aria-label="Close booking dialog">x</button>
           </div>
           <div className="modal-body">
             <div className="card modal-summary mb-2">
               {selectedSlot && (
                 <div className="booking-summary-grid">
-                  <div><div className="text-muted text-sm">Futsal</div><div className="fw-bold">{selectedSlot.futsal?.name || '—'}</div></div>
+                  <div><div className="text-muted text-sm">Futsal</div><div className="fw-bold">{selectedSlot.futsal?.name || '-'}</div></div>
                   <div><div className="text-muted text-sm">Date</div><div className="fw-bold">{formatDate(selectedSlot.slotDate)}</div></div>
-                  <div><div className="text-muted text-sm">Time</div><div className="fw-bold">{formatTime(selectedSlot.startTime)} – {formatTime(selectedSlot.endTime)}</div></div>
+                  <div><div className="text-muted text-sm">Time</div><div className="fw-bold">{formatTime(selectedSlot.startTime)} - {formatTime(selectedSlot.endTime)}</div></div>
                   <div><div className="text-muted text-sm">Duration</div><div className="fw-bold">{calculateDuration(selectedSlot.startTime, selectedSlot.endTime)}</div></div>
-                  <div><div className="text-muted text-sm">Price</div><div className="fw-bold text-green">NPR {selectedSlot.futsal?.hourlyPrice ?? '—'}</div></div>
+                  <div><div className="text-muted text-sm">Price</div><div className="fw-bold text-green">NPR {selectedSlot.futsal?.hourlyPrice ?? '-'}</div></div>
                 </div>
               )}
             </div>
@@ -265,13 +263,13 @@ export default function Slots() {
               <textarea className="form-control" value={bookingNotes} onChange={(e) => setBookingNotes(e.target.value)} placeholder="Any special requests?"></textarea>
             </div>
             <div className={`alert alert-error ${bookingError ? 'show' : ''}`}>
-              <span>⚠️</span><span>{bookingError}</span>
+              <span>Error</span><span>{bookingError}</span>
             </div>
           </div>
           <div className="modal-footer">
             <button onClick={closeModal} className="btn btn-secondary">Cancel</button>
             <button onClick={confirmBooking} className="btn btn-primary" disabled={bookingLoading}>
-              {bookingLoading ? 'Processing payment...' : '⚽ Book Now'}
+              {bookingLoading ? 'Processing payment...' : 'Confirm Booking'}
             </button>
           </div>
         </div>
