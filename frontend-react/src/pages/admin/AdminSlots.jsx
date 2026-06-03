@@ -13,6 +13,7 @@ export default function AdminSlots() {
   const [slots, setSlots] = useState([]);
   const [editingId, setEditingId] = useState(null);
   const [selectedFutsalId, setSelectedFutsalId] = useState(null);
+  const [futsalsLoaded, setFutsalsLoaded] = useState(false);
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({ slotDate: '', startTime: '', endTime: '', futsalId: '' });
   const [alert, setAlert] = useState('');
@@ -34,6 +35,9 @@ export default function AdminSlots() {
       }
     } catch (err) {
       showToast(`Failed to load futsals: ${err.message}`, 'error');
+      setLoading(false);
+    } finally {
+      setFutsalsLoaded(true);
     }
   };
 
@@ -60,10 +64,12 @@ export default function AdminSlots() {
   }, []);
 
   useEffect(() => {
-    if (selectedFutsalId !== null) {
+    if (futsalsLoaded) {
       loadSlots(page);
     }
-  }, [selectedFutsalId, page]);
+  }, [futsalsLoaded, selectedFutsalId, page]);
+
+  const hasFutsals = futsals.length > 0;
 
   const resetForm = () => {
     setEditingId(null);
@@ -144,8 +150,10 @@ export default function AdminSlots() {
                   className="form-control"
                   value={form.futsalId}
                   onChange={(e) => setForm((prev) => ({ ...prev, futsalId: e.target.value }))}
+                  disabled={!hasFutsals}
                   required
                 >
+                  {!hasFutsals && <option value="">No futsals available</option>}
                   {futsals.map((f) => (
                     <option key={f.futsalId} value={f.futsalId}>{f.name} — {f.city}</option>
                   ))}
@@ -153,26 +161,26 @@ export default function AdminSlots() {
               </div>
               <div className="form-group">
                 <label className="form-label">Date</label>
-                <input type="date" className="form-control" value={form.slotDate} min={todayStr} onChange={(e) => setForm((prev) => ({ ...prev, slotDate: e.target.value }))} required />
+                <input type="date" className="form-control" value={form.slotDate} min={todayStr} onChange={(e) => setForm((prev) => ({ ...prev, slotDate: e.target.value }))} disabled={!hasFutsals} required />
               </div>
               <div className="form-row">
                 <div className="form-group">
                   <label className="form-label">Start Time</label>
-                  <input type="time" className="form-control" value={form.startTime} onChange={(e) => setForm((prev) => ({ ...prev, startTime: e.target.value }))} required />
+                  <input type="time" className="form-control" value={form.startTime} onChange={(e) => setForm((prev) => ({ ...prev, startTime: e.target.value }))} disabled={!hasFutsals} required />
                 </div>
                 <div className="form-group">
                   <label className="form-label">End Time</label>
-                  <input type="time" className="form-control" value={form.endTime} onChange={(e) => setForm((prev) => ({ ...prev, endTime: e.target.value }))} required />
+                  <input type="time" className="form-control" value={form.endTime} onChange={(e) => setForm((prev) => ({ ...prev, endTime: e.target.value }))} disabled={!hasFutsals} required />
                 </div>
               </div>
               <div className={`alert alert-error ${alert ? 'show' : ''}`}>
                 <span>⚠️</span><span>{alert}</span>
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
-                <button type="submit" className="btn btn-primary" style={{ flex: 1 }} disabled={submitting}>
+                <button type="submit" className="btn btn-primary" style={{ flex: 1 }} disabled={submitting || !hasFutsals}>
                   {submitting ? (editingId ? 'Saving...' : 'Adding...') : (editingId ? 'Save Changes' : 'Add Slot')}
                 </button>
-                <button type="button" className="btn btn-secondary" onClick={resetForm}>Reset</button>
+                <button type="button" className="btn btn-secondary" onClick={resetForm} disabled={!hasFutsals}>Reset</button>
               </div>
             </form>
           </div>
