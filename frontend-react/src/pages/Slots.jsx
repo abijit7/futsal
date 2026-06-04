@@ -56,10 +56,7 @@ export default function Slots() {
 
   const loadPublicSlots = async (targetPage = page) => {
     if (!selectedFutsalId) return;
-    const params = { futsalId: selectedFutsalId, page: targetPage, size: pageSize };
-    if (dateFilter) {
-      params.slotDate = dateFilter;
-    }
+    const params = { futsalId: selectedFutsalId, slotDate: dateFilter, page: targetPage, size: pageSize };
     const data = await SlotAPI.getPublic(params);
     const items = data?.items ?? data ?? [];
     setSlots(items);
@@ -101,11 +98,6 @@ export default function Slots() {
     };
     loadSlots();
   }, [selectedFutsalId, dateFilter, page, showToast]);
-
-  const toggleShowAll = () => {
-    setDateFilter((prev) => (prev ? '' : todayStr));
-    setPage(0);
-  };
 
   const openBookingModal = (slotId) => {
     if (!Auth.isLoggedIn()) {
@@ -231,12 +223,6 @@ export default function Slots() {
                   setPage(0);
                 }}
               />
-            </div>
-            <div>
-              <label className="form-label">View</label>
-              <button onClick={toggleShowAll} className="btn btn-secondary">
-                {dateFilter ? 'Show All' : 'Show Today'}
-              </button>
             </div>
           </div>
         </div>
