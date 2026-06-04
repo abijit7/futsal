@@ -5,10 +5,31 @@ import { SlotAPI } from '../api/slot.js';
 import { PaymentAPI } from '../api/payment.js';
 import { Auth } from '../utils/auth.js';
 import { FutsalStore } from '../utils/futsalStore.js';
-import { calculateDuration, formatDate, formatTime } from '../utils/format.js';
+import { calculateDuration, compactTimeRange, formatDate, formatTime } from '../utils/format.js';
 import EmptyState from '../components/EmptyState.jsx';
 import Pagination from '../components/Pagination.jsx';
 import { useToast } from '../components/ToastProvider.jsx';
+
+function toDateInputValue(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function buildDateChoices(startDate) {
+  return Array.from({ length: 7 }).map((_, index) => {
+    const date = new Date(startDate);
+    date.setDate(startDate.getDate() + index);
+    return {
+      value: toDateInputValue(date),
+      weekday: date.toLocaleDateString('en-NP', { weekday: 'short' }),
+      day: date.toLocaleDateString('en-NP', { day: 'numeric' }),
+      month: date.toLocaleDateString('en-NP', { month: 'short' }),
+      isToday: index === 0
+    };
+  });
+}
 
 export default function Slots() {
   const navigate = useNavigate();
@@ -31,6 +52,7 @@ export default function Slots() {
   const [paymentMethod, setPaymentMethod] = useState('ESEWA');
   const [bookingError, setBookingError] = useState('');
   const [bookingLoading, setBookingLoading] = useState(false);
+  const dateChoices = buildDateChoices(new Date());
 
   useEffect(() => {
     const loadFutsals = async () => {
@@ -93,6 +115,19 @@ export default function Slots() {
     setBookingModalOpen(true);
   };
 
+  const selectSlot = (slot) => {
+    if (slot.available === false) return;
+    setSelectedSlotId(slot.slotId);
+  };
+
+  const reserveSelectedSlot = () => {
+    if (!selectedSlotId) {
+      showToast('Please select a time slot first', 'error');
+      return;
+    }
+    openBookingModal(selectedSlotId);
+  };
+
   const closeModal = () => {
     setBookingModalOpen(false);
     setSelectedSlotId(null);
@@ -124,6 +159,19 @@ export default function Slots() {
   };
 
   const selectedSlot = slots.find((s) => s.slotId === selectedSlotId);
+  const selectedFutsal = futsals.find((f) => f.futsalId === selectedFutsalId);
+
+  useEffect(() => {
+    if (slots.length === 0) {
+      setSelectedSlotId(null);
+      return;
+    }
+    const stillAvailable = slots.some((slot) => slot.slotId === selectedSlotId && slot.available !== false);
+    if (!stillAvailable) {
+      const firstAvailable = slots.find((slot) => slot.available !== false);
+      setSelectedSlotId(firstAvailable?.slotId || null);
+    }
+  }, [slots, selectedSlotId]);
 
   return (
     <>
@@ -146,7 +194,13 @@ export default function Slots() {
             </div>
           </div>
         )}
-        <div className="filter-bar mb-3">
+        <div className="booking-filter-shell mb-3">
+          <div className="booking-filter-summary">
+            <span className="availability-pill">Real-time availability</span>
+            <h2>{selectedFutsal?.name || 'Choose a futsal'}</h2>
+            <p>{selectedFutsal ? `${selectedFutsal.address}, ${selectedFutsal.city}` : 'Filter by venue and date to view bookable slots.'}</p>
+          </div>
+          <div className="filter-bar compact mb-0">
             <div>
               <label className="form-label">Select Futsal</label>
               <select
@@ -186,6 +240,7 @@ export default function Slots() {
                 {dateFilter ? 'Show All' : 'Show Today'}
               </button>
             </div>
+          </div>
         </div>
 
         {!selectedFutsalId && !loading && (
@@ -211,18 +266,92 @@ export default function Slots() {
         )}
 
         {!loading && slots.length > 0 && (
-          <div className="slots-grid">
-            {slots.map((slot) => (
-              <div className="slot-card" key={slot.slotId}>
-                <div className="slot-date">{formatDate(slot.slotDate)}</div>
-                <div className="slot-time">{formatTime(slot.startTime)} - {formatTime(slot.endTime)}</div>
-                <div className="slot-duration">{calculateDuration(slot.startTime, slot.endTime)} session</div>
-                <div className="slot-price">NPR {slot.futsal?.hourlyPrice ?? '-'} <span>/ hour</span></div>
-                <button className="btn btn-primary btn-full" onClick={() => openBookingModal(slot.slotId)}>
-                  Book This Slot
-                </button>
+          <div className="slot-booking-experience">
+            <section className="slot-picker-panel">
+              <div className="slot-section-title">
+                <span className="slot-section-icon calendar" aria-hidden="true"></span>
+                <h2>Select Date</h2>
               </div>
-            ))}
+              <div className="date-choice-row" role="list" aria-label="Select booking date">
+                {dateChoices.map((choice) => {
+                  const selected = dateFilter === choice.value;
+                  return (
+                    <button
+                      key={choice.value}
+                      type="button"
+                      className={`date-choice ${selected ? 'selected' : ''}`}
+                      onClick={() => {
+                        setDateFilter(choice.value);
+                        setPage(0);
+                      }}
+                    >
+                      <span>{choice.weekday}</span>
+                      <strong>{choice.day}</strong>
+                      <span>{choice.month}</span>
+                      {choice.isToday && <em>Today</em>}
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+
+            <div className="slot-detail-layout">
+              <section className="slot-picker-panel">
+                <div className="slot-section-title">
+                  <span className="slot-section-icon clock" aria-hidden="true"></span>
+                  <h2>Available Time Slots</h2>
+                </div>
+                <div className="slot-legend">
+                  <span><i className="legend-available"></i>Available</span>
+                  <span><i className="legend-booked"></i>Booked</span>
+                  <span><i className="legend-selected"></i>Selected</span>
+                </div>
+                <div className="time-slot-grid" role="list" aria-label="Available time slots">
+                  {slots.map((slot) => {
+                    const isBooked = slot.available === false;
+                    const selected = slot.slotId === selectedSlotId;
+                    return (
+                      <button
+                        type="button"
+                        key={slot.slotId}
+                        className={`time-slot-pill ${isBooked ? 'booked' : ''} ${selected ? 'selected' : ''}`}
+                        disabled={isBooked}
+                        onClick={() => selectSlot(slot)}
+                      >
+                        {formatTime(slot.startTime)}
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+
+              <aside className="selected-slot-card">
+                <div className="selected-slot-price">
+                  <strong>NPR {selectedSlot?.futsal?.hourlyPrice ?? selectedFutsal?.hourlyPrice ?? '-'}</strong>
+                  <span>/hour</span>
+                </div>
+                <div className="selected-slot-rating">Selected futsal booking</div>
+                <div className="selected-slot-body">
+                  <label>Selected Slot</label>
+                  <div className="selected-slot-value">
+                    {selectedSlot ? compactTimeRange(selectedSlot.startTime, selectedSlot.endTime) : 'Select a time slot'}
+                  </div>
+                  <div className="selected-slot-metrics">
+                    <div>
+                      <span>Duration</span>
+                      <strong>{selectedSlot ? calculateDuration(selectedSlot.startTime, selectedSlot.endTime) : '-'}</strong>
+                    </div>
+                    <div>
+                      <span>Date</span>
+                      <strong>{selectedSlot ? formatDate(selectedSlot.slotDate) : '-'}</strong>
+                    </div>
+                  </div>
+                  <button className="btn btn-primary btn-full" onClick={reserveSelectedSlot}>
+                    Reserve Selected Slot
+                  </button>
+                </div>
+              </aside>
+            </div>
           </div>
         )}
 
@@ -243,7 +372,7 @@ export default function Slots() {
                 <div className="booking-summary-grid">
                   <div><div className="text-muted text-sm">Futsal</div><div className="fw-bold">{selectedSlot.futsal?.name || '-'}</div></div>
                   <div><div className="text-muted text-sm">Date</div><div className="fw-bold">{formatDate(selectedSlot.slotDate)}</div></div>
-                  <div><div className="text-muted text-sm">Time</div><div className="fw-bold">{formatTime(selectedSlot.startTime)} - {formatTime(selectedSlot.endTime)}</div></div>
+                  <div><div className="text-muted text-sm">Time</div><div className="fw-bold">{compactTimeRange(selectedSlot.startTime, selectedSlot.endTime)}</div></div>
                   <div><div className="text-muted text-sm">Duration</div><div className="fw-bold">{calculateDuration(selectedSlot.startTime, selectedSlot.endTime)}</div></div>
                   <div><div className="text-muted text-sm">Price</div><div className="fw-bold text-green">NPR {selectedSlot.futsal?.hourlyPrice ?? '-'}</div></div>
                 </div>

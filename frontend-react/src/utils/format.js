@@ -16,6 +16,20 @@ export function formatTime(timeStr) {
   return `${hh}:${m} ${ampm}`;
 }
 
+export function compactTimeRange(startTime, endTime) {
+  if (!startTime || !endTime) return '-';
+  const start = formatTime(startTime);
+  const end = formatTime(endTime);
+  const startPeriod = start.slice(-2);
+  const endPeriod = end.slice(-2);
+  const startCore = start.replace(/\s?(AM|PM)$/i, '');
+  const endCore = end.replace(/\s?(AM|PM)$/i, '');
+  if (startPeriod === endPeriod) {
+    return `${startCore}-${endCore} ${endPeriod}`;
+  }
+  return `${startCore} ${startPeriod}-${endCore} ${endPeriod}`;
+}
+
 export function formatDateTime(dtStr) {
   if (!dtStr) return '-';
   const d = new Date(dtStr);
@@ -40,4 +54,3 @@ export function statusClass(status) {
   };
   return map[status] || '';
 }
-

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { BookingAPI } from '../api/booking.js';
 import { Auth } from '../utils/auth.js';
-import { calculateDuration, formatDate, formatDateTime, formatTime } from '../utils/format.js';
+import { calculateDuration, compactTimeRange, formatDate, formatDateTime } from '../utils/format.js';
 import StatusBadge from '../components/StatusBadge.jsx';
 import LoadingWrap from '../components/LoadingWrap.jsx';
 import EmptyState from '../components/EmptyState.jsx';
@@ -85,29 +85,35 @@ export default function MyBookings() {
         )}
 
         {!loading && filtered.length > 0 && (
-          <div className="slots-grid">
+          <div className="booking-card-grid">
             {filtered.map((b) => {
               const canCancel = b.status === 'PENDING' || b.status === 'APPROVED';
               const paymentInfo = b.paymentMethod ? `${b.paymentMethod} / ${b.paymentRef}` : '-';
               return (
-                <div key={b.bookingId} className={`slot-card booking-card status-border-${b.status.toLowerCase()}`}>
-                  <div className="flex-between mb-1">
-                    <div className="slot-date">{formatDate(b.timeSlot.slotDate)}</div>
+                <article key={b.bookingId} className={`booking-detail-card status-border-${b.status.toLowerCase()}`}>
+                  <div className="booking-detail-head">
+                    <div>
+                      <div className="slot-date">{formatDate(b.timeSlot.slotDate)}</div>
+                      <h2>{b.timeSlot.futsal?.name || 'Futsal booking'}</h2>
+                    </div>
                     <StatusBadge status={b.status} />
                   </div>
-                  <div className="text-muted text-sm mb-1">{b.timeSlot.futsal?.name || '-'}</div>
-                  <div className="slot-time">{formatTime(b.timeSlot.startTime)} - {formatTime(b.timeSlot.endTime)}</div>
-                  <div className="slot-duration">{calculateDuration(b.timeSlot.startTime, b.timeSlot.endTime)}</div>
-                  <div className="slot-price">NPR {b.timeSlot.futsal?.hourlyPrice ?? '-'} <span>/ hour</span></div>
-                  <div className="text-muted text-sm mb-1">Payment: {paymentInfo}</div>
-                  {b.notes && <div className="text-muted text-sm mb-1">Notes: {b.notes}</div>}
-                  <div className="text-muted text-sm mb-2">Booked: {formatDateTime(b.bookedAt)}</div>
+                  <div className="booking-detail-time">{compactTimeRange(b.timeSlot.startTime, b.timeSlot.endTime)}</div>
+                  <div className="booking-detail-meta">
+                    <span>{calculateDuration(b.timeSlot.startTime, b.timeSlot.endTime)} session</span>
+                    <span>Payment: {paymentInfo}</span>
+                    <span>Booked: {formatDateTime(b.bookedAt)}</span>
+                  </div>
+                  {b.notes && <div className="booking-notes">Notes: {b.notes}</div>}
+                  <div className="booking-detail-footer">
+                    <div className="slot-price">NPR {b.timeSlot.futsal?.hourlyPrice ?? '-'} <span>/ hour</span></div>
                   {canCancel && (
-                    <button className="btn btn-danger btn-full btn-sm" onClick={() => cancelBooking(b.bookingId)}>
+                    <button className="btn btn-danger btn-sm" onClick={() => cancelBooking(b.bookingId)}>
                       Cancel Booking
                     </button>
                   )}
-                </div>
+                  </div>
+                </article>
               );
             })}
           </div>

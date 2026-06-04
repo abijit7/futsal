@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { BookingAPI } from '../../api/booking.js';
-import { formatDate, formatDateTime, formatTime } from '../../utils/format.js';
+import { compactTimeRange, formatDate, formatDateTime } from '../../utils/format.js';
 import StatusBadge from '../../components/StatusBadge.jsx';
 import { useToast } from '../../components/ToastProvider.jsx';
 import { useConfirm } from '../../components/ConfirmProvider.jsx';
@@ -127,7 +127,7 @@ export default function AdminBookings() {
                         </td>
                         <td className="text-muted text-sm" data-label="Futsal">{b.timeSlot.futsal?.name || '-'}</td>
                         <td data-label="Date">{formatDate(b.timeSlot.slotDate)}</td>
-                        <td data-label="Time">{formatTime(b.timeSlot.startTime)}<br /><span className="text-muted text-sm">{formatTime(b.timeSlot.endTime)}</span></td>
+                        <td data-label="Time" className="nowrap">{compactTimeRange(b.timeSlot.startTime, b.timeSlot.endTime)}</td>
                         <td data-label="Price" className="text-accent fw-bold">NPR {b.timeSlot.futsal?.hourlyPrice ?? '-'}</td>
                         <td className="text-muted text-sm" data-label="Payment">{paymentInfo}</td>
                         <td className="text-muted text-sm" data-label="Notes">{b.notes || '-'}</td>

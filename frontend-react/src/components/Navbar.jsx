@@ -38,7 +38,7 @@ export default function Navbar() {
           <span className="logo-mark" aria-hidden="true">
             <span></span>
           </span>
-          <span>Futsal<span>Book</span></span>
+          <span>Futsal<span>Go</span></span>
         </NavLink>
 
         <button
@@ -74,7 +74,7 @@ export default function Navbar() {
           ) : (
             <>
               <NavLink to="/login" className="nav-link">Login</NavLink>
-              <NavLink to="/register" className="nav-btn">Register</NavLink>
+              <NavLink to="/register" className="nav-btn">Sign Up</NavLink>
             </>
           )}
 

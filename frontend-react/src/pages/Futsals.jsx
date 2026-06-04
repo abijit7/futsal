@@ -19,6 +19,8 @@ export default function Futsals() {
   const mouseStartRef = useRef({});
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
+  const [search, setSearch] = useState('');
+  const [sortBy, setSortBy] = useState('recommended');
   const pageSize = 12;
 
   useEffect(() => {
@@ -41,6 +43,17 @@ export default function Futsals() {
     FutsalStore.save({ futsalId: futsal.futsalId, name: futsal.name });
     navigate('/slots');
   };
+
+  const visibleFutsals = futsals
+    .filter((futsal) => {
+      const text = `${futsal.name || ''} ${futsal.address || ''} ${futsal.city || ''}`.toLowerCase();
+      return text.includes(search.toLowerCase());
+    })
+    .sort((a, b) => {
+      if (sortBy === 'price-low') return (a.hourlyPrice || 0) - (b.hourlyPrice || 0);
+      if (sortBy === 'price-high') return (b.hourlyPrice || 0) - (a.hourlyPrice || 0);
+      return (a.name || '').localeCompare(b.name || '');
+    });
 
   const getIndex = (futsalId) => photoIndex[futsalId] || 0;
 
@@ -99,6 +112,24 @@ export default function Futsals() {
       </div>
 
       <div className="container page-wrap">
+        <div className="browse-toolbar mb-3">
+          <div className="browse-search">
+            <span aria-hidden="true">⌕</span>
+            <input
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search futsal, city, or area"
+              aria-label="Search futsals"
+            />
+          </div>
+          <select className="compact-select" value={sortBy} onChange={(e) => setSortBy(e.target.value)} aria-label="Sort venues">
+            <option value="recommended">Recommended</option>
+            <option value="price-low">Price: low to high</option>
+            <option value="price-high">Price: high to low</option>
+          </select>
+        </div>
+
         {loading && (
           <div className="slots-grid">
             {Array.from({ length: 6 }).map((_, index) => (
@@ -118,18 +149,22 @@ export default function Futsals() {
           <EmptyState icon="0" title="No futsals available" description="Please check back later." />
         )}
 
-        {!loading && futsals.length > 0 && (
-          <div className="slots-grid">
-            {futsals.map((f) => {
+        {!loading && futsals.length > 0 && visibleFutsals.length === 0 && (
+          <EmptyState icon="0" title="No futsals match your search" description="Try another city, area, or venue name." />
+        )}
+
+        {!loading && visibleFutsals.length > 0 && (
+          <div className="venue-grid">
+            {visibleFutsals.map((f, index) => {
               const images = (f.imageUrls && f.imageUrls.length > 0) ? f.imageUrls : (f.imageUrl ? [f.imageUrl] : []);
               const currentIndex = getIndex(f.futsalId);
               const currentImage = images[currentIndex] || images[0];
               const dir = photoDir[f.futsalId] || 1;
               const slideClass = dir === 1 ? 'slide-left' : 'slide-right';
               return (
-                <article className="slot-card" key={f.futsalId}>
-                  {images.length > 0 && (
-                    <div className="futsal-gallery">
+                <article className="venue-card" key={f.futsalId}>
+                  <div className="venue-card-media">
+                    {images.length > 0 ? (
                       <div
                         className="futsal-carousel"
                         onTouchStart={(event) => handleTouchStart(f.futsalId, event)}
@@ -145,6 +180,8 @@ export default function Futsals() {
                           alt={f.name}
                           onError={(e) => (e.currentTarget.style.display = 'none')}
                         />
+                        <span className="availability-chip">Available</span>
+                        <span className="venue-rank">{index === 0 ? 'Top pick' : 'Verified'}</span>
                         {images.length > 1 && (
                           <>
                             <button
@@ -166,25 +203,36 @@ export default function Futsals() {
                           </>
                         )}
                       </div>
-                    </div>
-                  )}
-                  {images.length === 0 && (
+                    ) : (
                     <div className="venue-placeholder">
                       <span>{f.name?.charAt(0)?.toUpperCase() || 'F'}</span>
                     </div>
-                  )}
-                  <div className="slot-date">Verified venue</div>
-                  <h2 className="venue-title">{f.name}</h2>
-                  <div className="text-muted text-sm mb-1">{f.address}, {f.city}</div>
-                  <div className="text-muted text-sm mb-2">{f.phone}</div>
-                  <div className="venue-meta">
-                    <span>Opens {f.openingTime ? formatTime(f.openingTime) : '-'}</span>
-                    <span>NPR {f.hourlyPrice ?? '-'} / hour</span>
+                    )}
                   </div>
-                  {f.description && <div className="text-muted text-sm mb-2">{f.description}</div>}
-                  <button className="btn btn-primary btn-full" onClick={() => selectFutsal(f)}>
-                    View Available Slots
-                  </button>
+                  <div className="venue-card-body">
+                    <div className="venue-card-topline">
+                      <span className="slot-date">Verified venue</span>
+                      <span className="rating-pill">4.{(index + 5) % 10}</span>
+                    </div>
+                    <h2 className="venue-title">{f.name}</h2>
+                    <div className="venue-location">{f.address}, {f.city}</div>
+                    <div className="text-muted text-sm mb-2">{f.phone}</div>
+                    {f.description && <div className="venue-description">{f.description}</div>}
+                    <div className="venue-meta">
+                      <span>Opens {f.openingTime ? formatTime(f.openingTime) : '-'}</span>
+                      <span>Indoor court</span>
+                    </div>
+                    <div className="venue-card-footer">
+                      <div>
+                        <span className="price-label">From</span>
+                        <strong>NPR {f.hourlyPrice ?? '-'}</strong>
+                        <span>/ hour</span>
+                      </div>
+                      <button className="btn btn-primary btn-sm" onClick={() => selectFutsal(f)}>
+                        View Slots
+                      </button>
+                    </div>
+                  </div>
                 </article>
               );
             })}

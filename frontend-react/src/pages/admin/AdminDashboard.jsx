@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { BookingAPI } from '../../api/booking.js';
 import { SlotAPI } from '../../api/slot.js';
 import { UserAPI } from '../../api/user.js';
-import { formatDate, formatTime } from '../../utils/format.js';
+import { compactTimeRange, formatDate } from '../../utils/format.js';
 import { useToast } from '../../components/ToastProvider.jsx';
 
 export default function AdminDashboard() {
@@ -78,63 +78,61 @@ export default function AdminDashboard() {
       </div>
 
       <div className="container page-wrap">
-        <div className="stats-grid">
-          <div className="stat-card"><div className="stat-value">{stats.totalSlots}</div><div className="stat-label">Total Slots</div></div>
-          <div className="stat-card"><div className="stat-value text-approved">{stats.availableSlots}</div><div className="stat-label">Available Slots</div></div>
-          <div className="stat-card"><div className="stat-value">{stats.totalBookings}</div><div className="stat-label">Total Bookings</div></div>
-          <div className="stat-card"><div className="stat-value text-warning">{stats.pending}</div><div className="stat-label">Pending Approval</div></div>
-          <div className="stat-card"><div className="stat-value text-approved">{stats.approved}</div><div className="stat-label">Approved</div></div>
-          <div className="stat-card"><div className="stat-value">{stats.totalUsers}</div><div className="stat-label">Registered Users</div></div>
-        </div>
+        <div className="admin-dashboard-shell">
+          <aside className="admin-command-panel">
+            <div className="section-eyebrow">Admin console</div>
+            <h2>Venue operations</h2>
+            <p>Monitor inventory, approvals, users, and booking activity from the live backend.</p>
+            <div className="admin-command-links">
+              <a href="/admin/futsals">Manage Venues</a>
+              <a href="/admin/slots">Manage Slots</a>
+              <a href="/admin/bookings">Review Bookings</a>
+              <a href="/admin/users">Users</a>
+            </div>
+          </aside>
 
-        <div className="card mb-3">
-          <div className="card-header"><h2>Quick Actions</h2></div>
-          <div className="actions-row">
-            <a href="/admin/slots" className="btn btn-primary">Manage Slots</a>
-            <a href="/admin/bookings" className="btn btn-secondary">Review Bookings</a>
-            <a href="/admin/users" className="btn btn-secondary">View Users</a>
-          </div>
-        </div>
+          <div className="admin-dashboard-main">
+            <div className="stats-grid admin-stats-grid">
+              <div className="stat-card"><div className="stat-value">{stats.totalSlots}</div><div className="stat-label">Total Slots</div></div>
+              <div className="stat-card"><div className="stat-value text-approved">{stats.availableSlots}</div><div className="stat-label">Available Slots</div></div>
+              <div className="stat-card"><div className="stat-value">{stats.totalBookings}</div><div className="stat-label">Total Bookings</div></div>
+              <div className="stat-card"><div className="stat-value text-warning">{stats.pending}</div><div className="stat-label">Pending Approval</div></div>
+              <div className="stat-card"><div className="stat-value text-approved">{stats.approved}</div><div className="stat-label">Approved</div></div>
+              <div className="stat-card"><div className="stat-value">{stats.totalUsers}</div><div className="stat-label">Registered Users</div></div>
+            </div>
 
-        <div className="card">
-          <div className="card-header">
-            <h2>Pending Bookings</h2>
-            <a href="/admin/bookings" className="btn btn-secondary btn-sm">View All</a>
-          </div>
+            <div className="card">
+              <div className="card-header">
+                <h2>Pending Bookings</h2>
+                <a href="/admin/bookings" className="btn btn-secondary btn-sm">View All</a>
+              </div>
 
-          {loading ? (
-            <div className="loading-wrap"><div className="spinner"></div><p>Loading...</p></div>
-          ) : pendingBookings.length === 0 ? (
-            <div className="empty-state"><div className="icon">OK</div><h3>No pending bookings</h3><p>All bookings have been reviewed.</p></div>
-          ) : (
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr><th>User</th><th>Date</th><th>Time</th><th>Price</th><th>Notes</th><th>Actions</th></tr>
-                </thead>
-                <tbody>
+              {loading ? (
+                <div className="loading-wrap"><div className="spinner"></div><p>Loading...</p></div>
+              ) : pendingBookings.length === 0 ? (
+                <div className="empty-state"><div className="icon">OK</div><h3>No pending bookings</h3><p>All bookings have been reviewed.</p></div>
+              ) : (
+                <div className="booking-list">
                   {pendingBookings.map((b) => (
-                    <tr key={b.bookingId}>
-                      <td>
+                    <article className="booking-row-card admin-booking-row" key={b.bookingId}>
+                      <div>
                         <div className="fw-bold">{b.user.name}</div>
-                        <div className="text-muted text-sm">{b.user.email}</div>
-                      </td>
-                      <td>{formatDate(b.timeSlot.slotDate)}</td>
-                      <td>{formatTime(b.timeSlot.startTime)} - {formatTime(b.timeSlot.endTime)}</td>
-                      <td className="text-accent fw-bold">NPR {b.timeSlot.futsal?.hourlyPrice ?? '-'}</td>
-                      <td className="text-muted text-sm">{b.notes || '-'}</td>
-                      <td>
+                        <p>{b.user.email}</p>
+                        <div className="text-muted text-sm">{b.timeSlot.futsal?.name || '-'} · {formatDate(b.timeSlot.slotDate)} · {compactTimeRange(b.timeSlot.startTime, b.timeSlot.endTime)}</div>
+                      </div>
+                      <div className="booking-row-side">
+                        <strong>NPR {b.timeSlot.futsal?.hourlyPrice ?? '-'}</strong>
                         <div className="actions-row">
                           <button className="btn btn-success btn-sm" onClick={() => updateStatus(b.bookingId, 'APPROVED')}>Approve</button>
                           <button className="btn btn-danger btn-sm" onClick={() => updateStatus(b.bookingId, 'REJECTED')}>Reject</button>
                         </div>
-                      </td>
-                    </tr>
+                      </div>
+                    </article>
                   ))}
-                </tbody>
-              </table>
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
       </div>
     </>
