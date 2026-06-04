@@ -1637,14 +1637,119 @@ tbody tr:hover {
   color: var(--gray-950);
 }
 
-.compact-select {
-  min-height: 42px;
-  padding: 0 38px 0 12px;
+.sort-control {
+  position: relative;
+  min-width: 214px;
+}
+
+.sort-trigger {
+  position: relative;
+  width: 100%;
+  min-height: 50px;
+  display: grid;
+  gap: 3px;
+  justify-items: start;
+  padding: 8px 42px 8px 14px;
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(242, 245, 248, 0.94));
+  color: var(--navy-950);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.92);
+  text-align: left;
+  transition: border-color var(--transition), box-shadow var(--transition), background var(--transition);
+}
+
+.sort-trigger::after {
+  content: "";
+  position: absolute;
+  right: 15px;
+  top: 50%;
+  width: 9px;
+  height: 9px;
+  border-right: 2px solid var(--gray-600);
+  border-bottom: 2px solid var(--gray-600);
+  pointer-events: none;
+  transform: translateY(-68%) rotate(45deg);
+  transition: transform var(--transition);
+}
+
+.sort-control.open .sort-trigger::after {
+  transform: translateY(-25%) rotate(225deg);
+}
+
+.sort-trigger:hover,
+.sort-trigger:focus-visible,
+.sort-control.open .sort-trigger {
+  border-color: rgba(17, 168, 92, 0.42);
+  box-shadow: var(--ring);
+}
+
+.sort-label {
+  color: var(--gray-500);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.sort-value {
+  color: var(--navy-950);
+  font-size: 14px;
+  font-weight: 900;
+  line-height: 1.15;
+}
+
+.sort-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 30;
+  width: min(280px, calc(100vw - 32px));
+  overflow: hidden;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
   background: var(--white);
+  box-shadow: var(--shadow-md);
+}
+
+.sort-option {
+  width: 100%;
+  min-height: 54px;
+  display: grid;
+  justify-items: start;
+  gap: 3px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
   color: var(--gray-700);
-  font-weight: 800;
+  text-align: left;
+}
+
+.sort-option span {
+  color: var(--navy-950);
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.sort-option small {
+  color: var(--gray-500);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.sort-option:hover,
+.sort-option:focus-visible,
+.sort-option.selected {
+  background: var(--green-100);
+}
+
+.sort-option.selected span,
+.sort-option.selected small {
+  color: var(--green-600);
 }
 
 .booking-filter-shell {
@@ -2463,7 +2568,7 @@ tbody tr:hover {
     padding: 12px;
   }
 
-  .compact-select {
+  .sort-control {
     width: 100%;
   }
 

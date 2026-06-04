@@ -8,6 +8,12 @@ import EmptyState from '../components/EmptyState.jsx';
 import Pagination from '../components/Pagination.jsx';
 import { useToast } from '../components/ToastProvider.jsx';
 
+const sortOptions = [
+  { value: 'recommended', label: 'Recommended', hint: 'Best match first' },
+  { value: 'price-low', label: 'Price: low to high', hint: 'Lowest hourly rate' },
+  { value: 'price-high', label: 'Price: high to low', hint: 'Premium venues first' }
+];
+
 export default function Futsals() {
   const navigate = useNavigate();
   const { showToast } = useToast();
@@ -21,7 +27,9 @@ export default function Futsals() {
   const [totalPages, setTotalPages] = useState(0);
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState('recommended');
+  const [sortOpen, setSortOpen] = useState(false);
   const pageSize = 12;
+  const selectedSort = sortOptions.find((option) => option.value === sortBy) || sortOptions[0];
 
   useEffect(() => {
     const load = async () => {
@@ -123,11 +131,46 @@ export default function Futsals() {
               aria-label="Search futsals"
             />
           </div>
-          <select className="compact-select" value={sortBy} onChange={(e) => setSortBy(e.target.value)} aria-label="Sort venues">
-            <option value="recommended">Recommended</option>
-            <option value="price-low">Price: low to high</option>
-            <option value="price-high">Price: high to low</option>
-          </select>
+          <div
+            className={`sort-control ${sortOpen ? 'open' : ''}`}
+            onBlur={(event) => {
+              if (!event.currentTarget.contains(event.relatedTarget)) {
+                setSortOpen(false);
+              }
+            }}
+          >
+            <button
+              type="button"
+              className="sort-trigger"
+              aria-haspopup="listbox"
+              aria-expanded={sortOpen}
+              onClick={() => setSortOpen((value) => !value)}
+            >
+              <span className="sort-label">Sort by</span>
+              <span className="sort-value">{selectedSort.label}</span>
+            </button>
+            {sortOpen && (
+              <div className="sort-menu" role="listbox" aria-label="Sort venues">
+                {sortOptions.map((option) => (
+                  <button
+                    type="button"
+                    key={option.value}
+                    className={`sort-option ${sortBy === option.value ? 'selected' : ''}`}
+                    role="option"
+                    aria-selected={sortBy === option.value}
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => {
+                      setSortBy(option.value);
+                      setSortOpen(false);
+                    }}
+                  >
+                    <span>{option.label}</span>
+                    <small>{option.hint}</small>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {loading && (
