@@ -58,6 +58,9 @@ public class AdminAuthInterceptor implements HandlerInterceptor {
         if ("/api/slots".equals(path) && "GET".equalsIgnoreCase(method)) {
             return true;
         }
+        if ("/api/slots/public".equals(path) && "GET".equalsIgnoreCase(method)) {
+            return true;
+        }
         if (SLOT_ID.matcher(path).matches() && "GET".equalsIgnoreCase(method)) {
             return true;
         }

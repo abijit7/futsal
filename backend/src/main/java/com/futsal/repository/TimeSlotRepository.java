@@ -102,4 +102,40 @@ public interface TimeSlotRepository extends JpaRepository<TimeSlot, Long> {
             @Param("closingTime") LocalTime closingTime,
             Pageable pageable
     );
+
+    @Query("select s from TimeSlot s where s.slotDate >= :today and (s.slotDate > :today or s.startTime >= :minStartTime) and s.endTime <= :closingTime order by s.slotDate asc, s.startTime asc")
+    Page<TimeSlot> findPublicAfter(
+            @Param("today") LocalDate today,
+            @Param("minStartTime") LocalTime minStartTime,
+            @Param("closingTime") LocalTime closingTime,
+            Pageable pageable
+    );
+
+    @Query("select s from TimeSlot s where s.futsal.futsalId = :futsalId and s.slotDate >= :today and (s.slotDate > :today or s.startTime >= :minStartTime) and s.endTime <= :closingTime order by s.slotDate asc, s.startTime asc")
+    Page<TimeSlot> findPublicForFutsalAfter(
+            @Param("futsalId") Long futsalId,
+            @Param("today") LocalDate today,
+            @Param("minStartTime") LocalTime minStartTime,
+            @Param("closingTime") LocalTime closingTime,
+            Pageable pageable
+    );
+
+    @Query("select s from TimeSlot s where s.slotDate = :slotDate and s.endTime <= :closingTime and (:isToday = false or s.startTime >= :minStartTime) order by s.startTime asc")
+    Page<TimeSlot> findPublicOnDate(
+            @Param("slotDate") LocalDate slotDate,
+            @Param("isToday") boolean isToday,
+            @Param("minStartTime") LocalTime minStartTime,
+            @Param("closingTime") LocalTime closingTime,
+            Pageable pageable
+    );
+
+    @Query("select s from TimeSlot s where s.futsal.futsalId = :futsalId and s.slotDate = :slotDate and s.endTime <= :closingTime and (:isToday = false or s.startTime >= :minStartTime) order by s.startTime asc")
+    Page<TimeSlot> findPublicForFutsalOnDate(
+            @Param("futsalId") Long futsalId,
+            @Param("slotDate") LocalDate slotDate,
+            @Param("isToday") boolean isToday,
+            @Param("minStartTime") LocalTime minStartTime,
+            @Param("closingTime") LocalTime closingTime,
+            Pageable pageable
+    );
 }

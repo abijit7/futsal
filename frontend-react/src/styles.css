@@ -1829,13 +1829,13 @@ tbody tr:hover {
 
 .slot-booking-experience {
   display: grid;
-  gap: 26px;
+  gap: 18px;
 }
 
 .slot-picker-panel {
-  padding: 28px;
+  padding: 20px;
   border: 1px solid var(--border);
-  border-radius: 18px;
+  border-radius: 14px;
   background: var(--white);
   box-shadow: 0 1px 2px rgba(7, 17, 31, 0.06);
 }
@@ -1843,21 +1843,21 @@ tbody tr:hover {
 .slot-section-title {
   display: flex;
   align-items: center;
-  gap: 14px;
-  margin-bottom: 24px;
+  gap: 10px;
+  margin-bottom: 18px;
 }
 
 .slot-section-title h2 {
   color: var(--navy-950);
-  font-size: clamp(27px, 3vw, 38px);
+  font-size: clamp(22px, 2.2vw, 29px);
   line-height: 1;
   font-weight: 900;
 }
 
 .slot-section-icon {
   position: relative;
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   display: inline-flex;
   flex: 0 0 auto;
   color: var(--green-600);
@@ -1872,9 +1872,9 @@ tbody tr:hover {
 .slot-section-icon.calendar::after {
   content: "";
   position: absolute;
-  top: -5px;
+  top: -4px;
   width: 3px;
-  height: 8px;
+  height: 7px;
   border-radius: 99px;
   background: currentColor;
 }
@@ -1899,35 +1899,35 @@ tbody tr:hover {
 }
 
 .slot-section-icon.clock::before {
-  width: 7px;
+  width: 6px;
   height: 2px;
   transform: translateY(-50%) rotate(28deg);
 }
 
 .slot-section-icon.clock::after {
   width: 2px;
-  height: 7px;
+  height: 6px;
   transform: translate(-50%, -100%);
 }
 
 .date-choice-row {
   display: flex;
-  gap: 16px;
+  gap: 12px;
   overflow-x: auto;
   padding-bottom: 2px;
 }
 
 .date-choice {
-  width: 132px;
-  min-width: 132px;
-  min-height: 158px;
+  width: 96px;
+  min-width: 96px;
+  min-height: 118px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
   border: 2px solid #d4dbe4;
-  border-radius: 28px;
+  border-radius: 20px;
   background: #edf2f7;
   color: #5d7183;
   box-shadow: none;
@@ -1936,7 +1936,7 @@ tbody tr:hover {
 .date-choice span,
 .date-choice em {
   color: inherit;
-  font-size: 21px;
+  font-size: 15px;
   font-style: normal;
   font-weight: 800;
   line-height: 1.1;
@@ -1944,7 +1944,7 @@ tbody tr:hover {
 
 .date-choice strong {
   color: var(--navy-950);
-  font-size: 32px;
+  font-size: 27px;
   line-height: 1;
   font-weight: 900;
 }
@@ -1971,8 +1971,8 @@ tbody tr:hover {
 
 .slot-detail-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 360px;
-  gap: 26px;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 18px;
   align-items: start;
 }
 
@@ -1980,22 +1980,22 @@ tbody tr:hover {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 30px;
-  margin-bottom: 28px;
+  gap: 18px;
+  margin-bottom: 20px;
 }
 
 .slot-legend span {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   color: #5d7183;
-  font-size: 20px;
+  font-size: 15px;
   font-weight: 700;
 }
 
 .slot-legend i {
-  width: 22px;
-  height: 22px;
+  width: 15px;
+  height: 15px;
   display: inline-block;
   border-radius: 7px;
 }
@@ -2006,17 +2006,17 @@ tbody tr:hover {
 
 .time-slot-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(126px, 1fr));
+  gap: 12px;
 }
 
 .time-slot-pill {
-  min-height: 76px;
+  min-height: 52px;
   border: 0;
-  border-radius: 28px;
+  border-radius: 18px;
   background: #e8f5eb;
   color: #10823e;
-  font-size: clamp(19px, 2vw, 25px);
+  font-size: clamp(15px, 1.45vw, 18px);
   font-weight: 900;
   white-space: nowrap;
 }
@@ -2028,33 +2028,33 @@ tbody tr:hover {
 }
 
 .time-slot-pill.selected {
-  border: 4px solid var(--green-600);
+  border: 3px solid var(--green-600);
   background: var(--navy-950);
   color: var(--white);
 }
 
 .time-slot-pill:not(:disabled):hover {
   transform: translateY(-1px);
-  box-shadow: 0 14px 28px rgba(7, 17, 31, 0.12);
+  box-shadow: 0 10px 20px rgba(7, 17, 31, 0.1);
 }
 
 .selected-slot-card {
   overflow: hidden;
   border: 1px solid var(--border);
-  border-radius: 20px;
+  border-radius: 16px;
   background: var(--white);
   box-shadow: var(--shadow-sm);
 }
 
 .selected-slot-price {
-  padding: 30px 32px 28px;
+  padding: 22px 24px 20px;
   background: var(--navy-950);
   color: var(--white);
 }
 
 .selected-slot-price strong {
   color: var(--white);
-  font-size: 36px;
+  font-size: 28px;
   line-height: 1;
   font-weight: 900;
 }
@@ -2062,65 +2062,65 @@ tbody tr:hover {
 .selected-slot-price span {
   margin-left: 6px;
   color: rgba(255, 255, 255, 0.62);
-  font-size: 20px;
+  font-size: 15px;
   font-weight: 800;
 }
 
 .selected-slot-rating {
-  padding: 0 32px 26px;
-  margin-top: -18px;
+  padding: 0 24px 20px;
+  margin-top: -10px;
   background: var(--navy-950);
   color: rgba(255, 255, 255, 0.72);
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 800;
 }
 
 .selected-slot-body {
   display: grid;
-  gap: 18px;
-  padding: 26px 32px 32px;
+  gap: 13px;
+  padding: 20px 24px 24px;
 }
 
 .selected-slot-body label,
 .selected-slot-metrics span {
   color: #5d7183;
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 900;
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 
 .selected-slot-value {
-  min-height: 58px;
+  min-height: 46px;
   display: flex;
   align-items: center;
-  padding: 0 18px;
+  padding: 0 14px;
   border: 2px solid #d4dbe4;
-  border-radius: 18px;
+  border-radius: 14px;
   background: #edf2f7;
   color: #5d7183;
-  font-size: 21px;
+  font-size: 16px;
   font-weight: 800;
 }
 
 .selected-slot-metrics {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  gap: 9px;
 }
 
 .selected-slot-metrics div {
-  min-height: 78px;
-  padding: 14px;
-  border-radius: 16px;
+  min-height: 62px;
+  padding: 11px;
+  border-radius: 12px;
   background: #f4f7fa;
 }
 
 .selected-slot-metrics strong {
   display: block;
-  margin-top: 7px;
+  margin-top: 5px;
   color: var(--navy-950);
-  font-size: 17px;
+  font-size: 14px;
   line-height: 1.2;
 }
 
@@ -2585,28 +2585,28 @@ tbody tr:hover {
   }
 
   .slot-picker-panel {
-    padding: 20px;
-    border-radius: 16px;
+    padding: 16px;
+    border-radius: 14px;
   }
 
   .slot-section-title h2 {
-    font-size: 26px;
+    font-size: 22px;
   }
 
   .date-choice {
-    width: 102px;
-    min-width: 102px;
-    min-height: 132px;
-    border-radius: 22px;
+    width: 86px;
+    min-width: 86px;
+    min-height: 106px;
+    border-radius: 18px;
   }
 
   .date-choice span,
   .date-choice em {
-    font-size: 16px;
+    font-size: 14px;
   }
 
   .date-choice strong {
-    font-size: 27px;
+    font-size: 24px;
   }
 
   .slot-legend {
@@ -2619,18 +2619,18 @@ tbody tr:hover {
 
   .time-slot-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
+    gap: 10px;
   }
 
   .time-slot-pill {
-    min-height: 62px;
-    border-radius: 20px;
+    min-height: 48px;
+    border-radius: 16px;
   }
 
   .selected-slot-price,
   .selected-slot-body {
-    padding-left: 22px;
-    padding-right: 22px;
+    padding-left: 18px;
+    padding-right: 18px;
   }
 
   .card,

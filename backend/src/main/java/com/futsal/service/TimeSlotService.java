@@ -72,6 +72,52 @@ public class TimeSlotService {
         return timeSlotRepository.findAvailableAfter(today, minStartTime, CLOSING_TIME, pageable);
     }
 
+    // ── Public slot grid: available + booked slots for users ──────────────────
+    @Transactional
+    public Page<TimeSlot> getPublicSlots(Long futsalId, LocalDate slotDate, Pageable pageable) {
+        LocalDate today = LocalDate.now();
+        LocalTime now = LocalTime.now();
+        LocalTime minStartTime = now.getMinute() == 0 && now.getSecond() == 0
+                ? now
+                : now.plusHours(1).withMinute(0).withSecond(0).withNano(0);
+
+        if (futsalId != null) {
+            if (slotDate != null) {
+                LocalTime minTimeForDate = slotDate.equals(today) ? minStartTime : LocalTime.MIDNIGHT;
+                ensureHourlySlotsForDate(futsalId, slotDate, minTimeForDate);
+                return timeSlotRepository.findPublicForFutsalOnDate(
+                        futsalId,
+                        slotDate,
+                        slotDate.equals(today),
+                        minStartTime,
+                        CLOSING_TIME,
+                        pageable
+                );
+            }
+
+            for (int i = 0; i <= 7; i++) {
+                LocalDate date = today.plusDays(i);
+                LocalTime minTimeForDate = i == 0 ? minStartTime : LocalTime.MIDNIGHT;
+                ensureHourlySlotsForDate(futsalId, date, minTimeForDate);
+            }
+            return timeSlotRepository.findPublicForFutsalAfter(
+                    futsalId, today, minStartTime, CLOSING_TIME, pageable
+            );
+        }
+
+        if (slotDate != null) {
+            return timeSlotRepository.findPublicOnDate(
+                    slotDate,
+                    slotDate.equals(today),
+                    minStartTime,
+                    CLOSING_TIME,
+                    pageable
+            );
+        }
+
+        return timeSlotRepository.findPublicAfter(today, minStartTime, CLOSING_TIME, pageable);
+    }
+
     // ── Get all slots (admin view) ────────────────────────────────────────────
     public Page<TimeSlot> getAllSlots(Long futsalId, LocalDate slotDate, Pageable pageable) {
         LocalDate today = LocalDate.now();

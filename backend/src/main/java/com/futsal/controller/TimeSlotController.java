@@ -40,6 +40,20 @@ public class TimeSlotController {
         return ResponseEntity.ok(PagedResponse.fromPage(result));
     }
 
+    // GET /api/slots/public — public slot grid with available and booked states
+    @GetMapping("/public")
+    public ResponseEntity<PagedResponse<TimeSlotResponse>> getPublicSlots(
+            @RequestParam(required = false) Long futsalId,
+            @RequestParam(required = false) LocalDate slotDate,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "48") int size
+    ) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<TimeSlotResponse> result = timeSlotService.getPublicSlots(futsalId, slotDate, pageable)
+                .map(DtoMapper::toTimeSlotResponse);
+        return ResponseEntity.ok(PagedResponse.fromPage(result));
+    }
+
     // GET /api/slots/all — all slots (admin)
     @GetMapping("/all")
     public ResponseEntity<PagedResponse<TimeSlotResponse>> getAllSlots(

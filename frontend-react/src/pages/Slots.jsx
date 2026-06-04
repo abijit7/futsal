@@ -44,7 +44,7 @@ export default function Slots() {
   const [dateFilter, setDateFilter] = useState(todayStr);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
-  const pageSize = 12;
+  const pageSize = 48;
 
   const [bookingModalOpen, setBookingModalOpen] = useState(false);
   const [selectedSlotId, setSelectedSlotId] = useState(null);
@@ -53,6 +53,18 @@ export default function Slots() {
   const [bookingError, setBookingError] = useState('');
   const [bookingLoading, setBookingLoading] = useState(false);
   const dateChoices = buildDateChoices(new Date());
+
+  const loadPublicSlots = async (targetPage = page) => {
+    if (!selectedFutsalId) return;
+    const params = { futsalId: selectedFutsalId, page: targetPage, size: pageSize };
+    if (dateFilter) {
+      params.slotDate = dateFilter;
+    }
+    const data = await SlotAPI.getPublic(params);
+    const items = data?.items ?? data ?? [];
+    setSlots(items);
+    setTotalPages(data?.totalPages ?? (items.length > 0 ? 1 : 0));
+  };
 
   useEffect(() => {
     const loadFutsals = async () => {
@@ -80,14 +92,7 @@ export default function Slots() {
       if (!selectedFutsalId) return;
       try {
         setLoading(true);
-        const params = { futsalId: selectedFutsalId, page, size: pageSize };
-        if (dateFilter) {
-          params.slotDate = dateFilter;
-        }
-        const data = await SlotAPI.getAvailable(params);
-        const items = data?.items ?? data ?? [];
-        setSlots(items);
-        setTotalPages(data?.totalPages ?? (items.length > 0 ? 1 : 0));
+        await loadPublicSlots(page);
       } catch (err) {
         showToast(`Failed to load slots: ${err.message}`, 'error');
       } finally {
@@ -142,14 +147,7 @@ export default function Slots() {
       await PaymentAPI.confirm(user.userId, selectedSlotId, bookingNotes, paymentMethod);
       showToast(`Payment successful via ${paymentMethod}. Booking submitted.`, 'success');
       closeModal();
-      const params = { futsalId: selectedFutsalId, page: 0, size: pageSize };
-      if (dateFilter) {
-        params.slotDate = dateFilter;
-      }
-      const data = await SlotAPI.getAvailable(params);
-      const items = data?.items ?? data ?? [];
-      setSlots(items);
-      setTotalPages(data?.totalPages ?? (items.length > 0 ? 1 : 0));
+      await loadPublicSlots(0);
       setPage(0);
     } catch (err) {
       setBookingError(err.message);

@@ -2,6 +2,7 @@ import { apiFetch, withQuery } from './client.js';
 
 export const SlotAPI = {
   getAvailable: (params = {}) => apiFetch(withQuery('/slots', params)),
+  getPublic:    (params = {}) => apiFetch(withQuery('/slots/public', params)),
   getAll:       (params = {}) => apiFetch(withQuery('/slots/all', params)),
   getById:      (id) => apiFetch(`/slots/${id}`),
   add:          (slot) => apiFetch('/slots', { method: 'POST', body: JSON.stringify(slot) }),
