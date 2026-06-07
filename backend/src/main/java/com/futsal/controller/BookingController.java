@@ -14,7 +14,9 @@ import com.futsal.dto.BookingCreateRequest;
 import com.futsal.dto.BookingResponse;
 import com.futsal.dto.BookingStatusRequest;
 import com.futsal.dto.DtoMapper;
-import com.futsal.security.SimpleAuth;
+import com.futsal.security.AuthForbiddenException;
+import com.futsal.security.AuthRequiredException;
+import com.futsal.security.SecurityAuth;
 
 import jakarta.validation.Valid;
 import java.util.HashMap;
@@ -28,12 +30,14 @@ public class BookingController {
     @Autowired
     private BookingService bookingService;
 
+    @Autowired
+    private SecurityAuth securityAuth;
+
     // POST /api/bookings — create booking
     @PostMapping
-    public ResponseEntity<?> createBooking(@Valid @RequestBody BookingCreateRequest body,
-                                          @RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
+    public ResponseEntity<?> createBooking(@Valid @RequestBody BookingCreateRequest body) {
         try {
-            SimpleAuth.requireUserOrAdmin(body.getUserId(), authorizationHeader);
+            securityAuth.requireUserOrAdmin(body.getUserId());
             Booking booking = bookingService.createBooking(body.getUserId(), body.getSlotId(), body.getNotes());
             return ResponseEntity.ok(DtoMapper.toBookingResponse(booking));
         } catch (RuntimeException e) {
@@ -46,11 +50,10 @@ public class BookingController {
     public ResponseEntity<?> getAllBookings(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
-            @RequestParam(required = false) String status,
-            @RequestHeader(value = "Authorization", required = false) String authorizationHeader
+            @RequestParam(required = false) String status
     ) {
         try {
-            SimpleAuth.requireAdmin(authorizationHeader);
+            securityAuth.requireAdmin();
             Pageable pageable = PageRequest.of(page, size);
             Page<Booking> result;
             if (status != null && !status.isBlank() && !"ALL".equalsIgnoreCase(status)) {
@@ -73,11 +76,10 @@ public class BookingController {
     public ResponseEntity<?> getBookingsByUser(
             @PathVariable Long userId,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestHeader(value = "Authorization", required = false) String authorizationHeader
+            @RequestParam(defaultValue = "10") int size
     ) {
         try {
-            SimpleAuth.requireUserOrAdmin(userId, authorizationHeader);
+            securityAuth.requireUserOrAdmin(userId);
             Pageable pageable = PageRequest.of(page, size);
             Page<BookingResponse> result = bookingService.getBookingsByUser(userId, pageable)
                     .map(DtoMapper::toBookingResponse);
@@ -89,13 +91,10 @@ public class BookingController {
 
     // GET /api/bookings/{id} — get single booking
     @GetMapping("/{id}")
-    public ResponseEntity<?> getBookingById(@PathVariable Long id,
-                                            @RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
+    public ResponseEntity<?> getBookingById(@PathVariable Long id) {
         try {
             Booking booking = bookingService.getBookingById(id);
-            if (!SimpleAuth.isAdmin(authorizationHeader)) {
-                SimpleAuth.requireUserOrAdmin(booking.getUser().getUserId(), authorizationHeader);
-            }
+            securityAuth.requireUserOrAdmin(booking.getUser().getUserId());
             return ResponseEntity.ok(DtoMapper.toBookingResponse(booking));
         } catch (RuntimeException e) {
             return toErrorResponse(e);
@@ -105,22 +104,19 @@ public class BookingController {
     // PUT /api/bookings/{id}/status — update status (admin: approve/reject, user: cancel)
     @PutMapping("/{id}/status")
     public ResponseEntity<?> updateStatus(@PathVariable Long id,
-                                           @Valid @RequestBody BookingStatusRequest body,
-                                           @RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
+                                           @Valid @RequestBody BookingStatusRequest body) {
         try {
             String statusStr = body.getStatus();
             BookingStatus status = BookingStatus.valueOf(statusStr.toUpperCase());
 
             Booking booking = bookingService.getBookingById(id);
             if (status == BookingStatus.CANCELLED) {
-                SimpleAuth.requireUserOrAdmin(booking.getUser().getUserId(), authorizationHeader);
+                securityAuth.requireUserOrAdmin(booking.getUser().getUserId());
             } else {
-                SimpleAuth.requireAdmin(authorizationHeader);
+                securityAuth.requireAdmin();
             }
 
-            String actor = SimpleAuth.isAdmin(authorizationHeader)
-                    ? "admin"
-                    : "user:" + booking.getUser().getUserId();
+            String actor = securityAuth.actorFor(booking.getUser().getUserId());
             Booking updated = bookingService.updateStatus(id, status, actor);
             return ResponseEntity.ok(DtoMapper.toBookingResponse(updated));
         } catch (IllegalArgumentException e) {
@@ -132,10 +128,9 @@ public class BookingController {
 
     // DELETE /api/bookings/{id} — delete booking (admin)
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteBooking(@PathVariable Long id,
-                                           @RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
+    public ResponseEntity<?> deleteBooking(@PathVariable Long id) {
         try {
-            SimpleAuth.requireAdmin(authorizationHeader);
+            securityAuth.requireAdmin();
             bookingService.deleteBooking(id);
             Map<String, String> res = new HashMap<>();
             res.put("message", "Booking deleted successfully");
@@ -152,8 +147,11 @@ public class BookingController {
     }
 
     private ResponseEntity<?> toErrorResponse(RuntimeException e) {
-        if ("Admin authorization required".equals(e.getMessage()) || "User authorization required".equals(e.getMessage())) {
+        if (e instanceof AuthRequiredException) {
             return ResponseEntity.status(401).body(errorMap(e.getMessage()));
+        }
+        if (e instanceof AuthForbiddenException) {
+            return ResponseEntity.status(403).body(errorMap(e.getMessage()));
         }
         return ResponseEntity.badRequest().body(errorMap(e.getMessage()));
     }

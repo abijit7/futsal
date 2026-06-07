@@ -7,8 +7,11 @@ import com.futsal.dto.UserRegisterRequest;
 import com.futsal.dto.UserResponse;
 import com.futsal.dto.UserUpdateRequest;
 import com.futsal.model.User;
+import com.futsal.security.AuthForbiddenException;
+import com.futsal.security.AuthRequiredException;
+import com.futsal.security.JwtService;
+import com.futsal.security.SecurityAuth;
 import com.futsal.service.UserService;
-import com.futsal.security.SimpleAuth;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -28,6 +31,12 @@ public class UserController {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private JwtService jwtService;
+
+    @Autowired
+    private SecurityAuth securityAuth;
 
     // POST /api/users/register
     @PostMapping("/register")
@@ -51,7 +60,7 @@ public class UserController {
         try {
             User user = userService.login(credentials.getEmail(), credentials.getPassword());
             UserResponse response = DtoMapper.toUserResponse(user);
-            response.setAuthToken(SimpleAuth.createToken(user));
+            response.setAuthToken(jwtService.createToken(user));
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(errorMap(e.getMessage()));
@@ -62,11 +71,10 @@ public class UserController {
     @GetMapping
     public ResponseEntity<?> getAllUsers(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestHeader(value = "Authorization", required = false) String authorizationHeader
+            @RequestParam(defaultValue = "10") int size
     ) {
         try {
-            SimpleAuth.requireAdmin(authorizationHeader);
+            securityAuth.requireAdmin();
             Pageable pageable = PageRequest.of(page, size);
             Page<UserResponse> result = userService.getAllUsers(pageable).map(DtoMapper::toUserResponse);
             return ResponseEntity.ok(PagedResponse.fromPage(result));
@@ -77,10 +85,9 @@ public class UserController {
 
     // GET /api/users/{id}
     @GetMapping("/{id}")
-    public ResponseEntity<?> getUserById(@PathVariable Long id,
-                                         @RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
+    public ResponseEntity<?> getUserById(@PathVariable Long id) {
         try {
-            SimpleAuth.requireUserOrAdmin(id, authorizationHeader);
+            securityAuth.requireUserOrAdmin(id);
             return ResponseEntity.ok(DtoMapper.toUserResponse(userService.getUserById(id)));
         } catch (RuntimeException e) {
             return toErrorResponse(e);
@@ -89,10 +96,9 @@ public class UserController {
 
     // PUT /api/users/{id}
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateUser(@PathVariable Long id, @Valid @RequestBody UserUpdateRequest user,
-                                        @RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
+    public ResponseEntity<?> updateUser(@PathVariable Long id, @Valid @RequestBody UserUpdateRequest user) {
         try {
-            SimpleAuth.requireUserOrAdmin(id, authorizationHeader);
+            securityAuth.requireUserOrAdmin(id);
             User updated = userService.updateUser(id, user);
             return ResponseEntity.ok(DtoMapper.toUserResponse(updated));
         } catch (RuntimeException e) {
@@ -102,10 +108,9 @@ public class UserController {
 
     // DELETE /api/users/{id} (admin)
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteUser(@PathVariable Long id,
-                                        @RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
+    public ResponseEntity<?> deleteUser(@PathVariable Long id) {
         try {
-            SimpleAuth.requireAdmin(authorizationHeader);
+            securityAuth.requireAdmin();
             userService.deleteUser(id);
             return ResponseEntity.ok(successMap("User deleted successfully"));
         } catch (RuntimeException e) {
@@ -127,8 +132,11 @@ public class UserController {
     }
 
     private ResponseEntity<?> toErrorResponse(RuntimeException e) {
-        if ("Admin authorization required".equals(e.getMessage()) || "User authorization required".equals(e.getMessage())) {
+        if (e instanceof AuthRequiredException) {
             return ResponseEntity.status(401).body(errorMap(e.getMessage()));
+        }
+        if (e instanceof AuthForbiddenException) {
+            return ResponseEntity.status(403).body(errorMap(e.getMessage()));
         }
         return ResponseEntity.badRequest().body(errorMap(e.getMessage()));
     }
