@@ -19,7 +19,6 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/uploads")
-@CrossOrigin(origins = "*")
 public class UploadController {
 
     @Value("${app.upload.dir}")

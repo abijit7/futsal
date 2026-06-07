@@ -19,7 +19,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/futsals")
-@CrossOrigin(origins = "*")
 public class FutsalController {
 
     @Autowired
