@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.futsal.model.User;
 import com.futsal.model.enums.Role;
 import org.junit.jupiter.api.Test;
+import org.springframework.mock.env.MockEnvironment;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -12,6 +13,7 @@ class JwtServiceTest {
 
     private final JwtService jwtService = new JwtService(
             new ObjectMapper(),
+            new MockEnvironment(),
             "test-futsal-jwt-secret-with-at-least-32-bytes",
             60,
             "futsal-booking-test"

@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.futsal.model.User;
 import com.futsal.model.enums.Role;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.Mac;
@@ -15,6 +16,7 @@ import java.time.Instant;
 import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Arrays;
 
 @Service
 public class JwtService {
@@ -23,6 +25,7 @@ public class JwtService {
     private static final Base64.Encoder URL_ENCODER = Base64.getUrlEncoder().withoutPadding();
     private static final Base64.Decoder URL_DECODER = Base64.getUrlDecoder();
     private static final TypeReference<Map<String, Object>> CLAIMS_TYPE = new TypeReference<>() {};
+    private static final String DEV_SECRET = "dev-futsal-jwt-secret-change-me-32-bytes-min";
 
     private final ObjectMapper objectMapper;
     private final byte[] secret;
@@ -31,10 +34,12 @@ public class JwtService {
 
     public JwtService(
             ObjectMapper objectMapper,
-            @Value("${app.jwt.secret}") String secret,
+            Environment environment,
+            @Value("${app.jwt.secret:${JWT_SECRET:}}") String configuredSecret,
             @Value("${app.jwt.expiration-minutes:1440}") long expirationMinutes,
             @Value("${app.jwt.issuer:futsal-booking}") String issuer
     ) {
+        String secret = resolveSecret(configuredSecret, environment);
         if (secret == null || secret.getBytes(StandardCharsets.UTF_8).length < 32) {
             throw new IllegalStateException("app.jwt.secret must be at least 32 bytes");
         }
@@ -45,6 +50,18 @@ public class JwtService {
         this.secret = secret.getBytes(StandardCharsets.UTF_8);
         this.expirationSeconds = expirationMinutes * 60;
         this.issuer = issuer;
+    }
+
+    private String resolveSecret(String configuredSecret, Environment environment) {
+        if (configuredSecret != null && !configuredSecret.isBlank()) {
+            return configuredSecret;
+        }
+        boolean isProd = Arrays.stream(environment.getActiveProfiles())
+                .anyMatch(profile -> "prod".equalsIgnoreCase(profile));
+        if (isProd) {
+            throw new IllegalStateException("JWT_SECRET must be configured for the prod profile");
+        }
+        return DEV_SECRET;
     }
 
     public String createToken(User user) {
