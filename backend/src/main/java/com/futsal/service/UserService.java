@@ -7,8 +7,10 @@ import com.futsal.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
@@ -16,18 +18,14 @@ import java.util.Base64;
 @Service
 public class UserService {
 
+    private static final BCryptPasswordEncoder PASSWORD_ENCODER = new BCryptPasswordEncoder(12);
+
     @Autowired
     private UserRepository userRepository;
 
-    // ── Hash password using SHA-256 (simple, no BCrypt for BCA level) ─────────
+    // ── Hash password using BCrypt ────────────────────────────────────────────
     public String hashPassword(String password) {
-        try {
-            MessageDigest md = MessageDigest.getInstance("SHA-256");
-            byte[] hash = md.digest(password.getBytes());
-            return Base64.getEncoder().encodeToString(hash);
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("Hashing error", e);
-        }
+        return PASSWORD_ENCODER.encode(password);
     }
 
     // ── Register new user ─────────────────────────────────────────────────────
@@ -45,9 +43,12 @@ public class UserService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("No account found with this email."));
 
-        String hashedInput = hashPassword(password);
-        if (!user.getPassword().equals(hashedInput)) {
+        if (!passwordMatches(password, user.getPassword())) {
             throw new RuntimeException("Incorrect password. Please try again.");
+        }
+        if (!isBcryptHash(user.getPassword())) {
+            user.setPassword(hashPassword(password));
+            user = userRepository.save(user);
         }
         // Don't send password to frontend
         user.setPassword(null);
@@ -91,5 +92,29 @@ public class UserService {
             throw new RuntimeException("User not found");
         }
         userRepository.deleteById(id);
+    }
+
+    private boolean passwordMatches(String rawPassword, String storedPassword) {
+        if (storedPassword == null || storedPassword.isBlank()) {
+            return false;
+        }
+        if (isBcryptHash(storedPassword)) {
+            return PASSWORD_ENCODER.matches(rawPassword, storedPassword);
+        }
+        return storedPassword.equals(legacySha256(rawPassword));
+    }
+
+    private boolean isBcryptHash(String password) {
+        return password.startsWith("$2a$") || password.startsWith("$2b$") || password.startsWith("$2y$");
+    }
+
+    private String legacySha256(String password) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            byte[] hash = md.digest(password.getBytes(StandardCharsets.UTF_8));
+            return Base64.getEncoder().encodeToString(hash);
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("Hashing error", e);
+        }
     }
 }
