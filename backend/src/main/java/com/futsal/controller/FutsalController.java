@@ -13,6 +13,9 @@ import com.futsal.dto.DtoMapper;
 import com.futsal.dto.FutsalRequest;
 import com.futsal.dto.FutsalResponse;
 import com.futsal.dto.PagedResponse;
+import com.futsal.security.AuthForbiddenException;
+import com.futsal.security.AuthRequiredException;
+import com.futsal.security.SecurityAuth;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -23,6 +26,9 @@ public class FutsalController {
 
     @Autowired
     private FutsalService futsalService;
+
+    @Autowired
+    private SecurityAuth securityAuth;
 
     @GetMapping
     public ResponseEntity<PagedResponse<FutsalResponse>> getAll(
@@ -46,6 +52,7 @@ public class FutsalController {
     @PostMapping
     public ResponseEntity<?> add(@Valid @RequestBody FutsalRequest futsal) {
         try {
+            securityAuth.requireAdmin();
             Futsal entity = new Futsal();
             entity.setName(futsal.getName());
             entity.setAddress(futsal.getAddress());
@@ -58,13 +65,14 @@ public class FutsalController {
             entity.setDescription(futsal.getDescription());
             return ResponseEntity.ok(DtoMapper.toFutsalResponse(futsalService.add(entity)));
         } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(errorMap(e.getMessage()));
+            return toErrorResponse(e);
         }
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<?> update(@PathVariable Long id, @Valid @RequestBody FutsalRequest futsal) {
         try {
+            securityAuth.requireAdmin();
             Futsal entity = new Futsal();
             entity.setName(futsal.getName());
             entity.setAddress(futsal.getAddress());
@@ -77,19 +85,20 @@ public class FutsalController {
             entity.setDescription(futsal.getDescription());
             return ResponseEntity.ok(DtoMapper.toFutsalResponse(futsalService.update(id, entity)));
         } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(errorMap(e.getMessage()));
+            return toErrorResponse(e);
         }
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<?> delete(@PathVariable Long id) {
         try {
+            securityAuth.requireAdmin();
             futsalService.delete(id);
             Map<String, String> res = new HashMap<>();
             res.put("message", "Futsal deleted successfully");
             return ResponseEntity.ok(res);
         } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(errorMap(e.getMessage()));
+            return toErrorResponse(e);
         }
     }
 
@@ -97,5 +106,15 @@ public class FutsalController {
         Map<String, String> map = new HashMap<>();
         map.put("error", message);
         return map;
+    }
+
+    private ResponseEntity<?> toErrorResponse(RuntimeException e) {
+        if (e instanceof AuthRequiredException) {
+            return ResponseEntity.status(401).body(errorMap(e.getMessage()));
+        }
+        if (e instanceof AuthForbiddenException) {
+            return ResponseEntity.status(403).body(errorMap(e.getMessage()));
+        }
+        return ResponseEntity.badRequest().body(errorMap(e.getMessage()));
     }
 }

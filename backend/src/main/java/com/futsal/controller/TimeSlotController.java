@@ -13,6 +13,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.futsal.dto.PagedResponse;
 import com.futsal.dto.TimeSlotResponse;
+import com.futsal.security.AuthForbiddenException;
+import com.futsal.security.AuthRequiredException;
+import com.futsal.security.SecurityAuth;
 
 import java.time.LocalDate;
 import java.util.HashMap;
@@ -24,6 +27,9 @@ public class TimeSlotController {
 
     @Autowired
     private TimeSlotService timeSlotService;
+
+    @Autowired
+    private SecurityAuth securityAuth;
 
     // GET /api/slots — available slots for users
     @GetMapping
@@ -55,16 +61,21 @@ public class TimeSlotController {
 
     // GET /api/slots/all — all slots (admin)
     @GetMapping("/all")
-    public ResponseEntity<PagedResponse<TimeSlotResponse>> getAllSlots(
+    public ResponseEntity<?> getAllSlots(
             @RequestParam(required = false) Long futsalId,
             @RequestParam(required = false) LocalDate slotDate,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
-        Pageable pageable = PageRequest.of(page, size);
-        Page<TimeSlotResponse> result = timeSlotService.getAllSlots(futsalId, slotDate, pageable)
-                .map(DtoMapper::toTimeSlotResponse);
-        return ResponseEntity.ok(PagedResponse.fromPage(result));
+        try {
+            securityAuth.requireAdmin();
+            Pageable pageable = PageRequest.of(page, size);
+            Page<TimeSlotResponse> result = timeSlotService.getAllSlots(futsalId, slotDate, pageable)
+                    .map(DtoMapper::toTimeSlotResponse);
+            return ResponseEntity.ok(PagedResponse.fromPage(result));
+        } catch (RuntimeException e) {
+            return toErrorResponse(e);
+        }
     }
 
     // GET /api/slots/{id}
@@ -81,6 +92,7 @@ public class TimeSlotController {
     @PostMapping
     public ResponseEntity<?> addSlot(@Valid @RequestBody SlotRequest req) {
         try {
+            securityAuth.requireAdmin();
             TimeSlot slot = new TimeSlot();
             slot.setSlotDate(req.getSlotDate());
             slot.setStartTime(req.getStartTime());
@@ -90,7 +102,7 @@ public class TimeSlotController {
             }
             return ResponseEntity.ok(DtoMapper.toTimeSlotResponse(timeSlotService.addSlot(slot, req.getFutsalId())));
         } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(errorMap(e.getMessage()));
+            return toErrorResponse(e);
         }
     }
 
@@ -98,6 +110,7 @@ public class TimeSlotController {
     @PutMapping("/{id}")
     public ResponseEntity<?> updateSlot(@PathVariable Long id, @Valid @RequestBody SlotRequest req) {
         try {
+            securityAuth.requireAdmin();
             TimeSlot slot = new TimeSlot();
             slot.setSlotDate(req.getSlotDate());
             slot.setStartTime(req.getStartTime());
@@ -105,7 +118,7 @@ public class TimeSlotController {
             slot.setAvailable(req.getAvailable() != null && req.getAvailable());
             return ResponseEntity.ok(DtoMapper.toTimeSlotResponse(timeSlotService.updateSlot(id, slot, req.getFutsalId())));
         } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(errorMap(e.getMessage()));
+            return toErrorResponse(e);
         }
     }
 
@@ -113,12 +126,13 @@ public class TimeSlotController {
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteSlot(@PathVariable Long id) {
         try {
+            securityAuth.requireAdmin();
             timeSlotService.deleteSlot(id);
             Map<String, String> res = new HashMap<>();
             res.put("message", "Slot deleted successfully");
             return ResponseEntity.ok(res);
         } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(errorMap(e.getMessage()));
+            return toErrorResponse(e);
         }
     }
 
@@ -126,5 +140,15 @@ public class TimeSlotController {
         Map<String, String> map = new HashMap<>();
         map.put("error", message);
         return map;
+    }
+
+    private ResponseEntity<?> toErrorResponse(RuntimeException e) {
+        if (e instanceof AuthRequiredException) {
+            return ResponseEntity.status(401).body(errorMap(e.getMessage()));
+        }
+        if (e instanceof AuthForbiddenException) {
+            return ResponseEntity.status(403).body(errorMap(e.getMessage()));
+        }
+        return ResponseEntity.badRequest().body(errorMap(e.getMessage()));
     }
 }
