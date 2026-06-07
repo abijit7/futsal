@@ -3,6 +3,7 @@ package com.futsal.service;
 import com.futsal.model.Futsal;
 import com.futsal.model.TimeSlot;
 import com.futsal.model.TimeSlotStatusHistory;
+import com.futsal.repository.BookingRepository;
 import com.futsal.repository.FutsalRepository;
 import com.futsal.repository.TimeSlotRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 public class TimeSlotService {
@@ -25,6 +27,9 @@ public class TimeSlotService {
 
     @Autowired
     private FutsalRepository futsalRepository;
+
+    @Autowired
+    private BookingRepository bookingRepository;
 
     // ── Get all available slots (from today onwards) ─────���────────────────────
     @Transactional
@@ -187,8 +192,10 @@ public class TimeSlotService {
     }
 
     // ── Update slot (admin) ───────────────────────────────────────────────────
-    public TimeSlot updateSlot(Long id, TimeSlot updatedSlot, Long futsalId) {
-        TimeSlot existing = getSlotById(id);
+    @Transactional
+    public TimeSlot updateSlot(Long id, TimeSlot updatedSlot, Long futsalId, Boolean requestedAvailable) {
+        TimeSlot existing = timeSlotRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new RuntimeException("Slot not found with ID: " + id));
         Futsal futsal = futsalRepository.findById(futsalId)
                 .orElseThrow(() -> new RuntimeException("Futsal not found"));
 
@@ -213,12 +220,26 @@ public class TimeSlotService {
             throw new RuntimeException("Slot starts before the futsal opening time.");
         }
 
+        boolean hasActiveBooking = bookingRepository.existsByTimeSlotAndStatusNotIn(existing, BookingService.CLOSED_STATUSES);
+        if (hasActiveBooking && slotDetailsChanged(existing, updatedSlot, futsal)) {
+            throw new RuntimeException("Cannot edit date, time, or futsal for a slot with an active booking.");
+        }
+        if (hasActiveBooking && Boolean.TRUE.equals(requestedAvailable)) {
+            throw new RuntimeException("Cannot mark a slot with an active booking as available.");
+        }
+
+        boolean previousAvailable = existing.isAvailable();
+
         existing.setFutsal(futsal);
         existing.setSlotDate(updatedSlot.getSlotDate());
         existing.setStartTime(updatedSlot.getStartTime());
         existing.setEndTime(updatedSlot.getEndTime());
-        boolean previousAvailable = existing.isAvailable();
-        existing.setAvailable(updatedSlot.isAvailable());
+        if (requestedAvailable != null) {
+            existing.setAvailable(requestedAvailable);
+        }
+        if (hasActiveBooking && existing.isAvailable()) {
+            existing.setAvailable(false);
+        }
 
         boolean exists = timeSlotRepository
                 .existsByFutsalAndSlotDateAndStartTimeLessThanAndEndTimeGreaterThanAndSlotIdNot(
@@ -241,11 +262,24 @@ public class TimeSlotService {
     }
 
     // ── Delete slot (admin) ───────────────────────────────────────────────────
+    @Transactional
     public void deleteSlot(Long id) {
-        if (!timeSlotRepository.existsById(id)) {
-            throw new RuntimeException("Slot not found");
+        TimeSlot slot = timeSlotRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new RuntimeException("Slot not found"));
+        if (bookingRepository.existsByTimeSlotAndStatusNotIn(slot, BookingService.CLOSED_STATUSES)) {
+            throw new RuntimeException("Cannot delete a slot with active bookings.");
         }
-        timeSlotRepository.deleteById(id);
+        if (bookingRepository.existsByTimeSlot(slot)) {
+            throw new RuntimeException("Cannot delete a slot with booking history. Add an archive flow before deleting historical slots.");
+        }
+        timeSlotRepository.delete(slot);
+    }
+
+    private boolean slotDetailsChanged(TimeSlot existing, TimeSlot updatedSlot, Futsal futsal) {
+        return !Objects.equals(existing.getFutsal().getFutsalId(), futsal.getFutsalId())
+                || !Objects.equals(existing.getSlotDate(), updatedSlot.getSlotDate())
+                || !Objects.equals(existing.getStartTime(), updatedSlot.getStartTime())
+                || !Objects.equals(existing.getEndTime(), updatedSlot.getEndTime());
     }
 
     private void ensureHourlySlotsForDate(Long futsalId, LocalDate date, LocalTime minStartTime) {

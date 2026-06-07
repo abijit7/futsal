@@ -8,7 +8,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "time_slots")
+@Table(
+        name = "time_slots",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_time_slot_schedule",
+                columnNames = {"futsal_id", "slot_date", "start_time", "end_time"}
+        )
+)
 public class TimeSlot {
 
     @Id

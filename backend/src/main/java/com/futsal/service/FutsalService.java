@@ -2,11 +2,14 @@ package com.futsal.service;
 
 import com.futsal.model.Futsal;
 import com.futsal.model.FutsalImage;
+import com.futsal.repository.BookingRepository;
 import com.futsal.repository.FutsalRepository;
+import com.futsal.repository.TimeSlotRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -16,6 +19,12 @@ public class FutsalService {
 
     @Autowired
     private FutsalRepository futsalRepository;
+
+    @Autowired
+    private BookingRepository bookingRepository;
+
+    @Autowired
+    private TimeSlotRepository timeSlotRepository;
 
     public Page<Futsal> getAll(Pageable pageable) {
         return futsalRepository.findAll(pageable);
@@ -74,10 +83,17 @@ public class FutsalService {
         }
     }
 
+    @Transactional
     public void delete(Long id) {
-        if (!futsalRepository.existsById(id)) {
-            throw new RuntimeException("Futsal not found");
+        Futsal futsal = futsalRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Futsal not found"));
+        timeSlotRepository.findByFutsalIdForUpdate(id);
+        if (bookingRepository.existsByTimeSlot_Futsal_FutsalIdAndStatusNotIn(id, BookingService.CLOSED_STATUSES)) {
+            throw new RuntimeException("Cannot delete a futsal with active bookings.");
         }
-        futsalRepository.deleteById(id);
+        if (bookingRepository.existsByTimeSlot_Futsal_FutsalId(id)) {
+            throw new RuntimeException("Cannot delete a futsal with booking history. Add an archive flow before deleting historical futsals.");
+        }
+        futsalRepository.delete(futsal);
     }
 }

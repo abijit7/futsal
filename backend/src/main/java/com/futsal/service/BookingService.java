@@ -22,6 +22,8 @@ import java.util.List;
 @Service
 public class BookingService {
 
+    static final List<BookingStatus> CLOSED_STATUSES = List.of(BookingStatus.CANCELLED, BookingStatus.REJECTED);
+
     @Autowired
     private BookingRepository bookingRepository;
 
@@ -44,11 +46,10 @@ public class BookingService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        TimeSlot slot = timeSlotRepository.findById(slotId)
+        TimeSlot slot = timeSlotRepository.findByIdForUpdate(slotId)
                 .orElseThrow(() -> new RuntimeException("Time slot not found"));
 
-        java.util.List<BookingStatus> closed = java.util.List.of(BookingStatus.CANCELLED, BookingStatus.REJECTED);
-        if (bookingRepository.existsByTimeSlotAndStatusNotIn(slot, closed)) {
+        if (bookingRepository.existsByTimeSlotAndStatusNotIn(slot, CLOSED_STATUSES)) {
             throw new RuntimeException("This slot has already been booked.");
         }
 
@@ -102,28 +103,56 @@ public class BookingService {
     // ── Update booking status (admin: approve/reject, user: cancel) ───────────
     @Transactional
     public Booking updateStatus(Long bookingId, BookingStatus newStatus, String changedBy) {
-        Booking booking = bookingRepository.findById(bookingId)
+        if (newStatus == null) {
+            throw new RuntimeException("Booking status is required.");
+        }
+
+        Booking booking = bookingRepository.findByIdForUpdate(bookingId)
                 .orElseThrow(() -> new RuntimeException("Booking not found"));
 
         BookingStatus current = booking.getStatus();
 
-        // Validate status transitions
-        if (current == BookingStatus.CANCELLED) {
-            throw new RuntimeException("Cannot update a cancelled booking.");
+        if (current == newStatus) {
+            return booking;
         }
 
-        // If rejected or cancelled, free up the slot
+        if (!canTransition(current, newStatus)) {
+            throw new RuntimeException("Invalid booking status transition from " + current + " to " + newStatus + ".");
+        }
+
+        TimeSlot slot = timeSlotRepository.findByIdForUpdate(booking.getTimeSlot().getSlotId())
+                .orElseThrow(() -> new RuntimeException("Time slot not found"));
+        booking.setTimeSlot(slot);
+
         if (newStatus == BookingStatus.REJECTED || newStatus == BookingStatus.CANCELLED) {
-            TimeSlot slot = booking.getTimeSlot();
-            slot.setAvailable(true);
-            String note = newStatus == BookingStatus.CANCELLED ? "Booking cancelled" : "Booking rejected";
-            slot.addStatusHistory(new TimeSlotStatusHistory(slot, true, changedBy, note));
+            if (!slot.isAvailable()) {
+                slot.setAvailable(true);
+                String note = newStatus == BookingStatus.CANCELLED ? "Booking cancelled" : "Booking rejected";
+                slot.addStatusHistory(new TimeSlotStatusHistory(slot, true, changedBy, note));
+                timeSlotRepository.save(slot);
+            }
+        } else if (newStatus == BookingStatus.APPROVED && slot.isAvailable()) {
+            slot.setAvailable(false);
+            slot.addStatusHistory(new TimeSlotStatusHistory(slot, false, changedBy, "Booking approved"));
             timeSlotRepository.save(slot);
         }
 
         booking.setStatus(newStatus);
         booking.addStatusHistory(new BookingStatusHistory(booking, newStatus, changedBy, "Status updated"));
         return bookingRepository.save(booking);
+    }
+
+    static boolean canTransition(BookingStatus current, BookingStatus next) {
+        if (current == null || next == null || current == next) {
+            return false;
+        }
+        return switch (current) {
+            case PENDING -> next == BookingStatus.APPROVED
+                    || next == BookingStatus.REJECTED
+                    || next == BookingStatus.CANCELLED;
+            case APPROVED -> next == BookingStatus.CANCELLED;
+            case REJECTED, CANCELLED -> false;
+        };
     }
 
     // ── Get bookings by status ────────────────────────────────────────────────

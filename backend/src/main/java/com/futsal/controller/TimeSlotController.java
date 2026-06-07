@@ -115,8 +115,9 @@ public class TimeSlotController {
             slot.setSlotDate(req.getSlotDate());
             slot.setStartTime(req.getStartTime());
             slot.setEndTime(req.getEndTime());
-            slot.setAvailable(req.getAvailable() != null && req.getAvailable());
-            return ResponseEntity.ok(DtoMapper.toTimeSlotResponse(timeSlotService.updateSlot(id, slot, req.getFutsalId())));
+            return ResponseEntity.ok(DtoMapper.toTimeSlotResponse(
+                    timeSlotService.updateSlot(id, slot, req.getFutsalId(), req.getAvailable())
+            ));
         } catch (RuntimeException e) {
             return toErrorResponse(e);
         }

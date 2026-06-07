@@ -86,9 +86,11 @@ export default function AdminSlots() {
       futsalId: parseInt(form.futsalId, 10),
       slotDate: form.slotDate,
       startTime: `${form.startTime}:00`,
-      endTime: `${form.endTime}:00`,
-      available: true
+      endTime: `${form.endTime}:00`
     };
+    if (!editingId) {
+      payload.available = true;
+    }
 
     try {
       if (editingId) {
