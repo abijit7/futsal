@@ -59,11 +59,11 @@ public class PaymentController {
     }
 
     private ResponseEntity<?> toErrorResponse(RuntimeException e) {
-        if (e instanceof AuthRequiredException) {
-            return ResponseEntity.status(401).body(errorMap(e.getMessage()));
-        }
         if (e instanceof AuthForbiddenException) {
             return ResponseEntity.status(403).body(errorMap(e.getMessage()));
+        }
+        if (e instanceof AuthRequiredException) {
+            return ResponseEntity.status(401).body(errorMap(e.getMessage()));
         }
         return ResponseEntity.badRequest().body(errorMap(e.getMessage()));
     }

@@ -25,10 +25,11 @@ export default function Login() {
       const email = e.target.email.value.trim();
       const password = e.target.password.value;
       const user = await UserAPI.login(email, password);
-      Auth.save(user);
+      const role = Auth.tokenRole(user) || user.role;
+      Auth.save({ ...user, role });
       showToast(`Welcome back, ${user.name}.`, 'success');
       setTimeout(() => {
-        navigate(user.role === 'ADMIN' ? '/admin' : '/dashboard');
+        navigate(role === 'ADMIN' ? '/admin' : '/dashboard');
       }, 500);
     } catch (err) {
       setAlert(err.message);

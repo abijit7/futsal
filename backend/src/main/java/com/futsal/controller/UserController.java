@@ -73,7 +73,6 @@ public class UserController {
             @RequestParam(defaultValue = "10") int size
     ) {
         try {
-            securityAuth.requireAdmin();
             Pageable pageable = PageRequest.of(page, size);
             Page<UserResponse> result = userService.getAllUsers(pageable).map(DtoMapper::toUserResponse);
             return ResponseEntity.ok(PagedResponse.fromPage(result));
@@ -109,7 +108,6 @@ public class UserController {
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteUser(@PathVariable Long id) {
         try {
-            securityAuth.requireAdmin();
             userService.deleteUser(id);
             return ResponseEntity.ok(successMap("User deleted successfully"));
         } catch (RuntimeException e) {
@@ -131,11 +129,11 @@ public class UserController {
     }
 
     private ResponseEntity<?> toErrorResponse(RuntimeException e) {
-        if (e instanceof AuthRequiredException) {
-            return ResponseEntity.status(401).body(errorMap(e.getMessage()));
-        }
         if (e instanceof AuthForbiddenException) {
             return ResponseEntity.status(403).body(errorMap(e.getMessage()));
+        }
+        if (e instanceof AuthRequiredException) {
+            return ResponseEntity.status(401).body(errorMap(e.getMessage()));
         }
         return ResponseEntity.badRequest().body(errorMap(e.getMessage()));
     }

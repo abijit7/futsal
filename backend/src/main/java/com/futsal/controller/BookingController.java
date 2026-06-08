@@ -52,7 +52,6 @@ public class BookingController {
             @RequestParam(required = false) String status
     ) {
         try {
-            securityAuth.requireAdmin();
             Pageable pageable = PageRequest.of(page, size);
             Page<Booking> result;
             if (status != null && !status.isBlank() && !"ALL".equalsIgnoreCase(status)) {
@@ -129,7 +128,6 @@ public class BookingController {
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteBooking(@PathVariable Long id) {
         try {
-            securityAuth.requireAdmin();
             bookingService.deleteBooking(id);
             Map<String, String> res = new HashMap<>();
             res.put("message", "Booking deleted successfully");
@@ -146,11 +144,11 @@ public class BookingController {
     }
 
     private ResponseEntity<?> toErrorResponse(RuntimeException e) {
-        if (e instanceof AuthRequiredException) {
-            return ResponseEntity.status(401).body(errorMap(e.getMessage()));
-        }
         if (e instanceof AuthForbiddenException) {
             return ResponseEntity.status(403).body(errorMap(e.getMessage()));
+        }
+        if (e instanceof AuthRequiredException) {
+            return ResponseEntity.status(401).body(errorMap(e.getMessage()));
         }
         return ResponseEntity.badRequest().body(errorMap(e.getMessage()));
     }

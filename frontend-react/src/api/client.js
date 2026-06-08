@@ -1,6 +1,6 @@
 import { Auth } from '../utils/auth.js';
 
-export const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8080';
+export const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:9090';
 export const API_URL = import.meta.env.VITE_API_URL || `${API_BASE}/api`;
 
 export function authHeaders(extra = {}) {
@@ -36,7 +36,13 @@ export async function apiFetch(endpoint, options = {}) {
     });
     const text = await res.text();
     const data = text ? JSON.parse(text) : null;
-    if (!res.ok) throw new Error(data?.error || 'Request failed');
+    if (!res.ok) {
+      const message = data?.error || 'Request failed';
+      if (isAuthFailure(res.status, message)) {
+        Auth.logout();
+      }
+      throw new Error(message);
+    }
     return data;
   } catch (err) {
     throw new Error(err.message || 'Network error. Is the server running?');
@@ -53,9 +59,19 @@ export async function apiUpload(endpoint, file) {
       body: formData
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data?.error || 'Upload failed');
+    if (!res.ok) {
+      const message = data?.error || 'Upload failed';
+      if (isAuthFailure(res.status, message)) {
+        Auth.logout();
+      }
+      throw new Error(message);
+    }
     return data;
   } catch (err) {
     throw new Error(err.message || 'Upload failed');
   }
+}
+
+function isAuthFailure(status, message = '') {
+  return status === 401 || (status === 403 && /token/i.test(message));
 }

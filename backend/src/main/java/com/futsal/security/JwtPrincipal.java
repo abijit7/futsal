@@ -14,6 +14,6 @@ public record JwtPrincipal(Long userId, String email, Role role) {
     }
 
     public boolean isAdmin() {
-        return role == Role.ADMIN;
+        return role != null && Role.ADMIN.name().equals(role.name());
     }
 }

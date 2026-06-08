@@ -1,0 +1,20 @@
+.DS_Store
+
+# IDE/editor local state
+.idea/workspace.xml
+.idea/httpRequests/
+.idea/dataSources/
+.idea/dataSources.local.xml
+
+# Backend build output
+backend/target/
+
+# Frontend dependencies and build output
+frontend-react/node_modules/
+frontend-react/dist/
+
+# Local environment files
+.env
+.env.*
+frontend-react/.env
+frontend-react/.env.*

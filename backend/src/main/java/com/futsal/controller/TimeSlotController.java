@@ -15,7 +15,6 @@ import com.futsal.dto.PagedResponse;
 import com.futsal.dto.TimeSlotResponse;
 import com.futsal.security.AuthForbiddenException;
 import com.futsal.security.AuthRequiredException;
-import com.futsal.security.SecurityAuth;
 
 import java.time.LocalDate;
 import java.util.HashMap;
@@ -27,9 +26,6 @@ public class TimeSlotController {
 
     @Autowired
     private TimeSlotService timeSlotService;
-
-    @Autowired
-    private SecurityAuth securityAuth;
 
     // GET /api/slots — available slots for users
     @GetMapping
@@ -68,7 +64,6 @@ public class TimeSlotController {
             @RequestParam(defaultValue = "10") int size
     ) {
         try {
-            securityAuth.requireAdmin();
             Pageable pageable = PageRequest.of(page, size);
             Page<TimeSlotResponse> result = timeSlotService.getAllSlots(futsalId, slotDate, pageable)
                     .map(DtoMapper::toTimeSlotResponse);
@@ -92,7 +87,6 @@ public class TimeSlotController {
     @PostMapping
     public ResponseEntity<?> addSlot(@Valid @RequestBody SlotRequest req) {
         try {
-            securityAuth.requireAdmin();
             TimeSlot slot = new TimeSlot();
             slot.setSlotDate(req.getSlotDate());
             slot.setStartTime(req.getStartTime());
@@ -110,7 +104,6 @@ public class TimeSlotController {
     @PutMapping("/{id}")
     public ResponseEntity<?> updateSlot(@PathVariable Long id, @Valid @RequestBody SlotRequest req) {
         try {
-            securityAuth.requireAdmin();
             TimeSlot slot = new TimeSlot();
             slot.setSlotDate(req.getSlotDate());
             slot.setStartTime(req.getStartTime());
@@ -127,7 +120,6 @@ public class TimeSlotController {
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteSlot(@PathVariable Long id) {
         try {
-            securityAuth.requireAdmin();
             timeSlotService.deleteSlot(id);
             Map<String, String> res = new HashMap<>();
             res.put("message", "Slot deleted successfully");
@@ -144,11 +136,11 @@ public class TimeSlotController {
     }
 
     private ResponseEntity<?> toErrorResponse(RuntimeException e) {
-        if (e instanceof AuthRequiredException) {
-            return ResponseEntity.status(401).body(errorMap(e.getMessage()));
-        }
         if (e instanceof AuthForbiddenException) {
             return ResponseEntity.status(403).body(errorMap(e.getMessage()));
+        }
+        if (e instanceof AuthRequiredException) {
+            return ResponseEntity.status(401).body(errorMap(e.getMessage()));
         }
         return ResponseEntity.badRequest().body(errorMap(e.getMessage()));
     }

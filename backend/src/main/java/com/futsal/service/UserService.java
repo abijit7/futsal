@@ -28,6 +28,10 @@ public class UserService {
         return PASSWORD_ENCODER.encode(password);
     }
 
+    public boolean verifyPassword(String rawPassword, String storedPassword) {
+        return passwordMatches(rawPassword, storedPassword);
+    }
+
     // ── Register new user ─────────────────────────────────────────────────────
     public User register(User user) {
         if (userRepository.existsByEmail(user.getEmail())) {

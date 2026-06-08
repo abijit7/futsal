@@ -20,13 +20,14 @@ public class SecurityAuth {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         return authentication != null
                 && authentication.isAuthenticated()
-                && authentication.getPrincipal() instanceof JwtPrincipal principal
-                && principal.isAdmin();
+                && (hasAdminAuthority(authentication)
+                || (authentication.getPrincipal() instanceof JwtPrincipal principal && principal.isAdmin()));
     }
 
     public void requireAdmin() {
         JwtPrincipal principal = currentUser();
-        if (!principal.isAdmin()) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (!principal.isAdmin() && !hasAdminAuthority(authentication)) {
             throw new AuthForbiddenException("Admin authorization required");
         }
     }
@@ -42,5 +43,10 @@ public class SecurityAuth {
     public String actorFor(Long targetUserId) {
         JwtPrincipal principal = currentUser();
         return principal.isAdmin() ? "admin" : "user:" + targetUserId;
+    }
+
+    private boolean hasAdminAuthority(Authentication authentication) {
+        return authentication != null && authentication.getAuthorities().stream()
+                .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()));
     }
 }

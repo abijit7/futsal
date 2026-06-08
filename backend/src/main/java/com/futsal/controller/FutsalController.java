@@ -15,7 +15,6 @@ import com.futsal.dto.FutsalResponse;
 import com.futsal.dto.PagedResponse;
 import com.futsal.security.AuthForbiddenException;
 import com.futsal.security.AuthRequiredException;
-import com.futsal.security.SecurityAuth;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -26,9 +25,6 @@ public class FutsalController {
 
     @Autowired
     private FutsalService futsalService;
-
-    @Autowired
-    private SecurityAuth securityAuth;
 
     @GetMapping
     public ResponseEntity<PagedResponse<FutsalResponse>> getAll(
@@ -52,7 +48,6 @@ public class FutsalController {
     @PostMapping
     public ResponseEntity<?> add(@Valid @RequestBody FutsalRequest futsal) {
         try {
-            securityAuth.requireAdmin();
             Futsal entity = new Futsal();
             entity.setName(futsal.getName());
             entity.setAddress(futsal.getAddress());
@@ -72,7 +67,6 @@ public class FutsalController {
     @PutMapping("/{id}")
     public ResponseEntity<?> update(@PathVariable Long id, @Valid @RequestBody FutsalRequest futsal) {
         try {
-            securityAuth.requireAdmin();
             Futsal entity = new Futsal();
             entity.setName(futsal.getName());
             entity.setAddress(futsal.getAddress());
@@ -92,7 +86,6 @@ public class FutsalController {
     @DeleteMapping("/{id}")
     public ResponseEntity<?> delete(@PathVariable Long id) {
         try {
-            securityAuth.requireAdmin();
             futsalService.delete(id);
             Map<String, String> res = new HashMap<>();
             res.put("message", "Futsal deleted successfully");
@@ -109,11 +102,11 @@ public class FutsalController {
     }
 
     private ResponseEntity<?> toErrorResponse(RuntimeException e) {
-        if (e instanceof AuthRequiredException) {
-            return ResponseEntity.status(401).body(errorMap(e.getMessage()));
-        }
         if (e instanceof AuthForbiddenException) {
             return ResponseEntity.status(403).body(errorMap(e.getMessage()));
+        }
+        if (e instanceof AuthRequiredException) {
+            return ResponseEntity.status(401).body(errorMap(e.getMessage()));
         }
         return ResponseEntity.badRequest().body(errorMap(e.getMessage()));
     }

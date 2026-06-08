@@ -1,6 +1,7 @@
 package com.futsal;
 
 import com.futsal.model.User;
+import com.futsal.model.enums.Role;
 import com.futsal.repository.UserRepository;
 import com.futsal.service.UserService;
 import org.springframework.boot.CommandLineRunner;
@@ -12,9 +13,6 @@ import org.springframework.context.annotation.Bean;
 public class FutsalApplication {
     public static void main(String[] args) {
         SpringApplication.run(FutsalApplication.class, args);
-        System.out.println("git test");
-        System.out.println("added react");
-        System.out.println("project reset");
     }
 
     // Bootstrap an admin account only when credentials are explicitly configured.
@@ -29,18 +27,32 @@ public class FutsalApplication {
                 return;
             }
 
-            if (!userRepository.existsByEmail(adminEmail)) {
+            userRepository.findByEmail(adminEmail).ifPresentOrElse(existing -> {
+                boolean changed = false;
+                if (existing.getRole() != Role.ADMIN) {
+                    existing.setRole(Role.ADMIN);
+                    changed = true;
+                }
+                if (!userService.verifyPassword(adminPass, existing.getPassword())) {
+                    existing.setPassword(userService.hashPassword(adminPass));
+                    changed = true;
+                }
+                if (changed) {
+                    userRepository.save(existing);
+                    System.out.println("[BOOTSTRAP] Admin user updated: " + adminEmail);
+                } else {
+                    System.out.println("[BOOTSTRAP] Admin user already exists: " + adminEmail);
+                }
+            }, () -> {
                 User admin = new User();
                 admin.setName("Admin role");
                 admin.setEmail(adminEmail);
                 admin.setPassword(userService.hashPassword(adminPass));
                 admin.setPhone("9818100273");
-                admin.setRole(com.futsal.model.enums.Role.ADMIN);
+                admin.setRole(Role.ADMIN);
                 userRepository.save(admin);
                 System.out.println("[BOOTSTRAP] Admin user created: " + adminEmail);
-            } else {
-                System.out.println("[BOOTSTRAP] Admin user already exists: " + adminEmail);
-            }
+            });
         };
     }
 }
