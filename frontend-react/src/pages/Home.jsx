@@ -87,7 +87,7 @@ export default function Home() {
                       <h3>{futsal.name}</h3>
                       <p>{futsal.address}, {futsal.city}</p>
                       <div className="venue-card-footer">
-                        <span>Opens {futsal.openingTime ? formatTime(futsal.openingTime) : '-'}</span>
+                        <span>{futsal.openingTime ? formatTime(futsal.openingTime) : '-'} - {futsal.closingTime ? formatTime(futsal.closingTime) : '-'}</span>
                         <strong>NPR {futsal.hourlyPrice ?? '-'} / hr</strong>
                       </div>
                     </div>

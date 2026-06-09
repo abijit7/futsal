@@ -262,7 +262,7 @@ export default function Futsals() {
                     <div className="text-muted text-sm mb-2">{f.phone}</div>
                     {f.description && <div className="venue-description">{f.description}</div>}
                     <div className="venue-meta">
-                      <span>Opens {f.openingTime ? formatTime(f.openingTime) : '-'}</span>
+                      <span>{f.openingTime ? formatTime(f.openingTime) : '-'} - {f.closingTime ? formatTime(f.closingTime) : '-'}</span>
                       <span>Indoor court</span>
                     </div>
                     <div className="venue-card-footer">

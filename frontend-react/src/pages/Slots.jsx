@@ -5,17 +5,11 @@ import { SlotAPI } from '../api/slot.js';
 import { PaymentAPI } from '../api/payment.js';
 import { Auth } from '../utils/auth.js';
 import { FutsalStore } from '../utils/futsalStore.js';
+import { toDateInputValue } from '../utils/date.js';
 import { calculateDuration, compactTimeRange, formatDate, formatTime } from '../utils/format.js';
 import EmptyState from '../components/EmptyState.jsx';
 import Pagination from '../components/Pagination.jsx';
 import { useToast } from '../components/ToastProvider.jsx';
-
-function toDateInputValue(date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
 
 function buildDateChoices(startDate) {
   return Array.from({ length: 7 }).map((_, index) => {
@@ -34,7 +28,7 @@ function buildDateChoices(startDate) {
 export default function Slots() {
   const navigate = useNavigate();
   const { showToast } = useToast();
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = toDateInputValue();
   const isGuest = !Auth.isLoggedIn();
 
   const [futsals, setFutsals] = useState([]);

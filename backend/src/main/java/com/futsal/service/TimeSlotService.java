@@ -1,5 +1,7 @@
 package com.futsal.service;
 
+import com.futsal.dto.SlotGenerationRequest;
+import com.futsal.dto.SlotGenerationResponse;
 import com.futsal.model.Futsal;
 import com.futsal.model.TimeSlot;
 import com.futsal.model.TimeSlotStatusHistory;
@@ -12,15 +14,19 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 @Service
 public class TimeSlotService {
 
-    private static final LocalTime CLOSING_TIME = LocalTime.of(23, 0);
+    private static final LocalTime NO_GLOBAL_CLOSING_FILTER = LocalTime.MAX;
 
     @Autowired
     private TimeSlotRepository timeSlotRepository;
@@ -31,36 +37,29 @@ public class TimeSlotService {
     @Autowired
     private BookingRepository bookingRepository;
 
+    @Autowired
+    private Clock appClock;
+
     // ── Get all available slots (from today onwards) ─────���────────────────────
-    @Transactional
     public Page<TimeSlot> getAvailableSlots(Long futsalId, LocalDate slotDate, Pageable pageable) {
-        LocalDate today = LocalDate.now();
-        LocalTime now = LocalTime.now();
-        LocalTime minStartTime = now.getMinute() == 0 && now.getSecond() == 0
-                ? now
-                : now.plusHours(1).withMinute(0).withSecond(0).withNano(0);
+        LocalDate today = currentDate();
+        LocalTime minStartTime = nextBookableStartTime();
 
         if (futsalId != null) {
+            Futsal futsal = getFutsal(futsalId);
             if (slotDate != null) {
-                LocalTime minTimeForDate = slotDate.equals(today) ? minStartTime : LocalTime.MIDNIGHT;
-                ensureHourlySlotsForDate(futsalId, slotDate, minTimeForDate);
                 return timeSlotRepository.findAvailableForFutsalOnDate(
                         futsalId,
                         slotDate,
                         slotDate.equals(today),
                         minStartTime,
-                        CLOSING_TIME,
+                        closingTime(futsal),
                         pageable
                 );
             }
 
-            for (int i = 0; i <= 7; i++) {
-                LocalDate date = today.plusDays(i);
-                LocalTime minTimeForDate = i == 0 ? minStartTime : LocalTime.MIDNIGHT;
-                ensureHourlySlotsForDate(futsalId, date, minTimeForDate);
-            }
             return timeSlotRepository.findAvailableForFutsalAfter(
-                    futsalId, today, minStartTime, CLOSING_TIME, pageable
+                    futsalId, today, minStartTime, closingTime(futsal), pageable
             );
         }
 
@@ -69,44 +68,34 @@ public class TimeSlotService {
                     slotDate,
                     slotDate.equals(today),
                     minStartTime,
-                    CLOSING_TIME,
+                    NO_GLOBAL_CLOSING_FILTER,
                     pageable
             );
         }
 
-        return timeSlotRepository.findAvailableAfter(today, minStartTime, CLOSING_TIME, pageable);
+        return timeSlotRepository.findAvailableAfter(today, minStartTime, NO_GLOBAL_CLOSING_FILTER, pageable);
     }
 
     // ── Public slot grid: available + booked slots for users ──────────────────
-    @Transactional
     public Page<TimeSlot> getPublicSlots(Long futsalId, LocalDate slotDate, Pageable pageable) {
-        LocalDate today = LocalDate.now();
-        LocalTime now = LocalTime.now();
-        LocalTime minStartTime = now.getMinute() == 0 && now.getSecond() == 0
-                ? now
-                : now.plusHours(1).withMinute(0).withSecond(0).withNano(0);
+        LocalDate today = currentDate();
+        LocalTime minStartTime = nextBookableStartTime();
 
         if (futsalId != null) {
+            Futsal futsal = getFutsal(futsalId);
             if (slotDate != null) {
-                LocalTime minTimeForDate = slotDate.equals(today) ? minStartTime : LocalTime.MIDNIGHT;
-                ensureHourlySlotsForDate(futsalId, slotDate, minTimeForDate);
                 return timeSlotRepository.findPublicForFutsalOnDate(
                         futsalId,
                         slotDate,
                         slotDate.equals(today),
                         minStartTime,
-                        CLOSING_TIME,
+                        closingTime(futsal),
                         pageable
                 );
             }
 
-            for (int i = 0; i <= 7; i++) {
-                LocalDate date = today.plusDays(i);
-                LocalTime minTimeForDate = i == 0 ? minStartTime : LocalTime.MIDNIGHT;
-                ensureHourlySlotsForDate(futsalId, date, minTimeForDate);
-            }
             return timeSlotRepository.findPublicForFutsalAfter(
-                    futsalId, today, minStartTime, CLOSING_TIME, pageable
+                    futsalId, today, minStartTime, closingTime(futsal), pageable
             );
         }
 
@@ -115,17 +104,17 @@ public class TimeSlotService {
                     slotDate,
                     slotDate.equals(today),
                     minStartTime,
-                    CLOSING_TIME,
+                    NO_GLOBAL_CLOSING_FILTER,
                     pageable
             );
         }
 
-        return timeSlotRepository.findPublicAfter(today, minStartTime, CLOSING_TIME, pageable);
+        return timeSlotRepository.findPublicAfter(today, minStartTime, NO_GLOBAL_CLOSING_FILTER, pageable);
     }
 
     // ── Get all slots (admin view) ────────────────────────────────────────────
     public Page<TimeSlot> getAllSlots(Long futsalId, LocalDate slotDate, Pageable pageable) {
-        LocalDate today = LocalDate.now();
+        LocalDate today = currentDate();
         if (futsalId != null) {
             if (slotDate != null) {
                 return timeSlotRepository.findByFutsal_FutsalIdAndSlotDateOrderBySlotDateAscStartTimeAsc(
@@ -150,31 +139,20 @@ public class TimeSlotService {
 
     // ── Add new slot (admin) ──────────────────────────────────────────────────
     public TimeSlot addSlot(TimeSlot slot, Long futsalId) {
-        Futsal futsal = futsalRepository.findById(futsalId)
-                .orElseThrow(() -> new RuntimeException("Futsal not found"));
+        Futsal futsal = getFutsal(futsalId);
         slot.setFutsal(futsal);
 
-        LocalDate today = LocalDate.now();
+        LocalDate today = currentDate();
         if (slot.getSlotDate().isBefore(today)) {
             throw new RuntimeException("Cannot add slots for past dates.");
         }
         if (slot.getSlotDate().isEqual(today)) {
-            LocalTime now = LocalTime.now();
+            LocalTime now = currentTime();
             if (slot.getStartTime().isBefore(now)) {
                 throw new RuntimeException("Cannot add slots for times that have already passed today.");
             }
         }
-        if (slot.getEndTime().isBefore(slot.getStartTime()) ||
-            slot.getEndTime().equals(slot.getStartTime())) {
-            throw new RuntimeException("End time must be after start time.");
-        }
-        if (slot.getEndTime().isAfter(CLOSING_TIME)) {
-            throw new RuntimeException("Closing time is 11:00 PM.");
-        }
-        if (futsal.getOpeningTime() != null && slot.getStartTime().isBefore(futsal.getOpeningTime())) {
-            throw new RuntimeException("Slot starts before the futsal opening time.");
-        }
-
+        validateSlotWindow(slot.getStartTime(), slot.getEndTime(), futsal);
         boolean exists = timeSlotRepository
                 .existsByFutsalAndSlotDateAndStartTimeLessThanAndEndTimeGreaterThan(
                         futsal,
@@ -196,29 +174,19 @@ public class TimeSlotService {
     public TimeSlot updateSlot(Long id, TimeSlot updatedSlot, Long futsalId, Boolean requestedAvailable) {
         TimeSlot existing = timeSlotRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new RuntimeException("Slot not found with ID: " + id));
-        Futsal futsal = futsalRepository.findById(futsalId)
-                .orElseThrow(() -> new RuntimeException("Futsal not found"));
+        Futsal futsal = getFutsal(futsalId);
 
-        LocalDate today = LocalDate.now();
+        LocalDate today = currentDate();
         if (updatedSlot.getSlotDate().isBefore(today)) {
             throw new RuntimeException("Cannot set slots for past dates.");
         }
         if (updatedSlot.getSlotDate().isEqual(today)) {
-            LocalTime now = LocalTime.now();
+            LocalTime now = currentTime();
             if (updatedSlot.getStartTime().isBefore(now)) {
                 throw new RuntimeException("Cannot set slots for times that have already passed today.");
             }
         }
-        if (updatedSlot.getEndTime().isBefore(updatedSlot.getStartTime()) ||
-            updatedSlot.getEndTime().equals(updatedSlot.getStartTime())) {
-            throw new RuntimeException("End time must be after start time.");
-        }
-        if (updatedSlot.getEndTime().isAfter(CLOSING_TIME)) {
-            throw new RuntimeException("Closing time is 11:00 PM.");
-        }
-        if (futsal.getOpeningTime() != null && updatedSlot.getStartTime().isBefore(futsal.getOpeningTime())) {
-            throw new RuntimeException("Slot starts before the futsal opening time.");
-        }
+        validateSlotWindow(updatedSlot.getStartTime(), updatedSlot.getEndTime(), futsal);
 
         boolean hasActiveBooking = bookingRepository.existsByTimeSlotAndStatusNotIn(existing, BookingService.CLOSED_STATUSES);
         if (hasActiveBooking && slotDetailsChanged(existing, updatedSlot, futsal)) {
@@ -275,6 +243,66 @@ public class TimeSlotService {
         timeSlotRepository.delete(slot);
     }
 
+    @Transactional
+    public SlotGenerationResponse generateSlots(SlotGenerationRequest request) {
+        Futsal futsal = getFutsal(request.getFutsalId());
+        validateGenerationRequest(request, futsal);
+
+        Set<LocalDate> holidays = request.getHolidayDates() == null
+                ? Set.of()
+                : new HashSet<>(request.getHolidayDates());
+        List<SlotGenerationRequest.MaintenanceBlockRequest> maintenanceBlocks =
+                request.getMaintenanceBlocks() == null ? List.of() : request.getMaintenanceBlocks();
+
+        LocalTime dailyStart = request.getStartTime() == null ? futsal.getOpeningTime() : request.getStartTime();
+        LocalTime dailyEnd = request.getEndTime() == null ? closingTime(futsal) : request.getEndTime();
+        int created = 0;
+        int skippedExisting = 0;
+        int skippedBlocked = 0;
+
+        for (LocalDate date = request.getStartDate(); !date.isAfter(request.getEndDate()); date = date.plusDays(1)) {
+            if (holidays.contains(date)) {
+                skippedBlocked += slotsInWindow(dailyStart, dailyEnd, request.getSlotMinutes());
+                continue;
+            }
+
+            for (LocalTime start = dailyStart; start.plusMinutes(request.getSlotMinutes()).compareTo(dailyEnd) <= 0; start = start.plusMinutes(request.getSlotMinutes())) {
+                LocalTime end = start.plusMinutes(request.getSlotMinutes());
+                if (date.equals(currentDate()) && start.isBefore(nextBookableStartTime())) {
+                    skippedBlocked++;
+                    continue;
+                }
+                if (overlapsMaintenance(date, start, end, maintenanceBlocks)) {
+                    skippedBlocked++;
+                    continue;
+                }
+                boolean exists = timeSlotRepository
+                        .existsByFutsalAndSlotDateAndStartTimeLessThanAndEndTimeGreaterThan(
+                                futsal,
+                                date,
+                                end,
+                                start
+                        );
+                if (exists) {
+                    skippedExisting++;
+                    continue;
+                }
+
+                TimeSlot slot = new TimeSlot();
+                slot.setFutsal(futsal);
+                slot.setSlotDate(date);
+                slot.setStartTime(start);
+                slot.setEndTime(end);
+                slot.setAvailable(true);
+                slot.addStatusHistory(new TimeSlotStatusHistory(slot, true, "admin", "Bulk generated slot"));
+                timeSlotRepository.save(slot);
+                created++;
+            }
+        }
+
+        return new SlotGenerationResponse(created, skippedExisting, skippedBlocked);
+    }
+
     private boolean slotDetailsChanged(TimeSlot existing, TimeSlot updatedSlot, Futsal futsal) {
         return !Objects.equals(existing.getFutsal().getFutsalId(), futsal.getFutsalId())
                 || !Objects.equals(existing.getSlotDate(), updatedSlot.getSlotDate())
@@ -282,44 +310,87 @@ public class TimeSlotService {
                 || !Objects.equals(existing.getEndTime(), updatedSlot.getEndTime());
     }
 
-    private void ensureHourlySlotsForDate(Long futsalId, LocalDate date, LocalTime minStartTime) {
-        Futsal futsal = futsalRepository.findById(futsalId)
+    private Futsal getFutsal(Long futsalId) {
+        return futsalRepository.findById(futsalId)
                 .orElseThrow(() -> new RuntimeException("Futsal not found"));
+    }
+
+    private LocalDate currentDate() {
+        return LocalDate.now(appClock);
+    }
+
+    private LocalTime currentTime() {
+        return LocalTime.now(appClock);
+    }
+
+    private LocalTime nextBookableStartTime() {
+        LocalTime now = currentTime();
+        return now.getMinute() == 0 && now.getSecond() == 0 && now.getNano() == 0
+                ? now
+                : now.plusHours(1).withMinute(0).withSecond(0).withNano(0);
+    }
+
+    private void validateSlotWindow(LocalTime startTime, LocalTime endTime, Futsal futsal) {
+        if (endTime.isBefore(startTime) || endTime.equals(startTime)) {
+            throw new RuntimeException("End time must be after start time.");
+        }
+        if (futsal.getOpeningTime() != null && startTime.isBefore(futsal.getOpeningTime())) {
+            throw new RuntimeException("Slot starts before the futsal opening time.");
+        }
+        if (endTime.isAfter(closingTime(futsal))) {
+            throw new RuntimeException("Slot ends after the futsal closing time.");
+        }
+    }
+
+    private void validateGenerationRequest(SlotGenerationRequest request, Futsal futsal) {
         if (futsal.getHourlyPrice() == null || futsal.getHourlyPrice().signum() <= 0) {
             throw new RuntimeException("Set a positive hourly price for this futsal before generating slots.");
         }
         if (futsal.getOpeningTime() == null) {
-            throw new RuntimeException("Set an opening time for this futsal before generating slots.");
+            throw new RuntimeException("Set opening and closing times for this futsal before generating slots.");
         }
-
-        LocalTime openingTime = futsal.getOpeningTime();
-        LocalTime start = date.equals(LocalDate.now())
-                ? (minStartTime.isAfter(openingTime) ? minStartTime : openingTime)
-                : openingTime;
-        LocalTime end = CLOSING_TIME;
-
-        List<TimeSlot> existingSlots = timeSlotRepository.findByFutsal_FutsalIdAndSlotDate(futsalId, date);
-        java.util.Set<String> existingKeys = existingSlots.stream()
-                .map(s -> s.getStartTime() + "|" + s.getEndTime())
-                .collect(java.util.stream.Collectors.toSet());
-
-        for (LocalTime t = start; t.isBefore(end); t = t.plusHours(1)) {
-            LocalTime slotEnd = t.plusHours(1);
-            if (slotEnd.isAfter(end)) {
-                break;
-            }
-            String key = t + "|" + slotEnd;
-            if (existingKeys.contains(key)) {
-                continue;
-            }
-            TimeSlot slot = new TimeSlot();
-            slot.setFutsal(futsal);
-            slot.setSlotDate(date);
-            slot.setStartTime(t);
-            slot.setEndTime(slotEnd);
-            slot.setAvailable(true);
-            slot.addStatusHistory(new TimeSlotStatusHistory(slot, true, "system", "Auto-generated slot"));
-            timeSlotRepository.save(slot);
+        if (request.getStartDate().isAfter(request.getEndDate())) {
+            throw new RuntimeException("Generation end date must be on or after start date.");
         }
+        if (request.getStartDate().isBefore(currentDate())) {
+            throw new RuntimeException("Cannot generate slots for past dates.");
+        }
+        LocalTime start = request.getStartTime() == null ? futsal.getOpeningTime() : request.getStartTime();
+        LocalTime end = request.getEndTime() == null ? closingTime(futsal) : request.getEndTime();
+        validateSlotWindow(start, end, futsal);
+        if (Duration.between(start, end).toMinutes() < request.getSlotMinutes()) {
+            throw new RuntimeException("Generation window is shorter than the slot duration.");
+        }
+        if (request.getMaintenanceBlocks() != null) {
+            for (SlotGenerationRequest.MaintenanceBlockRequest block : request.getMaintenanceBlocks()) {
+                if (block.getEndTime().compareTo(block.getStartTime()) <= 0) {
+                    throw new RuntimeException("Maintenance end time must be after start time.");
+                }
+                if (block.getDate().isBefore(request.getStartDate()) || block.getDate().isAfter(request.getEndDate())) {
+                    throw new RuntimeException("Maintenance blocks must be within the generation date range.");
+                }
+            }
+        }
+    }
+
+    private boolean overlapsMaintenance(
+            LocalDate date,
+            LocalTime start,
+            LocalTime end,
+            List<SlotGenerationRequest.MaintenanceBlockRequest> maintenanceBlocks
+    ) {
+        return maintenanceBlocks.stream().anyMatch(block ->
+                date.equals(block.getDate())
+                        && start.isBefore(block.getEndTime())
+                        && end.isAfter(block.getStartTime())
+        );
+    }
+
+    private int slotsInWindow(LocalTime start, LocalTime end, int slotMinutes) {
+        return (int) (Duration.between(start, end).toMinutes() / slotMinutes);
+    }
+
+    private LocalTime closingTime(Futsal futsal) {
+        return futsal.getClosingTime() == null ? LocalTime.of(23, 0) : futsal.getClosingTime();
     }
 }

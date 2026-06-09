@@ -25,6 +25,7 @@ public class DtoMapper {
         dto.setPhone(futsal.getPhone());
         dto.setHourlyPrice(futsal.getHourlyPrice());
         dto.setOpeningTime(futsal.getOpeningTime());
+        dto.setClosingTime(futsal.getClosingTime());
         dto.setImageUrl(futsal.getImageUrl());
         dto.setImageUrls(futsal.getImageUrls());
         if (futsal.getImages() != null) {

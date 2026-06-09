@@ -60,6 +60,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/api/futsals/**").access(SecurityConfig::isAdminRequest)
                         .requestMatchers(HttpMethod.DELETE, "/api/futsals/**").access(SecurityConfig::isAdminRequest)
                         .requestMatchers(HttpMethod.GET, "/api/slots/all").access(SecurityConfig::isAdminRequest)
+                        .requestMatchers(HttpMethod.POST, "/api/slots/generate").access(SecurityConfig::isAdminRequest)
                         .requestMatchers(HttpMethod.POST, "/api/slots").access(SecurityConfig::isAdminRequest)
                         .requestMatchers(HttpMethod.PUT, "/api/slots/**").access(SecurityConfig::isAdminRequest)
                         .requestMatchers(HttpMethod.DELETE, "/api/slots/**").access(SecurityConfig::isAdminRequest)

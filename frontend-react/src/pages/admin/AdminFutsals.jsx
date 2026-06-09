@@ -12,6 +12,7 @@ const emptyForm = {
   city: '',
   phone: '',
   openingTime: '',
+  closingTime: '',
   hourlyPrice: '',
   imageUrls: [],
   description: ''
@@ -83,6 +84,7 @@ export default function AdminFutsals() {
         phone: form.phone.trim(),
         hourlyPrice: parseFloat(form.hourlyPrice),
         openingTime: form.openingTime ? `${form.openingTime}:00` : null,
+        closingTime: form.closingTime ? `${form.closingTime}:00` : null,
         imageUrls: mergedUrls,
         imageUrl: mergedUrls.length > 0 ? mergedUrls[0] : null,
         description: form.description.trim() || null
@@ -114,6 +116,7 @@ export default function AdminFutsals() {
       city: f.city || '',
       phone: f.phone || '',
       openingTime: f.openingTime ? f.openingTime.substring(0, 5) : '',
+      closingTime: f.closingTime ? f.closingTime.substring(0, 5) : '',
       hourlyPrice: f.hourlyPrice ?? '',
       imageUrls: (f.imageUrls && f.imageUrls.length > 0) ? f.imageUrls : (f.imageUrl ? [f.imageUrl] : []),
       description: f.description || ''
@@ -170,6 +173,12 @@ export default function AdminFutsals() {
                   <label className="form-label">Opening Time</label>
                   <input type="time" className="form-control" value={form.openingTime} onChange={(e) => updateField('openingTime', e.target.value)} required />
                 </div>
+                <div className="form-group">
+                  <label className="form-label">Closing Time</label>
+                  <input type="time" className="form-control" value={form.closingTime} onChange={(e) => updateField('closingTime', e.target.value)} required />
+                </div>
+              </div>
+              <div className="form-row">
                 <div className="form-group">
                   <label className="form-label">Hourly Price (NPR)</label>
                   <input type="number" className="form-control" value={form.hourlyPrice} onChange={(e) => updateField('hourlyPrice', e.target.value)} min="0" step="50" required />
@@ -247,7 +256,7 @@ export default function AdminFutsals() {
                 <div className="table-wrap">
                   <table className="responsive-table">
                    <thead>
-                     <tr><th>Name</th><th>Address</th><th>City</th><th>Phone</th><th>Open</th><th>Price/hr</th><th>Actions</th></tr>
+                     <tr><th>Name</th><th>Address</th><th>City</th><th>Phone</th><th>Hours</th><th>Price/hr</th><th>Actions</th></tr>
                    </thead>
                    <tbody>
                      {futsals.map((f) => (
@@ -256,7 +265,7 @@ export default function AdminFutsals() {
                           <td className="text-muted text-sm" data-label="Address">{f.address}</td>
                           <td data-label="City">{f.city}</td>
                           <td data-label="Phone">{f.phone}</td>
-                          <td data-label="Open">{f.openingTime ? formatTime(f.openingTime) : '-'}</td>
+                          <td data-label="Hours">{f.openingTime ? formatTime(f.openingTime) : '-'} - {f.closingTime ? formatTime(f.closingTime) : '-'}</td>
                           <td data-label="Price/hr">NPR {f.hourlyPrice ?? '-'}</td>
                           <td className="table-actions" data-label="Actions">
                            <div className="actions-row">

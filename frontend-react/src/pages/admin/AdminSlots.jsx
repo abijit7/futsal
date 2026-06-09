@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { FutsalAPI } from '../../api/futsal.js';
 import { SlotAPI } from '../../api/slot.js';
+import { toDateInputValue } from '../../utils/date.js';
 import { calculateDuration, formatDate, formatTime } from '../../utils/format.js';
 import { useToast } from '../../components/ToastProvider.jsx';
 import { useConfirm } from '../../components/ConfirmProvider.jsx';
@@ -18,11 +19,23 @@ export default function AdminSlots() {
   const [form, setForm] = useState({ slotDate: '', startTime: '', endTime: '', futsalId: '' });
   const [alert, setAlert] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [generation, setGeneration] = useState({
+    startDate: '',
+    endDate: '',
+    slotMinutes: 60,
+    startTime: '',
+    endTime: '',
+    holidayDates: '',
+    maintenanceDate: '',
+    maintenanceStartTime: '',
+    maintenanceEndTime: ''
+  });
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const pageSize = 10;
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = toDateInputValue();
 
   const loadFutsals = async () => {
     try {
@@ -77,6 +90,10 @@ export default function AdminSlots() {
     setAlert('');
   };
 
+  const updateGeneration = (key, value) => {
+    setGeneration((prev) => ({ ...prev, [key]: value }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setAlert('');
@@ -107,6 +124,50 @@ export default function AdminSlots() {
       setAlert(err.message);
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleGenerate = async (e) => {
+    e.preventDefault();
+    if (!selectedFutsalId) {
+      showToast('Select a futsal before generating slots.', 'error');
+      return;
+    }
+
+    const maintenanceBlocks = generation.maintenanceDate && generation.maintenanceStartTime && generation.maintenanceEndTime
+      ? [{
+          date: generation.maintenanceDate,
+          startTime: `${generation.maintenanceStartTime}:00`,
+          endTime: `${generation.maintenanceEndTime}:00`
+        }]
+      : [];
+
+    const holidayDates = generation.holidayDates
+      .split(',')
+      .map((date) => date.trim())
+      .filter(Boolean);
+
+    const payload = {
+      futsalId: selectedFutsalId,
+      startDate: generation.startDate,
+      endDate: generation.endDate,
+      slotMinutes: Number(generation.slotMinutes),
+      startTime: generation.startTime ? `${generation.startTime}:00` : null,
+      endTime: generation.endTime ? `${generation.endTime}:00` : null,
+      holidayDates,
+      maintenanceBlocks
+    };
+
+    try {
+      setGenerating(true);
+      const result = await SlotAPI.generate(payload);
+      showToast(`Generated ${result.created} slots. Skipped ${result.skippedExisting} existing and ${result.skippedBlocked} blocked.`, 'success');
+      setPage(0);
+      loadSlots(0);
+    } catch (err) {
+      showToast(err.message, 'error');
+    } finally {
+      setGenerating(false);
     }
   };
 
@@ -143,48 +204,106 @@ export default function AdminSlots() {
 
       <div className="container page-wrap">
         <div className="admin-grid">
-          <div className="card admin-side">
-            <div className="card-header"><h3>{editingId ? 'Edit Slot' : 'Add New Slot'}</h3></div>
-            <form onSubmit={handleSubmit}>
-              <div className="form-group">
-                <label className="form-label">Futsal</label>
-                <select
-                  className="form-control"
-                  value={form.futsalId}
-                  onChange={(e) => setForm((prev) => ({ ...prev, futsalId: e.target.value }))}
-                  disabled={!hasFutsals}
-                  required
-                >
-                  {!hasFutsals && <option value="">No futsals available</option>}
-                  {futsals.map((f) => (
-                    <option key={f.futsalId} value={f.futsalId}>{f.name} - {f.city}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Date</label>
-                <input type="date" className="form-control" value={form.slotDate} min={todayStr} onChange={(e) => setForm((prev) => ({ ...prev, slotDate: e.target.value }))} disabled={!hasFutsals} required />
-              </div>
-              <div className="form-row">
+          <div className="admin-side-stack">
+            <div className="card admin-side">
+              <div className="card-header"><h3>{editingId ? 'Edit Slot' : 'Add New Slot'}</h3></div>
+              <form onSubmit={handleSubmit}>
                 <div className="form-group">
-                  <label className="form-label">Start Time</label>
-                  <input type="time" className="form-control" value={form.startTime} onChange={(e) => setForm((prev) => ({ ...prev, startTime: e.target.value }))} disabled={!hasFutsals} required />
+                  <label className="form-label">Futsal</label>
+                  <select
+                    className="form-control"
+                    value={form.futsalId}
+                    onChange={(e) => setForm((prev) => ({ ...prev, futsalId: e.target.value }))}
+                    disabled={!hasFutsals}
+                    required
+                  >
+                    {!hasFutsals && <option value="">No futsals available</option>}
+                    {futsals.map((f) => (
+                      <option key={f.futsalId} value={f.futsalId}>{f.name} - {f.city}</option>
+                    ))}
+                  </select>
                 </div>
                 <div className="form-group">
-                  <label className="form-label">End Time</label>
-                  <input type="time" className="form-control" value={form.endTime} onChange={(e) => setForm((prev) => ({ ...prev, endTime: e.target.value }))} disabled={!hasFutsals} required />
+                  <label className="form-label">Date</label>
+                  <input type="date" className="form-control" value={form.slotDate} min={todayStr} onChange={(e) => setForm((prev) => ({ ...prev, slotDate: e.target.value }))} disabled={!hasFutsals} required />
                 </div>
-              </div>
-              <div className={`alert alert-error ${alert ? 'show' : ''}`}>
-                <span>Error</span><span>{alert}</span>
-              </div>
-              <div className="toolbar-inline">
-                <button type="submit" className="btn btn-primary grow" disabled={submitting || !hasFutsals}>
-                  {submitting ? (editingId ? 'Saving...' : 'Adding...') : (editingId ? 'Save Changes' : 'Add Slot')}
+                <div className="form-row">
+                  <div className="form-group">
+                    <label className="form-label">Start Time</label>
+                    <input type="time" className="form-control" value={form.startTime} onChange={(e) => setForm((prev) => ({ ...prev, startTime: e.target.value }))} disabled={!hasFutsals} required />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">End Time</label>
+                    <input type="time" className="form-control" value={form.endTime} onChange={(e) => setForm((prev) => ({ ...prev, endTime: e.target.value }))} disabled={!hasFutsals} required />
+                  </div>
+                </div>
+                <div className={`alert alert-error ${alert ? 'show' : ''}`}>
+                  <span>Error</span><span>{alert}</span>
+                </div>
+                <div className="toolbar-inline">
+                  <button type="submit" className="btn btn-primary grow" disabled={submitting || !hasFutsals}>
+                    {submitting ? (editingId ? 'Saving...' : 'Adding...') : (editingId ? 'Save Changes' : 'Add Slot')}
+                  </button>
+                  <button type="button" className="btn btn-secondary" onClick={resetForm} disabled={!hasFutsals}>Reset</button>
+                </div>
+              </form>
+            </div>
+
+            <div className="card admin-side">
+              <div className="card-header"><h3>Bulk Generate</h3></div>
+              <form onSubmit={handleGenerate}>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label className="form-label">Start Date</label>
+                    <input type="date" className="form-control" value={generation.startDate} min={todayStr} onChange={(e) => updateGeneration('startDate', e.target.value)} disabled={!hasFutsals} required />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">End Date</label>
+                    <input type="date" className="form-control" value={generation.endDate} min={generation.startDate || todayStr} onChange={(e) => updateGeneration('endDate', e.target.value)} disabled={!hasFutsals} required />
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label className="form-label">Start Time</label>
+                    <input type="time" className="form-control" value={generation.startTime} onChange={(e) => updateGeneration('startTime', e.target.value)} disabled={!hasFutsals} />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">End Time</label>
+                    <input type="time" className="form-control" value={generation.endTime} onChange={(e) => updateGeneration('endTime', e.target.value)} disabled={!hasFutsals} />
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Slot Duration</label>
+                  <select className="form-control" value={generation.slotMinutes} onChange={(e) => updateGeneration('slotMinutes', e.target.value)} disabled={!hasFutsals}>
+                    <option value="30">30 minutes</option>
+                    <option value="60">1 hour</option>
+                    <option value="90">1.5 hours</option>
+                    <option value="120">2 hours</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Holiday Dates</label>
+                  <input className="form-control" value={generation.holidayDates} onChange={(e) => updateGeneration('holidayDates', e.target.value)} placeholder="2026-06-15, 2026-06-20" disabled={!hasFutsals} />
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label className="form-label">Maintenance Date</label>
+                    <input type="date" className="form-control" value={generation.maintenanceDate} min={todayStr} onChange={(e) => updateGeneration('maintenanceDate', e.target.value)} disabled={!hasFutsals} />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Block Start</label>
+                    <input type="time" className="form-control" value={generation.maintenanceStartTime} onChange={(e) => updateGeneration('maintenanceStartTime', e.target.value)} disabled={!hasFutsals} />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Block End</label>
+                    <input type="time" className="form-control" value={generation.maintenanceEndTime} onChange={(e) => updateGeneration('maintenanceEndTime', e.target.value)} disabled={!hasFutsals} />
+                  </div>
+                </div>
+                <button type="submit" className="btn btn-primary btn-full" disabled={generating || !hasFutsals}>
+                  {generating ? 'Generating...' : 'Generate Slots'}
                 </button>
-                <button type="button" className="btn btn-secondary" onClick={resetForm} disabled={!hasFutsals}>Reset</button>
-              </div>
-            </form>
+              </form>
+            </div>
           </div>
 
           <div className="card">

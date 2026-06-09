@@ -51,6 +51,10 @@ public class Futsal {
     @Column(nullable = false)
     private LocalTime openingTime;
 
+    @NotNull(message = "Closing time is required")
+    @Column(nullable = false, columnDefinition = "time default '23:00:00'")
+    private LocalTime closingTime = LocalTime.of(23, 0);
+
     @Column(length = 300)
     private String imageUrl;
 
@@ -81,6 +85,7 @@ public class Futsal {
         this.phone = phone;
         this.hourlyPrice = hourlyPrice;
         this.openingTime = openingTime;
+        this.closingTime = LocalTime.of(23, 0);
         this.imageUrl = imageUrl;
         this.description = description;
     }
@@ -105,6 +110,9 @@ public class Futsal {
 
     public LocalTime getOpeningTime()          { return openingTime; }
     public void setOpeningTime(LocalTime openingTime){ this.openingTime = openingTime; }
+
+    public LocalTime getClosingTime()          { return closingTime; }
+    public void setClosingTime(LocalTime closingTime){ this.closingTime = closingTime; }
 
     public String getImageUrl()                { return imageUrl; }
     public void setImageUrl(String imageUrl)   { this.imageUrl = imageUrl; }

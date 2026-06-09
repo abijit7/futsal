@@ -35,6 +35,9 @@ public class FutsalRequest {
     @NotNull(message = "Opening time is required")
     private LocalTime openingTime;
 
+    @NotNull(message = "Closing time is required")
+    private LocalTime closingTime;
+
     private String imageUrl;
 
     private List<String> imageUrls;
@@ -60,6 +63,9 @@ public class FutsalRequest {
     public LocalTime getOpeningTime() { return openingTime; }
     public void setOpeningTime(LocalTime openingTime) { this.openingTime = openingTime; }
 
+    public LocalTime getClosingTime() { return closingTime; }
+    public void setClosingTime(LocalTime closingTime) { this.closingTime = closingTime; }
+
     public String getImageUrl() { return imageUrl; }
     public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
 
@@ -69,4 +75,3 @@ public class FutsalRequest {
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
 }
-

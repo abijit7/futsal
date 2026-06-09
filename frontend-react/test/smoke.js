@@ -25,14 +25,22 @@ const sourceChecks = [
   {
     file: 'src/api/slot.js',
     patterns: [
-      ['public mixed-status slot endpoint exists', /\/slots\/public/]
+      ['public mixed-status slot endpoint exists', /\/slots\/public/],
+      ['admin slot generation endpoint exists', /\/slots\/generate/]
+    ]
+  },
+  {
+    file: 'src/utils/date.js',
+    patterns: [
+      ['local date input helper exists', /getFullYear\(\)/]
     ]
   },
   {
     file: 'src/pages/Slots.jsx',
     patterns: [
       ['booking page loads mixed available and booked slots', /SlotAPI\.getPublic/],
-      ['booked slots are disabled in the UI', /disabled=\{isBooked\}/]
+      ['booked slots are disabled in the UI', /disabled=\{isBooked\}/],
+      ['booking page avoids UTC date conversion', /toDateInputValue\(\)/]
     ]
   },
   {

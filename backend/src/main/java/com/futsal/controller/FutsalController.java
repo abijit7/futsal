@@ -55,6 +55,7 @@ public class FutsalController {
             entity.setPhone(futsal.getPhone());
             entity.setHourlyPrice(futsal.getHourlyPrice());
             entity.setOpeningTime(futsal.getOpeningTime());
+            entity.setClosingTime(futsal.getClosingTime());
             entity.setImageUrl(futsal.getImageUrl());
             entity.setImageUrls(futsal.getImageUrls());
             entity.setDescription(futsal.getDescription());
@@ -74,6 +75,7 @@ public class FutsalController {
             entity.setPhone(futsal.getPhone());
             entity.setHourlyPrice(futsal.getHourlyPrice());
             entity.setOpeningTime(futsal.getOpeningTime());
+            entity.setClosingTime(futsal.getClosingTime());
             entity.setImageUrl(futsal.getImageUrl());
             entity.setImageUrls(futsal.getImageUrls());
             entity.setDescription(futsal.getDescription());

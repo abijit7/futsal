@@ -12,6 +12,7 @@ public class FutsalResponse {
     private String phone;
     private java.math.BigDecimal hourlyPrice;
     private LocalTime openingTime;
+    private LocalTime closingTime;
     private String imageUrl;
     private List<String> imageUrls;
     private List<FutsalImageResponse> images;
@@ -39,6 +40,9 @@ public class FutsalResponse {
     public LocalTime getOpeningTime() { return openingTime; }
     public void setOpeningTime(LocalTime openingTime) { this.openingTime = openingTime; }
 
+    public LocalTime getClosingTime() { return closingTime; }
+    public void setClosingTime(LocalTime closingTime) { this.closingTime = closingTime; }
+
     public String getImageUrl() { return imageUrl; }
     public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
 
@@ -54,4 +58,3 @@ public class FutsalResponse {
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 }
-

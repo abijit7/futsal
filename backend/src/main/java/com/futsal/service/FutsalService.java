@@ -36,6 +36,7 @@ public class FutsalService {
     }
 
     public Futsal add(Futsal futsal) {
+        validateSchedule(futsal);
         syncImages(futsal, futsal);
         return futsalRepository.save(futsal);
     }
@@ -48,9 +49,20 @@ public class FutsalService {
         existing.setPhone(updated.getPhone());
         existing.setHourlyPrice(updated.getHourlyPrice());
         existing.setOpeningTime(updated.getOpeningTime());
+        existing.setClosingTime(updated.getClosingTime());
+        validateSchedule(existing);
         syncImages(existing, updated);
         existing.setDescription(updated.getDescription());
         return futsalRepository.save(existing);
+    }
+
+    private void validateSchedule(Futsal futsal) {
+        if (futsal.getOpeningTime() == null || futsal.getClosingTime() == null) {
+            throw new RuntimeException("Opening and closing times are required.");
+        }
+        if (!futsal.getClosingTime().isAfter(futsal.getOpeningTime())) {
+            throw new RuntimeException("Closing time must be after opening time.");
+        }
     }
 
     private void syncImages(Futsal target, Futsal source) {

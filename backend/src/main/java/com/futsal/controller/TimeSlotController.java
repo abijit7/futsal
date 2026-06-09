@@ -1,6 +1,8 @@
 package com.futsal.controller;
 
 import com.futsal.dto.DtoMapper;
+import com.futsal.dto.SlotGenerationRequest;
+import com.futsal.dto.SlotGenerationResponse;
 import com.futsal.dto.SlotRequest;
 import com.futsal.model.TimeSlot;
 import com.futsal.service.TimeSlotService;
@@ -68,6 +70,17 @@ public class TimeSlotController {
             Page<TimeSlotResponse> result = timeSlotService.getAllSlots(futsalId, slotDate, pageable)
                     .map(DtoMapper::toTimeSlotResponse);
             return ResponseEntity.ok(PagedResponse.fromPage(result));
+        } catch (RuntimeException e) {
+            return toErrorResponse(e);
+        }
+    }
+
+    // POST /api/slots/generate — bulk-generate slots (admin)
+    @PostMapping("/generate")
+    public ResponseEntity<?> generateSlots(@Valid @RequestBody SlotGenerationRequest req) {
+        try {
+            SlotGenerationResponse result = timeSlotService.generateSlots(req);
+            return ResponseEntity.ok(result);
         } catch (RuntimeException e) {
             return toErrorResponse(e);
         }
