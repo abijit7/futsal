@@ -1,6 +1,8 @@
 package com.futsal.dto;
 
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -42,6 +44,18 @@ public class FutsalRequest {
 
     private List<String> imageUrls;
 
+    private boolean verified;
+
+    @Size(max = 60, message = "Court type must be up to 60 characters")
+    private String courtType;
+
+    @DecimalMin(value = "0.0", message = "Rating cannot be negative")
+    @DecimalMax(value = "5.0", message = "Rating cannot be above 5")
+    private java.math.BigDecimal rating;
+
+    @Min(value = 0, message = "Review count cannot be negative")
+    private Integer reviewCount;
+
     @Size(max = 250, message = "Description must be up to 250 characters")
     private String description;
 
@@ -71,6 +85,18 @@ public class FutsalRequest {
 
     public List<String> getImageUrls() { return imageUrls; }
     public void setImageUrls(List<String> imageUrls) { this.imageUrls = imageUrls; }
+
+    public boolean isVerified() { return verified; }
+    public void setVerified(boolean verified) { this.verified = verified; }
+
+    public String getCourtType() { return courtType; }
+    public void setCourtType(String courtType) { this.courtType = courtType; }
+
+    public java.math.BigDecimal getRating() { return rating; }
+    public void setRating(java.math.BigDecimal rating) { this.rating = rating; }
+
+    public Integer getReviewCount() { return reviewCount; }
+    public void setReviewCount(Integer reviewCount) { this.reviewCount = reviewCount; }
 
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }

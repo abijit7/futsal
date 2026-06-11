@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { UserAPI } from '../api/user.js';
 import { Auth } from '../utils/auth.js';
 
@@ -148,7 +148,7 @@ export default function Register() {
 
         <div className="auth-divider">or</div>
         <p className="auth-copy">
-          Already have an account? <a href="/login">Sign in</a>
+          Already have an account? <Link to="/login">Sign in</Link>
         </p>
       </div>
     </div>

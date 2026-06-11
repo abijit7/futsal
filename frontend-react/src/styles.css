@@ -1004,6 +1004,25 @@ textarea.form-control {
   color: var(--gray-600);
 }
 
+.ml-2 {
+  margin-left: 8px;
+}
+
+.checkbox-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  color: var(--gray-700);
+  font-weight: 700;
+}
+
+.checkbox-row input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--green);
+}
+
 .table-wrap {
   width: 100%;
   overflow-x: auto;

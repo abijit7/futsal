@@ -18,7 +18,7 @@ export default function AdminUsers() {
   const loadUsers = async (targetPage = page) => {
     setLoading(true);
     try {
-      const data = await UserAPI.getAll({ page: targetPage, size: pageSize });
+      const data = await UserAPI.getAll({ page: targetPage, size: pageSize, q: query });
       const items = data?.items ?? data ?? [];
       setUsers(items);
       setTotalPages(data?.totalPages ?? (items.length > 0 ? 1 : 0));
@@ -31,7 +31,7 @@ export default function AdminUsers() {
 
   useEffect(() => {
     loadUsers(page);
-  }, [page]);
+  }, [page, query]);
 
   const deleteUser = async (userId, name) => {
     const ok = await confirm(`Delete user "${name}"? This will also delete their bookings.`);
@@ -44,10 +44,6 @@ export default function AdminUsers() {
       showToast(err.message, 'error');
     }
   };
-
-  const filtered = users.filter((u) =>
-    u.name.toLowerCase().includes(query.toLowerCase()) || u.email.toLowerCase().includes(query.toLowerCase())
-  );
 
   return (
     <>
@@ -65,7 +61,10 @@ export default function AdminUsers() {
             className="form-control"
             placeholder="Search users by name or email..."
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setPage(0);
+            }}
           />
         </div>
 
@@ -77,7 +76,7 @@ export default function AdminUsers() {
 
           {loading ? (
             <div className="loading-wrap"><div className="spinner"></div><p>Loading users...</p></div>
-          ) : filtered.length === 0 ? (
+          ) : users.length === 0 ? (
             <div className="empty-state"><div className="icon">0</div><h3>No users found</h3></div>
           ) : (
             <div className="table-wrap">
@@ -86,7 +85,7 @@ export default function AdminUsers() {
                   <tr><th>#</th><th>Name</th><th>Email</th><th>Phone</th><th>Role</th><th>Joined</th><th>Actions</th></tr>
                 </thead>
                 <tbody>
-                  {filtered.map((u, i) => (
+                  {users.map((u, i) => (
                     <tr key={u.userId}>
                       <td className="text-muted text-sm" data-label="#">{page * pageSize + i + 1}</td>
                       <td data-label="Name">
@@ -116,7 +115,7 @@ export default function AdminUsers() {
               </table>
             </div>
           )}
-          {!loading && filtered.length > 0 && (
+          {!loading && users.length > 0 && (
             <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
           )}
         </div>

@@ -7,7 +7,10 @@ import com.futsal.repository.FutsalRepository;
 import com.futsal.repository.TimeSlotRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,8 +29,13 @@ public class FutsalService {
     @Autowired
     private TimeSlotRepository timeSlotRepository;
 
-    public Page<Futsal> getAll(Pageable pageable) {
-        return futsalRepository.findAll(pageable);
+    public Page<Futsal> getAll(String query, String sort, Pageable pageable) {
+        Pageable sortedPageable = PageRequest.of(
+                pageable.getPageNumber(),
+                pageable.getPageSize(),
+                resolveSort(sort)
+        );
+        return futsalRepository.findAll(searchSpec(query), sortedPageable);
     }
 
     public Futsal getById(Long id) {
@@ -50,6 +58,10 @@ public class FutsalService {
         existing.setHourlyPrice(updated.getHourlyPrice());
         existing.setOpeningTime(updated.getOpeningTime());
         existing.setClosingTime(updated.getClosingTime());
+        existing.setVerified(updated.isVerified());
+        existing.setCourtType(updated.getCourtType());
+        existing.setRating(updated.getRating());
+        existing.setReviewCount(updated.getReviewCount());
         validateSchedule(existing);
         syncImages(existing, updated);
         existing.setDescription(updated.getDescription());
@@ -60,9 +72,43 @@ public class FutsalService {
         if (futsal.getOpeningTime() == null || futsal.getClosingTime() == null) {
             throw new RuntimeException("Opening and closing times are required.");
         }
+        if (futsal.getReviewCount() == null) {
+            futsal.setReviewCount(0);
+        }
         if (!futsal.getClosingTime().isAfter(futsal.getOpeningTime())) {
             throw new RuntimeException("Closing time must be after opening time.");
         }
+    }
+
+    private Sort resolveSort(String sort) {
+        if ("price-low".equalsIgnoreCase(sort)) {
+            return Sort.by(Sort.Order.asc("hourlyPrice"), Sort.Order.asc("name"));
+        }
+        if ("price-high".equalsIgnoreCase(sort)) {
+            return Sort.by(Sort.Order.desc("hourlyPrice"), Sort.Order.asc("name"));
+        }
+        return Sort.by(
+                Sort.Order.desc("verified"),
+                Sort.Order.desc("rating").nullsLast(),
+                Sort.Order.desc("reviewCount"),
+                Sort.Order.asc("name")
+        );
+    }
+
+    private Specification<Futsal> searchSpec(String query) {
+        String term = query == null ? "" : query.trim().toLowerCase();
+        if (term.isBlank()) {
+            return null;
+        }
+        return (root, criteriaQuery, criteriaBuilder) -> {
+            String pattern = "%" + term + "%";
+            return criteriaBuilder.or(
+                    criteriaBuilder.like(criteriaBuilder.lower(root.get("name")), pattern),
+                    criteriaBuilder.like(criteriaBuilder.lower(root.get("address")), pattern),
+                    criteriaBuilder.like(criteriaBuilder.lower(root.get("city")), pattern),
+                    criteriaBuilder.like(criteriaBuilder.lower(root.get("courtType")), pattern)
+            );
+        };
     }
 
     private void syncImages(Futsal target, Futsal source) {

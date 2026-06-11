@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { UserAPI } from '../api/user.js';
 import { Auth } from '../utils/auth.js';
 import { useToast } from '../components/ToastProvider.jsx';
@@ -65,7 +65,7 @@ export default function Login() {
 
         <div className="auth-divider">or</div>
         <p className="auth-copy">
-          Don't have an account? <a href="/register">Create one</a>
+          Don't have an account? <Link to="/register">Create one</Link>
         </p>
         <p className="auth-note">
           Admin? Use your admin credentials to log in above.

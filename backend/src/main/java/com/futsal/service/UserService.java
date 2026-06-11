@@ -60,8 +60,9 @@ public class UserService {
     }
 
     // ── Get all users (admin) ─────────────────────────────────────────────────
-    public Page<User> getAllUsers(Pageable pageable) {
-        return userRepository.findAll(pageable);
+    public Page<User> getAllUsers(String query, Pageable pageable) {
+        String term = query == null ? "" : query.trim();
+        return userRepository.search(term, pageable);
     }
 
     // ── Get user by ID ────────────────────────────────────────────────────────

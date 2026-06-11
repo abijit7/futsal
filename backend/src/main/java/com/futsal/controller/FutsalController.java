@@ -29,10 +29,12 @@ public class FutsalController {
     @GetMapping
     public ResponseEntity<PagedResponse<FutsalResponse>> getAll(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "12") int size
+            @RequestParam(defaultValue = "12") int size,
+            @RequestParam(required = false) String q,
+            @RequestParam(defaultValue = "recommended") String sort
     ) {
         Pageable pageable = PageRequest.of(page, size);
-        Page<FutsalResponse> result = futsalService.getAll(pageable).map(DtoMapper::toFutsalResponse);
+        Page<FutsalResponse> result = futsalService.getAll(q, sort, pageable).map(DtoMapper::toFutsalResponse);
         return ResponseEntity.ok(PagedResponse.fromPage(result));
     }
 
@@ -58,6 +60,10 @@ public class FutsalController {
             entity.setClosingTime(futsal.getClosingTime());
             entity.setImageUrl(futsal.getImageUrl());
             entity.setImageUrls(futsal.getImageUrls());
+            entity.setVerified(futsal.isVerified());
+            entity.setCourtType(futsal.getCourtType());
+            entity.setRating(futsal.getRating());
+            entity.setReviewCount(futsal.getReviewCount());
             entity.setDescription(futsal.getDescription());
             return ResponseEntity.ok(DtoMapper.toFutsalResponse(futsalService.add(entity)));
         } catch (RuntimeException e) {
@@ -78,6 +84,10 @@ public class FutsalController {
             entity.setClosingTime(futsal.getClosingTime());
             entity.setImageUrl(futsal.getImageUrl());
             entity.setImageUrls(futsal.getImageUrls());
+            entity.setVerified(futsal.isVerified());
+            entity.setCourtType(futsal.getCourtType());
+            entity.setRating(futsal.getRating());
+            entity.setReviewCount(futsal.getReviewCount());
             entity.setDescription(futsal.getDescription());
             return ResponseEntity.ok(DtoMapper.toFutsalResponse(futsalService.update(id, entity)));
         } catch (RuntimeException e) {

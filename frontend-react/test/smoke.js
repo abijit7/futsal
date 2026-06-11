@@ -47,7 +47,45 @@ const sourceChecks = [
     file: 'src/pages/Futsals.jsx',
     patterns: [
       ['custom sort dropdown trigger exists', /sort-trigger/],
-      ['custom sort menu exists', /sort-menu/]
+      ['custom sort menu exists', /sort-menu/],
+      ['venue search is sent to backend', /q: search/],
+      ['venue sort is sent to backend', /sort: sortBy/],
+      ['venue cards use backend rating field', /f\.rating/],
+      ['venue cards use backend court type field', /f\.courtType/]
+    ]
+  },
+  {
+    file: 'src/pages/MyBookings.jsx',
+    patterns: [
+      ['booking status filter is sent to backend', /status: filter === 'ALL' \? undefined : filter/],
+      ['booking page renders backend page items directly', /bookings\.map/]
+    ]
+  },
+  {
+    file: 'src/pages/admin/AdminUsers.jsx',
+    patterns: [
+      ['admin user search is sent to backend', /q: query/],
+      ['admin users table renders backend page items directly', /users\.map/]
+    ]
+  },
+  {
+    file: 'src/pages/admin/AdminFutsals.jsx',
+    patterns: [
+      ['admin venue form submits real verified field', /verified: form\.verified/],
+      ['admin venue form submits real court type field', /courtType: form\.courtType/],
+      ['admin venue form submits real rating field', /rating: form\.rating/]
+    ]
+  },
+  {
+    file: 'src/pages/admin/AdminDashboard.jsx',
+    patterns: [
+      ['admin dashboard uses React Router links', /<Link to="\/admin\/futsals"/]
+    ]
+  },
+  {
+    file: 'src/pages/Dashboard.jsx',
+    patterns: [
+      ['user dashboard uses React Router links', /<Link to="\/slots"/]
     ]
   },
   {

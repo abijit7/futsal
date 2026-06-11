@@ -70,11 +70,12 @@ public class UserController {
     @GetMapping
     public ResponseEntity<?> getAllUsers(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String q
     ) {
         try {
             Pageable pageable = PageRequest.of(page, size);
-            Page<UserResponse> result = userService.getAllUsers(pageable).map(DtoMapper::toUserResponse);
+            Page<UserResponse> result = userService.getAllUsers(q, pageable).map(DtoMapper::toUserResponse);
             return ResponseEntity.ok(PagedResponse.fromPage(result));
         } catch (RuntimeException e) {
             return toErrorResponse(e);

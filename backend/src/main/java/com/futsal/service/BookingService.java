@@ -88,9 +88,12 @@ public class BookingService {
     }
 
     // ── Get bookings by user ──────────────────────────────────────────────────
-    public Page<Booking> getBookingsByUser(Long userId, Pageable pageable) {
+    public Page<Booking> getBookingsByUser(Long userId, BookingStatus status, Pageable pageable) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
+        if (status != null) {
+            return bookingRepository.findByUserAndStatusOrderByBookedAtDesc(user, status, pageable);
+        }
         return bookingRepository.findByUserOrderByBookedAtDesc(user, pageable);
     }
 

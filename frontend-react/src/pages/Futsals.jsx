@@ -33,8 +33,14 @@ export default function Futsals() {
 
   useEffect(() => {
     const load = async () => {
+      setLoading(true);
       try {
-        const data = await FutsalAPI.getAll({ page, size: pageSize });
+        const data = await FutsalAPI.getAll({
+          page,
+          size: pageSize,
+          q: search,
+          sort: sortBy
+        });
         const items = data?.items ?? data ?? [];
         setFutsals(items);
         setTotalPages(data?.totalPages ?? (items.length > 0 ? 1 : 0));
@@ -45,23 +51,12 @@ export default function Futsals() {
       }
     };
     load();
-  }, [page, showToast]);
+  }, [page, search, sortBy, showToast]);
 
   const selectFutsal = (futsal) => {
     FutsalStore.save({ futsalId: futsal.futsalId, name: futsal.name });
     navigate('/slots');
   };
-
-  const visibleFutsals = futsals
-    .filter((futsal) => {
-      const text = `${futsal.name || ''} ${futsal.address || ''} ${futsal.city || ''}`.toLowerCase();
-      return text.includes(search.toLowerCase());
-    })
-    .sort((a, b) => {
-      if (sortBy === 'price-low') return (a.hourlyPrice || 0) - (b.hourlyPrice || 0);
-      if (sortBy === 'price-high') return (b.hourlyPrice || 0) - (a.hourlyPrice || 0);
-      return (a.name || '').localeCompare(b.name || '');
-    });
 
   const getIndex = (futsalId) => photoIndex[futsalId] || 0;
 
@@ -126,7 +121,10 @@ export default function Futsals() {
             <input
               type="search"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(0);
+              }}
               placeholder="Search futsal, city, or area"
               aria-label="Search futsals"
             />
@@ -161,6 +159,7 @@ export default function Futsals() {
                     onMouseDown={(event) => event.preventDefault()}
                     onClick={() => {
                       setSortBy(option.value);
+                      setPage(0);
                       setSortOpen(false);
                     }}
                   >
@@ -188,22 +187,24 @@ export default function Futsals() {
           </div>
         )}
 
-        {!loading && futsals.length === 0 && (
+        {!loading && futsals.length === 0 && !search.trim() && (
           <EmptyState icon="0" title="No futsals available" description="Please check back later." />
         )}
 
-        {!loading && futsals.length > 0 && visibleFutsals.length === 0 && (
+        {!loading && futsals.length === 0 && search.trim() && (
           <EmptyState icon="0" title="No futsals match your search" description="Try another city, area, or venue name." />
         )}
 
-        {!loading && visibleFutsals.length > 0 && (
+        {!loading && futsals.length > 0 && (
           <div className="venue-grid">
-            {visibleFutsals.map((f, index) => {
+            {futsals.map((f) => {
               const images = (f.imageUrls && f.imageUrls.length > 0) ? f.imageUrls : (f.imageUrl ? [f.imageUrl] : []);
               const currentIndex = getIndex(f.futsalId);
               const currentImage = images[currentIndex] || images[0];
               const dir = photoDir[f.futsalId] || 1;
               const slideClass = dir === 1 ? 'slide-left' : 'slide-right';
+              const ratingValue = f.rating !== null && f.rating !== undefined ? Number(f.rating).toFixed(1) : null;
+              const reviewCount = Number(f.reviewCount || 0);
               return (
                 <article className="venue-card" key={f.futsalId}>
                   <div className="venue-card-media">
@@ -223,8 +224,8 @@ export default function Futsals() {
                           alt={f.name}
                           onError={(e) => (e.currentTarget.style.display = 'none')}
                         />
-                        <span className="availability-chip">Available</span>
-                        <span className="venue-rank">{index === 0 ? 'Top pick' : 'Verified'}</span>
+                        {f.courtType && <span className="availability-chip">{f.courtType}</span>}
+                        {f.verified && <span className="venue-rank">Verified</span>}
                         {images.length > 1 && (
                           <>
                             <button
@@ -253,17 +254,23 @@ export default function Futsals() {
                     )}
                   </div>
                   <div className="venue-card-body">
-                    <div className="venue-card-topline">
-                      <span className="slot-date">Verified venue</span>
-                      <span className="rating-pill">4.{(index + 5) % 10}</span>
-                    </div>
+                    {(f.verified || ratingValue) && (
+                      <div className="venue-card-topline">
+                        {f.verified && <span className="slot-date">Verified venue</span>}
+                        {ratingValue && (
+                          <span className="rating-pill">
+                            {ratingValue}{reviewCount > 0 ? ` (${reviewCount})` : ''}
+                          </span>
+                        )}
+                      </div>
+                    )}
                     <h2 className="venue-title">{f.name}</h2>
                     <div className="venue-location">{f.address}, {f.city}</div>
                     <div className="text-muted text-sm mb-2">{f.phone}</div>
                     {f.description && <div className="venue-description">{f.description}</div>}
                     <div className="venue-meta">
                       <span>{f.openingTime ? formatTime(f.openingTime) : '-'} - {f.closingTime ? formatTime(f.closingTime) : '-'}</span>
-                      <span>Indoor court</span>
+                      {f.courtType && <span>{f.courtType}</span>}
                     </div>
                     <div className="venue-card-footer">
                       <div>

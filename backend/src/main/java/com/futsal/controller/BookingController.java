@@ -74,14 +74,21 @@ public class BookingController {
     public ResponseEntity<?> getBookingsByUser(
             @PathVariable Long userId,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String status
     ) {
         try {
             securityAuth.requireUserOrAdmin(userId);
             Pageable pageable = PageRequest.of(page, size);
-            Page<BookingResponse> result = bookingService.getBookingsByUser(userId, pageable)
+            BookingStatus parsedStatus = null;
+            if (status != null && !status.isBlank() && !"ALL".equalsIgnoreCase(status)) {
+                parsedStatus = BookingStatus.valueOf(status.toUpperCase());
+            }
+            Page<BookingResponse> result = bookingService.getBookingsByUser(userId, parsedStatus, pageable)
                     .map(DtoMapper::toBookingResponse);
             return ResponseEntity.ok(PagedResponse.fromPage(result));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(errorMap("Invalid status value"));
         } catch (RuntimeException e) {
             return toErrorResponse(e);
         }

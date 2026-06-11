@@ -23,8 +23,13 @@ export default function MyBookings() {
   const pageSize = 6;
 
   const loadBookings = async (targetPage = page) => {
+    setLoading(true);
     try {
-      const data = await BookingAPI.getByUser(user.userId, { page: targetPage, size: pageSize });
+      const data = await BookingAPI.getByUser(user.userId, {
+        page: targetPage,
+        size: pageSize,
+        status: filter === 'ALL' ? undefined : filter
+      });
       const items = data?.items ?? data ?? [];
       setBookings(items);
       setTotalPages(data?.totalPages ?? (items.length > 0 ? 1 : 0));
@@ -37,9 +42,7 @@ export default function MyBookings() {
 
   useEffect(() => {
     loadBookings(page);
-  }, [page]);
-
-  const filtered = filter === 'ALL' ? bookings : bookings.filter((b) => b.status === filter);
+  }, [page, filter]);
 
   const cancelBooking = async (bookingId) => {
     const ok = await confirm('Are you sure you want to cancel this booking?');
@@ -80,13 +83,13 @@ export default function MyBookings() {
 
         {loading && <LoadingWrap message="Loading your bookings..." />}
 
-        {!loading && filtered.length === 0 && (
+        {!loading && bookings.length === 0 && (
           <EmptyState icon="0" title="No bookings found" description="Browse available slots to get started." />
         )}
 
-        {!loading && filtered.length > 0 && (
+        {!loading && bookings.length > 0 && (
           <div className="booking-card-grid">
-            {filtered.map((b) => {
+            {bookings.map((b) => {
               const canCancel = b.status === 'PENDING' || b.status === 'APPROVED';
               const paymentInfo = b.paymentMethod ? `${b.paymentMethod} / ${b.paymentRef}` : '-';
               return (
@@ -118,7 +121,7 @@ export default function MyBookings() {
             })}
           </div>
         )}
-        {!loading && filtered.length > 0 && (
+        {!loading && bookings.length > 0 && (
           <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
         )}
       </div>

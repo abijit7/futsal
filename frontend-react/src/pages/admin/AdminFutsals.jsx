@@ -15,6 +15,10 @@ const emptyForm = {
   closingTime: '',
   hourlyPrice: '',
   imageUrls: [],
+  verified: false,
+  courtType: '',
+  rating: '',
+  reviewCount: '',
   description: ''
 };
 
@@ -87,6 +91,10 @@ export default function AdminFutsals() {
         closingTime: form.closingTime ? `${form.closingTime}:00` : null,
         imageUrls: mergedUrls,
         imageUrl: mergedUrls.length > 0 ? mergedUrls[0] : null,
+        verified: form.verified,
+        courtType: form.courtType.trim() || null,
+        rating: form.rating === '' ? null : parseFloat(form.rating),
+        reviewCount: form.reviewCount === '' ? 0 : parseInt(form.reviewCount, 10),
         description: form.description.trim() || null
       };
 
@@ -119,6 +127,10 @@ export default function AdminFutsals() {
       closingTime: f.closingTime ? f.closingTime.substring(0, 5) : '',
       hourlyPrice: f.hourlyPrice ?? '',
       imageUrls: (f.imageUrls && f.imageUrls.length > 0) ? f.imageUrls : (f.imageUrl ? [f.imageUrl] : []),
+      verified: Boolean(f.verified),
+      courtType: f.courtType || '',
+      rating: f.rating ?? '',
+      reviewCount: f.reviewCount ?? '',
       description: f.description || ''
     });
     setNewFiles([]);
@@ -182,6 +194,27 @@ export default function AdminFutsals() {
                 <div className="form-group">
                   <label className="form-label">Hourly Price (NPR)</label>
                   <input type="number" className="form-control" value={form.hourlyPrice} onChange={(e) => updateField('hourlyPrice', e.target.value)} min="0" step="50" required />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Court Type</label>
+                  <input className="form-control" value={form.courtType} onChange={(e) => updateField('courtType', e.target.value)} placeholder="Indoor turf, outdoor court..." maxLength={60} />
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">Rating</label>
+                  <input type="number" className="form-control" value={form.rating} onChange={(e) => updateField('rating', e.target.value)} min="0" max="5" step="0.1" placeholder="4.8" />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Review Count</label>
+                  <input type="number" className="form-control" value={form.reviewCount} onChange={(e) => updateField('reviewCount', e.target.value)} min="0" step="1" placeholder="128" />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Verified Venue</label>
+                  <label className="checkbox-row">
+                    <input type="checkbox" checked={form.verified} onChange={(e) => updateField('verified', e.target.checked)} />
+                    <span>Show verified badge</span>
+                  </label>
                 </div>
               </div>
               <div className="form-group">
@@ -256,7 +289,7 @@ export default function AdminFutsals() {
                 <div className="table-wrap">
                   <table className="responsive-table">
                    <thead>
-                     <tr><th>Name</th><th>Address</th><th>City</th><th>Phone</th><th>Hours</th><th>Price/hr</th><th>Actions</th></tr>
+                     <tr><th>Name</th><th>Address</th><th>City</th><th>Type</th><th>Rating</th><th>Hours</th><th>Price/hr</th><th>Actions</th></tr>
                    </thead>
                    <tbody>
                      {futsals.map((f) => (
@@ -264,7 +297,11 @@ export default function AdminFutsals() {
                           <td className="fw-bold" data-label="Name">{f.name}</td>
                           <td className="text-muted text-sm" data-label="Address">{f.address}</td>
                           <td data-label="City">{f.city}</td>
-                          <td data-label="Phone">{f.phone}</td>
+                          <td data-label="Type">{f.courtType || '-'}</td>
+                          <td data-label="Rating">
+                            {f.rating !== null && f.rating !== undefined ? `${Number(f.rating).toFixed(1)} (${f.reviewCount || 0})` : '-'}
+                            {f.verified && <span className="badge badge-approved ml-2">Verified</span>}
+                          </td>
                           <td data-label="Hours">{f.openingTime ? formatTime(f.openingTime) : '-'} - {f.closingTime ? formatTime(f.closingTime) : '-'}</td>
                           <td data-label="Price/hr">NPR {f.hourlyPrice ?? '-'}</td>
                           <td className="table-actions" data-label="Actions">

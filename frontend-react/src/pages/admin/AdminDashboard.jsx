@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { BookingAPI } from '../../api/booking.js';
 import { SlotAPI } from '../../api/slot.js';
 import { UserAPI } from '../../api/user.js';
@@ -84,10 +85,10 @@ export default function AdminDashboard() {
             <h2>Venue operations</h2>
             <p>Monitor inventory, approvals, users, and booking activity from the live backend.</p>
             <div className="admin-command-links">
-              <a href="/admin/futsals">Manage Venues</a>
-              <a href="/admin/slots">Manage Slots</a>
-              <a href="/admin/bookings">Review Bookings</a>
-              <a href="/admin/users">Users</a>
+              <Link to="/admin/futsals">Manage Venues</Link>
+              <Link to="/admin/slots">Manage Slots</Link>
+              <Link to="/admin/bookings">Review Bookings</Link>
+              <Link to="/admin/users">Users</Link>
             </div>
           </aside>
 
@@ -104,7 +105,7 @@ export default function AdminDashboard() {
             <div className="card">
               <div className="card-header">
                 <h2>Pending Bookings</h2>
-                <a href="/admin/bookings" className="btn btn-secondary btn-sm">View All</a>
+                <Link to="/admin/bookings" className="btn btn-secondary btn-sm">View All</Link>
               </div>
 
               {loading ? (

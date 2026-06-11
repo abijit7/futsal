@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { BookingAPI } from '../api/booking.js';
 import { Auth } from '../utils/auth.js';
 import { compactTimeRange, formatDate, formatDateTime } from '../utils/format.js';
@@ -57,7 +58,7 @@ export default function Dashboard() {
               <div><strong>{statTotal}</strong><span>Total</span></div>
               <div><strong>{statApproved}</strong><span>Approved</span></div>
             </div>
-            <a href="/slots" className="btn btn-primary btn-full">Book a Court</a>
+            <Link to="/slots" className="btn btn-primary btn-full">Book a Court</Link>
           </aside>
 
           <div className="dashboard-main">
@@ -71,7 +72,7 @@ export default function Dashboard() {
             <div className="card">
               <div className="card-header">
                 <h2>Recent Bookings</h2>
-                <a href="/my-bookings" className="btn btn-secondary btn-sm">View All</a>
+                <Link to="/my-bookings" className="btn btn-secondary btn-sm">View All</Link>
               </div>
 
               {loading && <LoadingWrap message="Loading your bookings..." />}

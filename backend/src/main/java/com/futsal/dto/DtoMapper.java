@@ -28,6 +28,10 @@ public class DtoMapper {
         dto.setClosingTime(futsal.getClosingTime());
         dto.setImageUrl(futsal.getImageUrl());
         dto.setImageUrls(futsal.getImageUrls());
+        dto.setVerified(futsal.isVerified());
+        dto.setCourtType(futsal.getCourtType());
+        dto.setRating(futsal.getRating());
+        dto.setReviewCount(futsal.getReviewCount());
         if (futsal.getImages() != null) {
             dto.setImages(futsal.getImages().stream().map(DtoMapper::toFutsalImageResponse).toList());
         }

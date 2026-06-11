@@ -16,6 +16,10 @@ public class FutsalResponse {
     private String imageUrl;
     private List<String> imageUrls;
     private List<FutsalImageResponse> images;
+    private boolean verified;
+    private String courtType;
+    private java.math.BigDecimal rating;
+    private Integer reviewCount;
     private String description;
     private LocalDateTime createdAt;
 
@@ -51,6 +55,18 @@ public class FutsalResponse {
 
     public List<FutsalImageResponse> getImages() { return images; }
     public void setImages(List<FutsalImageResponse> images) { this.images = images; }
+
+    public boolean isVerified() { return verified; }
+    public void setVerified(boolean verified) { this.verified = verified; }
+
+    public String getCourtType() { return courtType; }
+    public void setCourtType(String courtType) { this.courtType = courtType; }
+
+    public java.math.BigDecimal getRating() { return rating; }
+    public void setRating(java.math.BigDecimal rating) { this.rating = rating; }
+
+    public Integer getReviewCount() { return reviewCount; }
+    public void setReviewCount(Integer reviewCount) { this.reviewCount = reviewCount; }
 
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
