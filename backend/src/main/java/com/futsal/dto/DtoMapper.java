@@ -13,6 +13,54 @@ public class DtoMapper {
     private DtoMapper() {
     }
 
+    public static Futsal toFutsal(FutsalRequest request) {
+        if (request == null) {
+            return null;
+        }
+        Futsal futsal = new Futsal();
+        futsal.setName(request.getName());
+        futsal.setAddress(request.getAddress());
+        futsal.setCity(request.getCity());
+        futsal.setPhone(request.getPhone());
+        futsal.setHourlyPrice(request.getHourlyPrice());
+        futsal.setOpeningTime(request.getOpeningTime());
+        futsal.setClosingTime(request.getClosingTime());
+        futsal.setImageUrl(request.getImageUrl());
+        futsal.setImageUrls(request.getImageUrls());
+        futsal.setVerified(request.isVerified());
+        futsal.setCourtType(request.getCourtType());
+        futsal.setRating(request.getRating());
+        futsal.setReviewCount(request.getReviewCount());
+        futsal.setDescription(request.getDescription());
+        return futsal;
+    }
+
+    public static TimeSlot toTimeSlot(SlotRequest request) {
+        if (request == null) {
+            return null;
+        }
+        TimeSlot slot = new TimeSlot();
+        slot.setSlotDate(request.getSlotDate());
+        slot.setStartTime(request.getStartTime());
+        slot.setEndTime(request.getEndTime());
+        if (request.getAvailable() != null) {
+            slot.setAvailable(request.getAvailable());
+        }
+        return slot;
+    }
+
+    public static User toUser(UserRegisterRequest request) {
+        if (request == null) {
+            return null;
+        }
+        User user = new User();
+        user.setName(request.getName());
+        user.setEmail(request.getEmail());
+        user.setPhone(request.getPhone());
+        user.setPassword(request.getPassword());
+        return user;
+    }
+
     public static FutsalResponse toFutsalResponse(Futsal futsal) {
         if (futsal == null) {
             return null;
