@@ -34,12 +34,11 @@ export async function apiFetch(endpoint, options = {}) {
       ...rest,
       headers: buildHeaders(headers)
     });
-    const text = await res.text();
-    const data = text ? JSON.parse(text) : null;
+    const data = await parseResponse(res);
     if (!res.ok) {
       const message = data?.error || 'Request failed';
       if (isAuthFailure(res.status, message)) {
-        Auth.logout();
+        handleAuthFailure(res.status, message);
       }
       throw new Error(message);
     }
@@ -58,11 +57,11 @@ export async function apiUpload(endpoint, file) {
       headers: authHeaders(),
       body: formData
     });
-    const data = await res.json();
+    const data = await parseResponse(res);
     if (!res.ok) {
       const message = data?.error || 'Upload failed';
       if (isAuthFailure(res.status, message)) {
-        Auth.logout();
+        handleAuthFailure(res.status, message);
       }
       throw new Error(message);
     }
@@ -74,4 +73,24 @@ export async function apiUpload(endpoint, file) {
 
 function isAuthFailure(status, message = '') {
   return status === 401 || (status === 403 && /token/i.test(message));
+}
+
+async function parseResponse(res) {
+  const text = await res.text();
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { error: res.ok ? null : text };
+  }
+}
+
+function handleAuthFailure(status, message) {
+  Auth.logout();
+  window.dispatchEvent(new CustomEvent('authrequired', {
+    detail: {
+      status,
+      message
+    }
+  }));
 }

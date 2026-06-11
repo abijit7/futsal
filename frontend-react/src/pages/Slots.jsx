@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FutsalAPI } from '../api/futsal.js';
 import { SlotAPI } from '../api/slot.js';
@@ -10,6 +10,7 @@ import { calculateDuration, compactTimeRange, formatDate, formatTime } from '../
 import EmptyState from '../components/EmptyState.jsx';
 import Pagination from '../components/Pagination.jsx';
 import { useToast } from '../components/ToastProvider.jsx';
+import { useModalAccessibility } from '../components/useModalAccessibility.js';
 
 function buildDateChoices(startDate) {
   return Array.from({ length: 7 }).map((_, index) => {
@@ -46,6 +47,7 @@ export default function Slots() {
   const [paymentMethod, setPaymentMethod] = useState('ESEWA');
   const [bookingError, setBookingError] = useState('');
   const [bookingLoading, setBookingLoading] = useState(false);
+  const bookingDialogRef = useRef(null);
   const dateChoices = buildDateChoices(new Date());
 
   const loadPublicSlots = async (targetPage = page) => {
@@ -119,11 +121,13 @@ export default function Slots() {
     openBookingModal(selectedSlotId);
   };
 
-  const closeModal = () => {
+  const closeModal = useCallback(() => {
     setBookingModalOpen(false);
     setSelectedSlotId(null);
     setBookingError('');
-  };
+  }, []);
+
+  useModalAccessibility(bookingModalOpen, bookingDialogRef, closeModal);
 
   const confirmBooking = async () => {
     setBookingError('');
@@ -338,49 +342,58 @@ export default function Slots() {
         )}
       </div>
 
-      <div className={`modal-overlay ${bookingModalOpen ? 'show' : ''}`}>
-        <div className="modal" role="dialog" aria-modal="true" aria-labelledby="booking-dialog-title">
-          <div className="modal-header">
-            <h3 id="booking-dialog-title">Confirm Booking</h3>
-            <button className="modal-close" onClick={closeModal} aria-label="Close booking dialog">x</button>
-          </div>
-          <div className="modal-body">
-            <div className="card modal-summary mb-2">
-              {selectedSlot && (
-                <div className="booking-summary-grid">
-                  <div><div className="text-muted text-sm">Futsal</div><div className="fw-bold">{selectedSlot.futsal?.name || '-'}</div></div>
-                  <div><div className="text-muted text-sm">Date</div><div className="fw-bold">{formatDate(selectedSlot.slotDate)}</div></div>
-                  <div><div className="text-muted text-sm">Time</div><div className="fw-bold">{compactTimeRange(selectedSlot.startTime, selectedSlot.endTime)}</div></div>
-                  <div><div className="text-muted text-sm">Duration</div><div className="fw-bold">{calculateDuration(selectedSlot.startTime, selectedSlot.endTime)}</div></div>
-                  <div><div className="text-muted text-sm">Price</div><div className="fw-bold text-green">NPR {selectedSlot.futsal?.hourlyPrice ?? '-'}</div></div>
-                </div>
-              )}
+      {bookingModalOpen && (
+        <div className="modal-overlay show">
+          <div
+            ref={bookingDialogRef}
+            className="modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="booking-dialog-title"
+            tabIndex="-1"
+          >
+            <div className="modal-header">
+              <h3 id="booking-dialog-title">Confirm Booking</h3>
+              <button className="modal-close" onClick={closeModal} aria-label="Close booking dialog">x</button>
             </div>
+            <div className="modal-body">
+              <div className="card modal-summary mb-2">
+                {selectedSlot && (
+                  <div className="booking-summary-grid">
+                    <div><div className="text-muted text-sm">Futsal</div><div className="fw-bold">{selectedSlot.futsal?.name || '-'}</div></div>
+                    <div><div className="text-muted text-sm">Date</div><div className="fw-bold">{formatDate(selectedSlot.slotDate)}</div></div>
+                    <div><div className="text-muted text-sm">Time</div><div className="fw-bold">{compactTimeRange(selectedSlot.startTime, selectedSlot.endTime)}</div></div>
+                    <div><div className="text-muted text-sm">Duration</div><div className="fw-bold">{calculateDuration(selectedSlot.startTime, selectedSlot.endTime)}</div></div>
+                    <div><div className="text-muted text-sm">Price</div><div className="fw-bold text-green">NPR {selectedSlot.futsal?.hourlyPrice ?? '-'}</div></div>
+                  </div>
+                )}
+              </div>
 
-            <div className="form-group">
-              <label className="form-label">Payment Method</label>
-              <select className="form-control" value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
-                <option value="ESEWA">eSewa</option>
-                <option value="KHALTI">Khalti</option>
-                <option value="CASH_IN_HAND">Cash in hand</option>
-              </select>
+              <div className="form-group">
+                <label className="form-label">Payment Method</label>
+                <select className="form-control" value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
+                  <option value="ESEWA">eSewa</option>
+                  <option value="KHALTI">Khalti</option>
+                  <option value="CASH_IN_HAND">Cash in hand</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Notes (optional)</label>
+                <textarea className="form-control" value={bookingNotes} onChange={(e) => setBookingNotes(e.target.value)} placeholder="Any special requests?"></textarea>
+              </div>
+              <div className={`alert alert-error ${bookingError ? 'show' : ''}`} aria-live="polite">
+                <span>Error</span><span>{bookingError}</span>
+              </div>
             </div>
-            <div className="form-group">
-              <label className="form-label">Notes (optional)</label>
-              <textarea className="form-control" value={bookingNotes} onChange={(e) => setBookingNotes(e.target.value)} placeholder="Any special requests?"></textarea>
+            <div className="modal-footer">
+              <button onClick={closeModal} className="btn btn-secondary">Cancel</button>
+              <button onClick={confirmBooking} className="btn btn-primary" disabled={bookingLoading}>
+                {bookingLoading ? 'Processing payment...' : 'Confirm Booking'}
+              </button>
             </div>
-            <div className={`alert alert-error ${bookingError ? 'show' : ''}`}>
-              <span>Error</span><span>{bookingError}</span>
-            </div>
-          </div>
-          <div className="modal-footer">
-            <button onClick={closeModal} className="btn btn-secondary">Cancel</button>
-            <button onClick={confirmBooking} className="btn btn-primary" disabled={bookingLoading}>
-              {bookingLoading ? 'Processing payment...' : 'Confirm Booking'}
-            </button>
           </div>
         </div>
-      </div>
+      )}
     </>
   );
 }

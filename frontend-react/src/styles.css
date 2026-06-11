@@ -1294,6 +1294,10 @@ tbody tr:hover {
   display: flex;
 }
 
+body.modal-open {
+  overflow: hidden;
+}
+
 .modal {
   width: min(100%, 500px);
   overflow: hidden;
@@ -1301,6 +1305,10 @@ tbody tr:hover {
   border-radius: var(--radius);
   background: var(--white);
   box-shadow: var(--shadow-lg);
+}
+
+.modal:focus {
+  outline: none;
 }
 
 .confirm-modal {
@@ -1338,6 +1346,11 @@ tbody tr:hover {
   border-radius: var(--radius-sm);
   background: var(--gray-100);
   color: var(--gray-700);
+}
+
+.modal-close:focus-visible {
+  outline: 3px solid rgba(17, 168, 92, 0.28);
+  outline-offset: 2px;
 }
 
 .modal-body {

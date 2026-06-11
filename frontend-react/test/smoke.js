@@ -19,7 +19,16 @@ const sourceChecks = [
     file: 'src/api/client.js',
     patterns: [
       ['default API base uses backend port 9090', /localhost:9090/],
-      ['auth failures clear local auth state', /Auth\.logout\(\)/]
+      ['auth failures clear local auth state', /Auth\.logout\(\)/],
+      ['401 handling emits authrequired event', /new CustomEvent\('authrequired'/],
+      ['API response parser tolerates malformed JSON', /parseResponse/]
+    ]
+  },
+  {
+    file: 'src/App.jsx',
+    patterns: [
+      ['authrequired redirects users to login', /window\.addEventListener\('authrequired'/],
+      ['authrequired redirect uses React Router navigation', /navigate\('\/login'/]
     ]
   },
   {
@@ -40,7 +49,9 @@ const sourceChecks = [
     patterns: [
       ['booking page loads mixed available and booked slots', /SlotAPI\.getPublic/],
       ['booked slots are disabled in the UI', /disabled=\{isBooked\}/],
-      ['booking page avoids UTC date conversion', /toDateInputValue\(\)/]
+      ['booking page avoids UTC date conversion', /toDateInputValue\(\)/],
+      ['booking modal uses shared accessibility hook', /useModalAccessibility\(bookingModalOpen/],
+      ['booking modal unmounts when closed', /\{bookingModalOpen && \(/]
     ]
   },
   {
@@ -73,7 +84,23 @@ const sourceChecks = [
     patterns: [
       ['admin venue form submits real verified field', /verified: form\.verified/],
       ['admin venue form submits real court type field', /courtType: form\.courtType/],
-      ['admin venue form submits real rating field', /rating: form\.rating/]
+      ['admin venue form submits real rating field', /rating: form\.rating/],
+      ['admin venue preview URLs are revoked', /URL\.revokeObjectURL/]
+    ]
+  },
+  {
+    file: 'src/components/ConfirmProvider.jsx',
+    patterns: [
+      ['confirmation modal uses shared accessibility hook', /useModalAccessibility\(state\.open/],
+      ['confirmation modal unmounts when closed', /\{state\.open && \(/]
+    ]
+  },
+  {
+    file: 'src/components/useModalAccessibility.js',
+    patterns: [
+      ['modal closes on Escape', /event\.key === 'Escape'/],
+      ['modal traps Tab focus', /event\.key !== 'Tab'/],
+      ['modal restores previous focus', /previousActive\.focus\(\)/]
     ]
   },
   {
@@ -98,7 +125,9 @@ const sourceChecks = [
     file: 'src/utils/auth.js',
     patterns: [
       ['auth checks token expiry', /payload\.exp/],
-      ['admin role falls back to saved user role', /this\.tokenRole\(user\) \|\| user\?\.role/]
+      ['admin role falls back to saved user role', /this\.tokenRole\(user\) \|\| user\?\.role/],
+      ['malformed localStorage is removed', /removeStoredUser\(\)/],
+      ['localStorage access failures are handled', /localStorage\.getItem\(KEY\)/]
     ]
   }
 ];

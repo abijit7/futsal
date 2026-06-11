@@ -4,6 +4,19 @@ function emitAuthChange() {
   window.dispatchEvent(new Event('authchange'));
 }
 
+function removeStoredUser({ notify = true, deferNotify = false } = {}) {
+  try {
+    localStorage.removeItem(KEY);
+  } catch {
+    // Ignore storage failures; callers still get a logged-out state.
+  }
+  if (notify && deferNotify) {
+    queueMicrotask(emitAuthChange);
+  } else if (notify) {
+    emitAuthChange();
+  }
+}
+
 function tokenPayload(token) {
   if (!token || typeof token !== 'string') return null;
   const parts = token.split('.');
@@ -27,15 +40,30 @@ function hasUsableToken(user) {
 
 export const Auth = {
   save(user) {
-    localStorage.setItem(KEY, JSON.stringify(user));
+    try {
+      localStorage.setItem(KEY, JSON.stringify(user));
+    } catch {
+      removeStoredUser({ notify: false });
+    }
     emitAuthChange();
   },
   get() {
-    const raw = localStorage.getItem(KEY);
+    let raw = null;
     try {
-      return raw ? JSON.parse(raw) : null;
+      raw = localStorage.getItem(KEY);
     } catch {
-      localStorage.removeItem(KEY);
+      return null;
+    }
+    if (!raw) return null;
+    try {
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== 'object') {
+        removeStoredUser({ deferNotify: true });
+        return null;
+      }
+      return parsed;
+    } catch {
+      removeStoredUser({ deferNotify: true });
       return null;
     }
   },
@@ -53,7 +81,6 @@ export const Auth = {
     return this.tokenRole(user) || user?.role;
   },
   logout() {
-    localStorage.removeItem(KEY);
-    emitAuthChange();
+    removeStoredUser();
   }
 };

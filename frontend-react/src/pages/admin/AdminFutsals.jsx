@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { FutsalAPI } from '../../api/futsal.js';
 import { formatTime } from '../../utils/format.js';
 import { resolveImageUrl } from '../../utils/image.js';
@@ -36,10 +36,21 @@ export default function AdminFutsals() {
   const [totalPages, setTotalPages] = useState(0);
   const pageSize = 10;
 
-  const previewUrls = [
-    ...(form.imageUrls || []).map((url) => resolveImageUrl(url)),
-    ...newFiles.map((file) => URL.createObjectURL(file))
-  ];
+  const existingPreviewUrls = useMemo(
+    () => (form.imageUrls || []).map((url) => resolveImageUrl(url)),
+    [form.imageUrls]
+  );
+  const filePreviewUrls = useMemo(
+    () => newFiles.map((file) => URL.createObjectURL(file)),
+    [newFiles]
+  );
+  const previewUrls = [...existingPreviewUrls, ...filePreviewUrls];
+
+  useEffect(() => {
+    return () => {
+      filePreviewUrls.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [filePreviewUrls]);
 
   const loadFutsals = async (targetPage = page) => {
     try {

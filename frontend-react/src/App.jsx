@@ -1,4 +1,5 @@
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { useEffect } from 'react';
+import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import Navbar from './components/Navbar.jsx';
 import { ToastProvider } from './components/ToastProvider.jsx';
 import { ConfirmProvider } from './components/ConfirmProvider.jsx';
@@ -20,6 +21,7 @@ export default function App() {
   return (
     <ToastProvider>
       <ConfirmProvider>
+        <AuthRequiredRedirect />
         <Navbar />
         <Routes>
           <Route path="/" element={<Home />} />
@@ -46,4 +48,22 @@ export default function App() {
       </ConfirmProvider>
     </ToastProvider>
   );
+}
+
+function AuthRequiredRedirect() {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    const handleAuthRequired = () => {
+      if (location.pathname !== '/login' && location.pathname !== '/register') {
+        navigate('/login', { replace: true });
+      }
+    };
+
+    window.addEventListener('authrequired', handleAuthRequired);
+    return () => window.removeEventListener('authrequired', handleAuthRequired);
+  }, [location.pathname, navigate]);
+
+  return null;
 }
