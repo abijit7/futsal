@@ -5,8 +5,11 @@ React SPA replacement for the legacy static frontend. It talks to the existing S
 ## Setup
 
 - Set the API base URL if the backend is not running on the default local port:
-  - `VITE_API_BASE` (default `http://localhost:8080`)
+  - `VITE_API_BASE` (default `http://localhost:9090`)
   - `VITE_API_URL` (default `${VITE_API_BASE}/api`)
+
+The backend requires Maven 3.9+ when running from the command line. On macOS,
+install it with `brew install maven`, then verify with `mvn -v`.
 
 Authentication is JWT-only. The frontend does not use static admin tokens or
 `VITE_ADMIN_TOKEN`. Users and admins must sign in through `POST /api/users/login`;
