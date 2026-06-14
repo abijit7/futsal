@@ -10,7 +10,7 @@ export function formatTime(timeStr) {
   const hr = parseInt(h, 10);
   const ampm = hr >= 12 ? 'PM' : 'AM';
   let h12 = hr % 12;
-  if (hr === 0) h12 = 0;
+  if (hr === 0) h12 = 12;
   if (hr === 12) h12 = 12;
   const hh = String(h12).padStart(2, '0');
   return `${hh}:${m} ${ampm}`;

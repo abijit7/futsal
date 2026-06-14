@@ -5,6 +5,7 @@ import { resolveImageUrl } from '../../utils/image.js';
 import { useToast } from '../../components/ToastProvider.jsx';
 import { useConfirm } from '../../components/ConfirmProvider.jsx';
 import Pagination from '../../components/Pagination.jsx';
+import TimeField from '../../components/TimeField.jsx';
 
 const emptyForm = {
   name: '',
@@ -192,14 +193,22 @@ export default function AdminFutsals() {
                 </div>
               </div>
               <div className="form-row">
-                <div className="form-group">
-                  <label className="form-label">Opening Time</label>
-                  <input type="time" className="form-control" value={form.openingTime} onChange={(e) => updateField('openingTime', e.target.value)} required />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Closing Time</label>
-                  <input type="time" className="form-control" value={form.closingTime} onChange={(e) => updateField('closingTime', e.target.value)} required />
-                </div>
+                <TimeField
+                  id="futsal-opening-time"
+                  label="Opening Time"
+                  value={form.openingTime}
+                  onChange={(value) => updateField('openingTime', value)}
+                  required
+                  hint="Set when this venue opens, for example 06:00 AM"
+                />
+                <TimeField
+                  id="futsal-closing-time"
+                  label="Closing Time"
+                  value={form.closingTime}
+                  onChange={(value) => updateField('closingTime', value)}
+                  required
+                  hint="Set when this venue closes, for example 10:00 PM"
+                />
               </div>
               <div className="form-row">
                 <div className="form-group">

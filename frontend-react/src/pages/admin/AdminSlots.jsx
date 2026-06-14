@@ -6,6 +6,7 @@ import { calculateDuration, formatDate, formatTime } from '../../utils/format.js
 import { useToast } from '../../components/ToastProvider.jsx';
 import { useConfirm } from '../../components/ConfirmProvider.jsx';
 import Pagination from '../../components/Pagination.jsx';
+import TimeField from '../../components/TimeField.jsx';
 
 export default function AdminSlots() {
   const { showToast } = useToast();
@@ -83,6 +84,8 @@ export default function AdminSlots() {
   }, [futsalsLoaded, selectedFutsalId, page]);
 
   const hasFutsals = futsals.length > 0;
+  const formFutsal = futsals.find((futsal) => futsal.futsalId === Number(form.futsalId));
+  const generationFutsal = futsals.find((futsal) => futsal.futsalId === Number(selectedFutsalId));
 
   const resetForm = () => {
     setEditingId(null);
@@ -97,6 +100,13 @@ export default function AdminSlots() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setAlert('');
+
+    const validationError = validateSlotWindow(form.startTime, form.endTime, formFutsal, 'Slot');
+    if (validationError) {
+      setAlert(validationError);
+      return;
+    }
+
     setSubmitting(true);
 
     const payload = {
@@ -131,6 +141,12 @@ export default function AdminSlots() {
     e.preventDefault();
     if (!selectedFutsalId) {
       showToast('Select a futsal before generating slots.', 'error');
+      return;
+    }
+
+    const generationValidationError = validateGenerationWindow(generation, generationFutsal);
+    if (generationValidationError) {
+      showToast(generationValidationError, 'error');
       return;
     }
 
@@ -218,24 +234,36 @@ export default function AdminSlots() {
                     required
                   >
                     {!hasFutsals && <option value="">No futsals available</option>}
+                    {hasFutsals && <option value="" disabled>Select futsal</option>}
                     {futsals.map((f) => (
                       <option key={f.futsalId} value={f.futsalId}>{f.name} - {f.city}</option>
                     ))}
                   </select>
+                  {formFutsal && (
+                    <div className="form-hint">Venue hours: {venueHoursText(formFutsal)}</div>
+                  )}
                 </div>
                 <div className="form-group">
                   <label className="form-label">Date</label>
                   <input type="date" className="form-control" value={form.slotDate} min={todayStr} onChange={(e) => setForm((prev) => ({ ...prev, slotDate: e.target.value }))} disabled={!hasFutsals} required />
                 </div>
                 <div className="form-row">
-                  <div className="form-group">
-                    <label className="form-label">Start Time</label>
-                    <input type="time" className="form-control" value={form.startTime} onChange={(e) => setForm((prev) => ({ ...prev, startTime: e.target.value }))} disabled={!hasFutsals} required />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">End Time</label>
-                    <input type="time" className="form-control" value={form.endTime} onChange={(e) => setForm((prev) => ({ ...prev, endTime: e.target.value }))} disabled={!hasFutsals} required />
-                  </div>
+                  <TimeField
+                    id="slot-start-time"
+                    label="Start Time"
+                    value={form.startTime}
+                    onChange={(value) => setForm((prev) => ({ ...prev, startTime: value }))}
+                    disabled={!hasFutsals}
+                    required
+                  />
+                  <TimeField
+                    id="slot-end-time"
+                    label="End Time"
+                    value={form.endTime}
+                    onChange={(value) => setForm((prev) => ({ ...prev, endTime: value }))}
+                    disabled={!hasFutsals}
+                    required
+                  />
                 </div>
                 <div className={`alert alert-error ${alert ? 'show' : ''}`}>
                   <span>Error</span><span>{alert}</span>
@@ -252,6 +280,28 @@ export default function AdminSlots() {
             <div className="card admin-side">
               <div className="card-header"><h3>Bulk Generate</h3></div>
               <form onSubmit={handleGenerate}>
+                <div className="form-group">
+                  <label className="form-label">Futsal</label>
+                  <select
+                    className="form-control"
+                    value={selectedFutsalId || ''}
+                    onChange={(e) => {
+                      setSelectedFutsalId(e.target.value ? parseInt(e.target.value, 10) : null);
+                      setPage(0);
+                    }}
+                    disabled={!hasFutsals}
+                    required
+                  >
+                    {!hasFutsals && <option value="">No futsals available</option>}
+                    {hasFutsals && <option value="" disabled>Select futsal</option>}
+                    {futsals.map((f) => (
+                      <option key={f.futsalId} value={f.futsalId}>{f.name} - {f.city}</option>
+                    ))}
+                  </select>
+                  {generationFutsal && (
+                    <div className="form-hint">Generation must stay within venue hours: {venueHoursText(generationFutsal)}</div>
+                  )}
+                </div>
                 <div className="form-row">
                   <div className="form-group">
                     <label className="form-label">Start Date</label>
@@ -263,14 +313,20 @@ export default function AdminSlots() {
                   </div>
                 </div>
                 <div className="form-row">
-                  <div className="form-group">
-                    <label className="form-label">Start Time</label>
-                    <input type="time" className="form-control" value={generation.startTime} onChange={(e) => updateGeneration('startTime', e.target.value)} disabled={!hasFutsals} />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">End Time</label>
-                    <input type="time" className="form-control" value={generation.endTime} onChange={(e) => updateGeneration('endTime', e.target.value)} disabled={!hasFutsals} />
-                  </div>
+                  <TimeField
+                    id="generate-start-time"
+                    label="Start Time"
+                    value={generation.startTime}
+                    onChange={(value) => updateGeneration('startTime', value)}
+                    disabled={!hasFutsals}
+                  />
+                  <TimeField
+                    id="generate-end-time"
+                    label="End Time"
+                    value={generation.endTime}
+                    onChange={(value) => updateGeneration('endTime', value)}
+                    disabled={!hasFutsals}
+                  />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Slot Duration</label>
@@ -290,14 +346,20 @@ export default function AdminSlots() {
                     <label className="form-label">Maintenance Date</label>
                     <input type="date" className="form-control" value={generation.maintenanceDate} min={todayStr} onChange={(e) => updateGeneration('maintenanceDate', e.target.value)} disabled={!hasFutsals} />
                   </div>
-                  <div className="form-group">
-                    <label className="form-label">Block Start</label>
-                    <input type="time" className="form-control" value={generation.maintenanceStartTime} onChange={(e) => updateGeneration('maintenanceStartTime', e.target.value)} disabled={!hasFutsals} />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Block End</label>
-                    <input type="time" className="form-control" value={generation.maintenanceEndTime} onChange={(e) => updateGeneration('maintenanceEndTime', e.target.value)} disabled={!hasFutsals} />
-                  </div>
+                  <TimeField
+                    id="maintenance-start-time"
+                    label="Block Start"
+                    value={generation.maintenanceStartTime}
+                    onChange={(value) => updateGeneration('maintenanceStartTime', value)}
+                    disabled={!hasFutsals}
+                  />
+                  <TimeField
+                    id="maintenance-end-time"
+                    label="Block End"
+                    value={generation.maintenanceEndTime}
+                    onChange={(value) => updateGeneration('maintenanceEndTime', value)}
+                    disabled={!hasFutsals}
+                  />
                 </div>
                 <button type="submit" className="btn btn-primary btn-full" disabled={generating || !hasFutsals}>
                   {generating ? 'Generating...' : 'Generate Slots'}
@@ -371,4 +433,48 @@ export default function AdminSlots() {
       </div>
     </>
   );
+}
+
+function venueHoursText(futsal) {
+  const opening = futsal.openingTime ? formatTime(futsal.openingTime) : '-';
+  const closing = futsal.closingTime ? formatTime(futsal.closingTime) : '-';
+  return `${opening} - ${closing}`;
+}
+
+function validateGenerationWindow(generation, futsal) {
+  if (!futsal) {
+    return 'Select a futsal before generating slots.';
+  }
+  const startTime = generation.startTime || timeInputValue(futsal.openingTime);
+  const endTime = generation.endTime || timeInputValue(futsal.closingTime);
+  return validateSlotWindow(startTime, endTime, futsal, 'Generation window');
+}
+
+function validateSlotWindow(startTime, endTime, futsal, label) {
+  if (!startTime || !endTime) {
+    return `${label} requires both start and end time.`;
+  }
+  if (compareTimes(endTime, startTime) <= 0) {
+    return `${label} end time must be after start time.`;
+  }
+  if (futsal?.openingTime && compareTimes(startTime, timeInputValue(futsal.openingTime)) < 0) {
+    return `${label} starts before ${futsal.name} opens at ${formatTime(futsal.openingTime)}.`;
+  }
+  if (futsal?.closingTime && compareTimes(endTime, timeInputValue(futsal.closingTime)) > 0) {
+    return `${label} ends after ${futsal.name} closes at ${formatTime(futsal.closingTime)}.`;
+  }
+  return '';
+}
+
+function compareTimes(left, right) {
+  return timeMinutes(left) - timeMinutes(right);
+}
+
+function timeMinutes(value) {
+  const [hours = 0, minutes = 0] = timeInputValue(value).split(':').map(Number);
+  return (hours * 60) + minutes;
+}
+
+function timeInputValue(value) {
+  return value ? value.substring(0, 5) : '';
 }
