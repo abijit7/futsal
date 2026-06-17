@@ -25,7 +25,7 @@ textarea {
 }
 
 .app-shell {
-  @apply min-h-screen bg-slate-50 text-slate-950;
+  @apply flex min-h-screen flex-col bg-slate-50 text-slate-950;
 }
 
 .container-page {
@@ -66,4 +66,40 @@ textarea {
 
 .admin-grid {
   @apply grid gap-5 lg:grid-cols-[250px_minmax(0,1fr)];
+}
+
+.site-footer {
+  background:
+    linear-gradient(180deg, rgba(15, 23, 42, 0.96), #020617),
+    radial-gradient(circle at 15% 0%, rgba(34, 197, 94, 0.16), transparent 24rem);
+}
+
+.footer-heading {
+  @apply text-sm font-black uppercase tracking-[0.18em] text-white;
+}
+
+.footer-heading::after {
+  content: "";
+  display: block;
+  width: 56px;
+  height: 3px;
+  margin-top: 16px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #22c55e, transparent);
+}
+
+.footer-link {
+  @apply w-max text-base font-bold text-slate-400 transition hover:text-green-400;
+}
+
+.footer-contact-row {
+  @apply flex max-w-sm items-start gap-4 text-base font-semibold leading-7 text-slate-400 transition hover:text-green-400;
+}
+
+.footer-contact-row svg {
+  @apply mt-1 shrink-0 text-green-400;
+}
+
+.footer-icon-btn {
+  @apply inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-slate-400 transition hover:border-green-400/40 hover:bg-green-400/10 hover:text-green-300;
 }
