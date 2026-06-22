@@ -15,7 +15,7 @@ export function Register() {
     setLoading(true);
     try {
       await register(form);
-      navigate('/login', { replace: true });
+      navigate('/login', { replace: true, state: { message: 'Account created successfully. Log in to verify your email and phone.' } });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed');
     } finally {

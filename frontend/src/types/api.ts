@@ -18,6 +18,14 @@ export type User = {
   role: Role;
   createdAt?: string;
   authToken?: string | null;
+  emailVerified: boolean;
+  phoneVerified: boolean;
+};
+
+export type VerificationIssueResponse = {
+  message: string;
+  expiresInSeconds: number;
+  devCode?: string | null;
 };
 
 export type FutsalImage = {

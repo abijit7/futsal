@@ -5,6 +5,7 @@ import { AdminRoute, ProtectedRoute } from './components/ProtectedRoute';
 import { Home } from './pages/public/Home';
 import { Login } from './pages/public/Login';
 import { Register } from './pages/public/Register';
+import { ForgotPassword } from './pages/public/ForgotPassword';
 import { Venues } from './pages/public/Venues';
 import { VenueDetails } from './pages/public/VenueDetails';
 import { BookingPage } from './pages/user/BookingPage';
@@ -26,6 +27,7 @@ export default function App() {
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/venues" element={<Venues />} />
           <Route path="/venues/:id" element={<VenueDetails />} />
           <Route element={<ProtectedRoute />}>

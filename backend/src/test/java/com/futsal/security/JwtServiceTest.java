@@ -25,12 +25,14 @@ class JwtServiceTest {
         user.setUserId(42L);
         user.setEmail("player@gmail.com");
         user.setRole(Role.USER);
+        user.setAuthVersion(3);
 
         JwtPrincipal principal = jwtService.parseToken(jwtService.createToken(user));
 
         assertEquals(42L, principal.userId());
         assertEquals("player@gmail.com", principal.email());
         assertEquals(Role.USER, principal.role());
+        assertEquals(3, principal.authVersion());
     }
 
     @Test

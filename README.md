@@ -16,21 +16,31 @@ cd /Users/abijit/Downloads/futsal-main/backend
 mvn spring-boot:run
 ```
 
-### Frontend (React)
+### Frontend (React + TypeScript + Tailwind)
 
 ```bash
-cd /Users/abijit/Downloads/futsal-main/frontend-react
+cd /Users/abijit/Downloads/futsal-main/frontend
 npm install
 npm run dev
 ```
 
-The React app defaults to `http://localhost:9090/api` for backend calls. Override with `VITE_API_BASE` or `VITE_API_URL` when needed.
+The React app runs at `http://127.0.0.1:5174` and uses `VITE_API_BASE_URL` for backend calls.
 
 ## Core Flow
 
 1. Admin creates futsal venues in the Admin UI (set hourly price, opening time, and photo).
 2. Admin generates and manages slots for a selected venue/date range.
 3. Users choose a futsal and then book available slots.
+
+## Account Security
+
+- Customers can edit their name and phone from `/profile`.
+- Password changes require the current password and invalidate existing JWT sessions.
+- Forgot-password recovery uses a six-digit, single-use code with expiry, resend cooldown, and attempt limits.
+- Email and phone verification are available from the profile page.
+- Development exposes verification codes in API responses for local testing.
+- Production must configure `VERIFICATION_SECRET` plus SMTP and/or `SMS_WEBHOOK_URL` delivery settings.
+- Apply `backend/src/main/resources/db/security-features.sql` before starting the production profile with `ddl-auto=validate`.
 
 ## Uploads
 
@@ -49,6 +59,6 @@ The React app defaults to `http://localhost:9090/api` for backend calls. Overrid
 - `backend/src/main/java/com/futsal/model` entities (`Futsal`, `TimeSlot`, `Booking`, `User`)
 - `backend/src/main/java/com/futsal/controller` REST endpoints
 - `backend/src/main/java/com/futsal/service` business logic
-- `frontend-react/src/pages` UI pages (user and admin)
-- `frontend-react/src/api` shared API layer
-- `frontend-react/src/components` shared React UI components
+- `frontend/src/pages` UI pages (public, user, and admin)
+- `frontend/src/api` shared API layer
+- `frontend/src/components` shared React UI components

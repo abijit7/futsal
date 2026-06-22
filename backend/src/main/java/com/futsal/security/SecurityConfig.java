@@ -48,7 +48,13 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/uploads/**").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/info").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/users/register", "/api/users/login").permitAll()
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/users/register",
+                                "/api/users/login",
+                                "/api/users/forgot-password",
+                                "/api/users/reset-password"
+                        ).permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/futsals/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/slots", "/api/slots/public").permitAll()
                         .requestMatchers(new RegexRequestMatcher("^/api/slots/\\d+$", "GET")).permitAll()

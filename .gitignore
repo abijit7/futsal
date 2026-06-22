@@ -10,11 +10,12 @@
 backend/target/
 
 # Frontend dependencies and build output
-frontend-react/node_modules/
-frontend-react/dist/
+frontend/node_modules/
+frontend/dist/
+frontend/*.tsbuildinfo
 
 # Local environment files
 .env
 .env.*
-frontend-react/.env
-frontend-react/.env.*
+frontend/.env
+frontend/.env.*

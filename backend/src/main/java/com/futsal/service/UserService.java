@@ -4,6 +4,7 @@ import com.futsal.dto.UserUpdateRequest;
 import com.futsal.model.User;
 import com.futsal.model.enums.Role;
 import com.futsal.repository.UserRepository;
+import com.futsal.repository.VerificationCodeRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -23,6 +24,9 @@ public class UserService {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private VerificationCodeRepository verificationCodeRepository;
+
     // ── Hash password using BCrypt ────────────────────────────────────────────
     public String hashPassword(String password) {
         return PASSWORD_ENCODER.encode(password);
@@ -34,17 +38,21 @@ public class UserService {
 
     // ── Register new user ─────────────────────────────────────────────────────
     public User register(User user) {
-        if (userRepository.existsByEmail(user.getEmail())) {
+        user.setEmail(normalizeEmail(user.getEmail()));
+        if (userRepository.existsByEmailIgnoreCase(user.getEmail())) {
             throw new RuntimeException("Email is already registered. Please use a different email.");
         }
         user.setPassword(hashPassword(user.getPassword()));
         user.setRole(Role.USER);
+        user.setEmailVerified(false);
+        user.setPhoneVerified(false);
+        user.setAuthVersion(0);
         return userRepository.save(user);
     }
 
     // ── Login ─────────────────────────────────────────────────────────────────
     public User login(String email, String password) {
-        User user = userRepository.findByEmail(email)
+        User user = userRepository.findByEmailIgnoreCase(normalizeEmail(email))
                 .orElseThrow(() -> new RuntimeException("No account found with this email."));
 
         if (!passwordMatches(password, user.getPassword())) {
@@ -54,8 +62,6 @@ public class UserService {
             user.setPassword(hashPassword(password));
             user = userRepository.save(user);
         }
-        // Don't send password to frontend
-        user.setPassword(null);
         return user;
     }
 
@@ -67,10 +73,8 @@ public class UserService {
 
     // ── Get user by ID ────────────────────────────────────────────────────────
     public User getUserById(Long id) {
-        User user = userRepository.findById(id)
+        return userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-        user.setPassword(null);
-        return user;
     }
 
     // ── Update user profile ───────────────────────────────────────────────────
@@ -81,22 +85,41 @@ public class UserService {
             existing.setName(updatedUser.getName());
         }
         if (updatedUser.getPhone() != null && !updatedUser.getPhone().isBlank()) {
+            if (!updatedUser.getPhone().equals(existing.getPhone())) {
+                existing.setPhoneVerified(false);
+            }
             existing.setPhone(updatedUser.getPhone());
         }
-        if (updatedUser.getPassword() != null && !updatedUser.getPassword().isEmpty()) {
-            existing.setPassword(hashPassword(updatedUser.getPassword()));
+        return userRepository.save(existing);
+    }
+
+    public void changePassword(Long id, String currentPassword, String newPassword) {
+        User existing = getUserById(id);
+        if (!passwordMatches(currentPassword, existing.getPassword())) {
+            throw new IllegalArgumentException("Current password is incorrect");
         }
-        User saved = userRepository.save(existing);
-        saved.setPassword(null);
-        return saved;
+        if (passwordMatches(newPassword, existing.getPassword())) {
+            throw new IllegalArgumentException("New password must be different from the current password");
+        }
+        setNewPassword(existing, newPassword);
+    }
+
+    public void resetPassword(User user, String newPassword) {
+        setNewPassword(user, newPassword);
+    }
+
+    private void setNewPassword(User user, String newPassword) {
+        user.setPassword(hashPassword(newPassword));
+        user.setAuthVersion(user.getAuthVersion() + 1);
+        userRepository.save(user);
     }
 
     // ── Delete user (admin) ───────────────────────────────────────────────────
     public void deleteUser(Long id) {
-        if (!userRepository.existsById(id)) {
-            throw new RuntimeException("User not found");
-        }
-        userRepository.deleteById(id);
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        verificationCodeRepository.deleteByUser(user);
+        userRepository.delete(user);
     }
 
     private boolean passwordMatches(String rawPassword, String storedPassword) {
@@ -121,5 +144,9 @@ public class UserService {
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException("Hashing error", e);
         }
+    }
+
+    private String normalizeEmail(String email) {
+        return email == null ? "" : email.trim().toLowerCase();
     }
 }

@@ -58,6 +58,15 @@ public class User {
     @Column(nullable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
+    @Column(nullable = false)
+    private boolean emailVerified = false;
+
+    @Column(nullable = false)
+    private boolean phoneVerified = false;
+
+    @Column(nullable = false)
+    private int authVersion = 0;
+
     // don't serialize bookings from the user side to avoid recursion/leaking data
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonIgnore
@@ -95,4 +104,13 @@ public class User {
 
     public LocalDateTime getCreatedAt()             { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt){ this.createdAt = createdAt; }
+
+    public boolean isEmailVerified() { return emailVerified; }
+    public void setEmailVerified(boolean emailVerified) { this.emailVerified = emailVerified; }
+
+    public boolean isPhoneVerified() { return phoneVerified; }
+    public void setPhoneVerified(boolean phoneVerified) { this.phoneVerified = phoneVerified; }
+
+    public int getAuthVersion() { return authVersion; }
+    public void setAuthVersion(int authVersion) { this.authVersion = authVersion; }
 }

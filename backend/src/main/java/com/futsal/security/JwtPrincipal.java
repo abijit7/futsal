@@ -7,7 +7,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import java.util.Collection;
 import java.util.List;
 
-public record JwtPrincipal(Long userId, String email, Role role) {
+public record JwtPrincipal(Long userId, String email, Role role, int authVersion) {
 
     public Collection<? extends GrantedAuthority> authorities() {
         return List.of(new SimpleGrantedAuthority("ROLE_" + role.name()));

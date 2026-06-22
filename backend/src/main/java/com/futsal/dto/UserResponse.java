@@ -11,6 +11,8 @@ public class UserResponse {
     private Role role;
     private LocalDateTime createdAt;
     private String authToken;
+    private boolean emailVerified;
+    private boolean phoneVerified;
 
     public Long getUserId() { return userId; }
     public void setUserId(Long userId) { this.userId = userId; }
@@ -32,4 +34,10 @@ public class UserResponse {
 
     public String getAuthToken() { return authToken; }
     public void setAuthToken(String authToken) { this.authToken = authToken; }
+
+    public boolean isEmailVerified() { return emailVerified; }
+    public void setEmailVerified(boolean emailVerified) { this.emailVerified = emailVerified; }
+
+    public boolean isPhoneVerified() { return phoneVerified; }
+    public void setPhoneVerified(boolean phoneVerified) { this.phoneVerified = phoneVerified; }
 }

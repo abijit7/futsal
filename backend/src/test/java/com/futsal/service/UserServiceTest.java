@@ -15,7 +15,6 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class UserServiceTest {
@@ -51,7 +50,7 @@ class UserServiceTest {
         User loggedIn = userService.login("player@gmail.com", "secret123");
 
         assertTrue(savedPassword.get());
-        assertNull(loggedIn.getPassword());
+        assertTrue(verifier.matches("secret123", loggedIn.getPassword()));
         assertTrue(verifier.matches("secret123", user.getPassword()));
     }
 
@@ -60,7 +59,7 @@ class UserServiceTest {
                 UserRepository.class.getClassLoader(),
                 new Class<?>[]{UserRepository.class},
                 (proxy, method, args) -> {
-                    if ("findByEmail".equals(method.getName())) {
+                    if ("findByEmailIgnoreCase".equals(method.getName())) {
                         return Optional.of(user);
                     }
                     if ("save".equals(method.getName())) {

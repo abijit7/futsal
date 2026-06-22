@@ -141,6 +141,8 @@ public class DtoMapper {
         dto.setPhone(user.getPhone());
         dto.setRole(user.getRole());
         dto.setCreatedAt(user.getCreatedAt());
+        dto.setEmailVerified(user.isEmailVerified());
+        dto.setPhoneVerified(user.isPhoneVerified());
         return dto;
     }
 

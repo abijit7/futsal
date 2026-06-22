@@ -79,6 +79,7 @@ public class JwtService {
         payload.put("sub", user.getEmail());
         payload.put("uid", user.getUserId());
         payload.put("role", user.getRole().name());
+        payload.put("ver", user.getAuthVersion());
         payload.put("iat", now.getEpochSecond());
         payload.put("exp", now.plusSeconds(expirationSeconds).getEpochSecond());
 
@@ -122,7 +123,8 @@ public class JwtService {
         Long userId = longClaim(payload, "uid");
         String email = stringClaim(payload, "sub");
         Role role = Role.valueOf(stringClaim(payload, "role"));
-        return new JwtPrincipal(userId, email, role);
+        int authVersion = Math.toIntExact(longClaim(payload, "ver"));
+        return new JwtPrincipal(userId, email, role, authVersion);
     }
 
     private String encodeJson(Map<String, Object> value) {

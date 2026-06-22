@@ -1,5 +1,6 @@
 package com.futsal.security;
 
+import com.futsal.repository.UserRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -18,9 +19,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final String BEARER_PREFIX = "Bearer ";
 
     private final JwtService jwtService;
+    private final UserRepository userRepository;
 
-    public JwtAuthenticationFilter(JwtService jwtService) {
+    public JwtAuthenticationFilter(JwtService jwtService, UserRepository userRepository) {
         this.jwtService = jwtService;
+        this.userRepository = userRepository;
     }
 
     @Override
@@ -42,6 +45,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try {
             String token = authorizationHeader.substring(BEARER_PREFIX.length()).trim();
             JwtPrincipal principal = jwtService.parseToken(token);
+            boolean currentVersion = userRepository.findById(principal.userId())
+                    .map(user -> user.getAuthVersion() == principal.authVersion())
+                    .orElse(false);
+            if (!currentVersion) {
+                throw new IllegalArgumentException("JWT session is no longer valid");
+            }
             UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                     principal,
                     null,

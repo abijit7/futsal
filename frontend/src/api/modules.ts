@@ -1,16 +1,31 @@
 import { api, query } from './client';
-import type { Booking, BookingStatus, Futsal, FutsalPayload, PagedResponse, PaymentMethod, TimeSlot, TimeSlotPayload, User } from '../types/api';
+import type { Booking, BookingStatus, Futsal, FutsalPayload, PagedResponse, PaymentMethod, TimeSlot, TimeSlotPayload, User, VerificationIssueResponse } from '../types/api';
 
 export const authApi = {
   login: (payload: Pick<User, 'email'> & { password: string }) =>
     api.post<User>('/users/login', payload).then((res) => res.data),
   register: (payload: Pick<User, 'name' | 'email' | 'phone'> & { password: string }) =>
-    api.post<User>('/users/register', payload).then((res) => res.data)
+    api.post<User>('/users/register', payload).then((res) => res.data),
+  forgotPassword: (email: string) =>
+    api.post<VerificationIssueResponse>('/users/forgot-password', { email }).then((res) => res.data),
+  resetPassword: (payload: { email: string; code: string; newPassword: string }) =>
+    api.post<{ message: string }>('/users/reset-password', payload).then((res) => res.data)
 };
 
 export const userApi = {
   list: (page = 0, size = 10) => api.get<PagedResponse<User>>(`/users?${query({ page, size })}`).then((res) => res.data),
-  update: (id: number, payload: { name: string; phone: string; password?: string }) => api.put<User>(`/users/${id}`, payload).then((res) => res.data),
+  get: (id: number) => api.get<User>(`/users/${id}`).then((res) => res.data),
+  update: (id: number, payload: { name: string; phone: string }) => api.put<User>(`/users/${id}`, payload).then((res) => res.data),
+  changePassword: (id: number, payload: { currentPassword: string; newPassword: string }) =>
+    api.put<{ message: string }>(`/users/${id}/password`, payload).then((res) => res.data),
+  requestEmailVerification: (id: number) =>
+    api.post<VerificationIssueResponse>(`/users/${id}/verification/email/request`).then((res) => res.data),
+  confirmEmailVerification: (id: number, code: string) =>
+    api.post<User>(`/users/${id}/verification/email/confirm`, { code }).then((res) => res.data),
+  requestPhoneVerification: (id: number) =>
+    api.post<VerificationIssueResponse>(`/users/${id}/verification/phone/request`).then((res) => res.data),
+  confirmPhoneVerification: (id: number, code: string) =>
+    api.post<User>(`/users/${id}/verification/phone/confirm`, { code }).then((res) => res.data),
   delete: (id: number) => api.delete(`/users/${id}`).then((res) => res.data)
 };
 

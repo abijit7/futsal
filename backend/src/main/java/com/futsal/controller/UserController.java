@@ -1,15 +1,13 @@
 package com.futsal.controller;
 
 import com.futsal.dto.DtoMapper;
-import com.futsal.dto.LoginRequest;
-import com.futsal.dto.PagedResponse;
-import com.futsal.dto.UserRegisterRequest;
-import com.futsal.dto.UserResponse;
-import com.futsal.dto.UserUpdateRequest;
+import com.futsal.dto.*;
 import com.futsal.model.User;
+import com.futsal.model.enums.VerificationPurpose;
 import com.futsal.security.JwtService;
 import com.futsal.security.SecurityAuth;
 import com.futsal.service.UserService;
+import com.futsal.service.VerificationService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -33,6 +31,9 @@ public class UserController {
     @Autowired
     private SecurityAuth securityAuth;
 
+    @Autowired
+    private VerificationService verificationService;
+
     // POST /api/users/register
     @PostMapping("/register")
     public ResponseEntity<UserResponse> register(@Valid @RequestBody UserRegisterRequest request) {
@@ -47,6 +48,22 @@ public class UserController {
         UserResponse response = DtoMapper.toUserResponse(user);
         response.setAuthToken(jwtService.createToken(user));
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<VerificationIssueResponse> forgotPassword(
+            @Valid @RequestBody ForgotPasswordRequest request
+    ) {
+        return ResponseEntity.ok(verificationService.issuePasswordReset(request.getEmail()));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<Map<String, String>> resetPassword(
+            @Valid @RequestBody ResetPasswordRequest request
+    ) {
+        User user = verificationService.consumePasswordReset(request.getEmail(), request.getCode());
+        userService.resetPassword(user, request.getNewPassword());
+        return ResponseEntity.ok(successMap("Password reset successfully. You can now log in."));
     }
 
     // GET /api/users (admin)
@@ -74,6 +91,62 @@ public class UserController {
         securityAuth.requireUserOrAdmin(id);
         User updated = userService.updateUser(id, user);
         return ResponseEntity.ok(DtoMapper.toUserResponse(updated));
+    }
+
+    @PutMapping("/{id}/password")
+    public ResponseEntity<Map<String, String>> changePassword(
+            @PathVariable Long id,
+            @Valid @RequestBody PasswordChangeRequest request
+    ) {
+        securityAuth.requireUserOrAdmin(id);
+        userService.changePassword(id, request.getCurrentPassword(), request.getNewPassword());
+        return ResponseEntity.ok(successMap("Password changed successfully. Please log in again."));
+    }
+
+    @PostMapping("/{id}/verification/email/request")
+    public ResponseEntity<VerificationIssueResponse> requestEmailVerification(@PathVariable Long id) {
+        securityAuth.requireUserOrAdmin(id);
+        return ResponseEntity.ok(verificationService.issueForUser(
+                userService.getUserById(id),
+                VerificationPurpose.EMAIL_VERIFICATION
+        ));
+    }
+
+    @PostMapping("/{id}/verification/email/confirm")
+    public ResponseEntity<UserResponse> confirmEmailVerification(
+            @PathVariable Long id,
+            @Valid @RequestBody VerificationConfirmRequest request
+    ) {
+        securityAuth.requireUserOrAdmin(id);
+        User verified = verificationService.confirm(
+                userService.getUserById(id),
+                VerificationPurpose.EMAIL_VERIFICATION,
+                request.getCode()
+        );
+        return ResponseEntity.ok(DtoMapper.toUserResponse(verified));
+    }
+
+    @PostMapping("/{id}/verification/phone/request")
+    public ResponseEntity<VerificationIssueResponse> requestPhoneVerification(@PathVariable Long id) {
+        securityAuth.requireUserOrAdmin(id);
+        return ResponseEntity.ok(verificationService.issueForUser(
+                userService.getUserById(id),
+                VerificationPurpose.PHONE_VERIFICATION
+        ));
+    }
+
+    @PostMapping("/{id}/verification/phone/confirm")
+    public ResponseEntity<UserResponse> confirmPhoneVerification(
+            @PathVariable Long id,
+            @Valid @RequestBody VerificationConfirmRequest request
+    ) {
+        securityAuth.requireUserOrAdmin(id);
+        User verified = verificationService.confirm(
+                userService.getUserById(id),
+                VerificationPurpose.PHONE_VERIFICATION,
+                request.getCode()
+        );
+        return ResponseEntity.ok(DtoMapper.toUserResponse(verified));
     }
 
     // DELETE /api/users/{id} (admin)
