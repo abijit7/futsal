@@ -1,20 +1,67 @@
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
 :root {
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  color: #0f172a;
-  background: #f3f7f8;
-  --navy: #071527;
-  --green: #16a34a;
+  font-family: var(--font-body);
+  color: #0D1B2A;
+  background: #F0F4F8;
+  --font-size: 16px;
+  --font-display: 'Barlow Condensed', sans-serif;
+  --font-body: 'Inter', sans-serif;
+  --background: #F0F4F8;
+  --foreground: #0D1B2A;
+  --card: #ffffff;
+  --card-foreground: #0D1B2A;
+  --popover: #ffffff;
+  --popover-foreground: #0D1B2A;
+  --primary: #0D1B2A;
+  --primary-foreground: #ffffff;
+  --secondary: #E8F5E9;
+  --secondary-foreground: #0D1B2A;
+  --muted: #E2EAF0;
+  --muted-foreground: #5A7184;
+  --accent: #16A34A;
+  --accent-foreground: #ffffff;
+  --destructive: #DC2626;
+  --destructive-foreground: #ffffff;
+  --border: rgba(13, 27, 42, 0.1);
+  --input: transparent;
+  --input-background: #EEF2F7;
+  --switch-background: #94A3B8;
+  --font-weight-medium: 600;
+  --font-weight-normal: 400;
+  --ring: #16A34A;
+  --chart-1: #16A34A;
+  --chart-2: #0D9488;
+  --chart-3: #2563EB;
+  --chart-4: #F59E0B;
+  --chart-5: #EF4444;
+  --radius: 0.75rem;
+  --sidebar: #0D1B2A;
+  --sidebar-foreground: #ffffff;
+  --sidebar-primary: #16A34A;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #1A2D42;
+  --sidebar-accent-foreground: #CBD5E1;
+  --sidebar-border: rgba(255,255,255,0.08);
+  --sidebar-ring: #16A34A;
+  --futsal-green: #16A34A;
+  --futsal-green-light: #22C55E;
+  --futsal-green-dark: #15803D;
+  --futsal-navy: #0D1B2A;
+  --futsal-navy-mid: #1A2D42;
+  --futsal-navy-light: #243B55;
+  --navy: var(--futsal-navy);
+  --green: var(--futsal-green);
 }
 
 body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background:
-    radial-gradient(circle at 85% 12%, rgba(34, 197, 94, 0.16), transparent 32rem),
-    linear-gradient(180deg, #f8fbfc 0%, #edf3f5 100%);
+  background: var(--background);
+  font-family: var(--font-body);
+  color: var(--foreground);
 }
 
 button,

@@ -1,5 +1,7 @@
 import { FormEvent, useState } from 'react';
+import type { ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { Mail, Phone, UserRound } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 export function Register() {
@@ -24,20 +26,53 @@ export function Register() {
   };
 
   return (
-    <main className="container-page grid min-h-[calc(100vh-5rem)] place-items-center py-10">
-      <form className="panel w-full max-w-lg p-8" onSubmit={submit}>
-        <p className="eyebrow">Join the pitch</p>
-        <h1 className="mt-2 text-3xl font-black text-slate-950">Create your account</h1>
-        {error && <div className="mt-5 rounded-2xl bg-red-50 p-4 text-sm font-bold text-red-700">{error}</div>}
-        <div className="mt-6 grid gap-4 sm:grid-cols-2">
-          <div className="sm:col-span-2"><label className="label">Full name</label><input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required /></div>
-          <div><label className="label">Email</label><input className="input" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required /></div>
-          <div><label className="label">Phone</label><input className="input" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} required /></div>
-          <div className="sm:col-span-2"><label className="label">Password</label><input className="input" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required /></div>
-        </div>
-        <button className="btn-primary mt-6 w-full" disabled={loading}>{loading ? 'Creating account...' : 'Sign Up'}</button>
-        <p className="mt-5 text-center text-sm text-slate-500">Already have an account? <Link className="font-black text-green-700" to="/login">Login</Link></p>
-      </form>
+    <main className="min-h-[calc(100vh-4rem)]" style={{ background: 'var(--background)' }}>
+      <div className="mx-auto grid min-h-[calc(100vh-4rem)] max-w-5xl place-items-center px-4 py-10 sm:px-6 lg:px-8">
+        <form className="w-full max-w-2xl rounded-3xl border bg-white p-7 shadow-sm sm:p-8" style={{ borderColor: 'var(--border)' }} onSubmit={submit}>
+          <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--futsal-green)' }}>Join the pitch</p>
+          <h1 className="mt-2 text-4xl font-black uppercase" style={{ fontFamily: 'var(--font-display)', color: 'var(--futsal-navy)' }}>Create Account</h1>
+          <p className="mt-2 text-sm" style={{ color: 'var(--muted-foreground)' }}>Start booking futsal courts and managing sessions instantly.</p>
+          {error && <div className="mt-5 rounded-2xl bg-red-50 p-4 text-sm font-semibold text-red-700">{error}</div>}
+
+          <div className="mt-6 grid gap-4 sm:grid-cols-2">
+            <Field icon={<UserRound size={16} />} label="Full name" value={form.name} onChange={(value) => setForm({ ...form, name: value })} />
+            <Field icon={<Phone size={16} />} label="Phone" value={form.phone} onChange={(value) => setForm({ ...form, phone: value })} />
+            <Field icon={<Mail size={16} />} label="Email" type="email" value={form.email} onChange={(value) => setForm({ ...form, email: value })} />
+            <Field label="Password" type="password" value={form.password} onChange={(value) => setForm({ ...form, password: value })} />
+          </div>
+
+          <button className="mt-6 w-full rounded-xl py-3 text-sm font-semibold transition-all hover:opacity-90" style={{ background: 'var(--futsal-green)', color: 'white' }} disabled={loading}>
+            {loading ? 'Creating account...' : 'Get Started'}
+          </button>
+          <p className="mt-5 text-center text-sm" style={{ color: 'var(--muted-foreground)' }}>
+            Already have an account? <Link className="font-semibold" style={{ color: 'var(--futsal-green)' }} to="/login">Sign in</Link>
+          </p>
+        </form>
+      </div>
     </main>
+  );
+}
+
+function Field({
+  icon,
+  label,
+  onChange,
+  type = 'text',
+  value
+}: {
+  icon?: ReactNode;
+  label: string;
+  onChange: (value: string) => void;
+  type?: string;
+  value: string;
+}) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted-foreground)' }}>{label}</span>
+      <span className="flex items-center gap-3 rounded-xl border px-3 py-2.5" style={{ background: 'var(--input-background)', borderColor: 'var(--border)' }}>
+        {icon && <span style={{ color: 'var(--muted-foreground)' }}>{icon}</span>}
+        <input className="flex-1 bg-transparent text-sm outline-none" type={type} value={value} onChange={(event) => onChange(event.target.value)} required />
+      </span>
+    </label>
   );
 }
