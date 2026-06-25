@@ -40,6 +40,8 @@ The React app runs at `http://127.0.0.1:5174` and uses `VITE_API_BASE_URL` for b
 - Email and phone verification are available from the profile page.
 - Development exposes verification codes in API responses for local testing.
 - Production must configure `VERIFICATION_SECRET` plus SMTP and/or `SMS_WEBHOOK_URL` delivery settings.
+- SMTP uses Spring Boot variables such as `SPRING_MAIL_HOST`, `SPRING_MAIL_PORT`, `SPRING_MAIL_USERNAME`, and `SPRING_MAIL_PASSWORD`.
+- The mail health probe is disabled by default. Set `MAIL_HEALTH_ENABLED=true` only when a reachable SMTP server is configured.
 - Apply `backend/src/main/resources/db/security-features.sql` before starting the production profile with `ddl-auto=validate`.
 
 ## Uploads

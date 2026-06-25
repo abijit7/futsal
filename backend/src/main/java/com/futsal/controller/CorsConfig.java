@@ -12,7 +12,7 @@ public class CorsConfig implements WebMvcConfigurer {
     @Value("${app.upload.dir}")
     private String uploadDir;
 
-    @Value("${app.cors.allowed-origins:http://localhost:5174,http://127.0.0.1:5174}")
+    @Value("${app.cors.allowed-origins:http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174}")
     private String[] allowedOrigins;
 
     @Override
