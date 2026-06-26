@@ -203,12 +203,12 @@ export function VenueDetails() {
 
             <div className="mt-6 rounded-3xl bg-slate-100 p-5 text-slate-600">
               <div className="flex justify-between text-base font-normal">
-                <span>{money(futsal.hourlyPrice)} x {selectedSlot ? slotDuration(selectedSlot.startTime, selectedSlot.endTime) || '1 hr' : '1 hr'}</span>
-                <span className="text-slate-950">{money(subtotal)}</span>
+                <span>Futsal fee</span>
+                <span className="text-slate-800">{money(subtotal)}</span>
               </div>
               <div className="mt-3 flex justify-between text-base font-normal">
                 <span>Service fee</span>
-                <span className="text-slate-950">{money(serviceFee)}</span>
+                <span className="text-slate-800">{money(serviceFee)}</span>
               </div>
               <div className="mt-4 flex justify-between border-t border-slate-200 pt-4 text-lg font-black text-slate-950">
                 <span>Total</span>
