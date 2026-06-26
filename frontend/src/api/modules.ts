@@ -1,5 +1,5 @@
 import { api, query } from './client';
-import type { Booking, BookingStatus, Futsal, FutsalPayload, PagedResponse, PaymentMethod, TimeSlot, TimeSlotPayload, User, VerificationIssueResponse } from '../types/api';
+import type { Booking, BookingStatus, Futsal, FutsalPayload, PagedResponse, PaymentMethod, SlotGenerationPayload, SlotGenerationResponse, TimeSlot, TimeSlotPayload, User, VerificationIssueResponse } from '../types/api';
 
 export const authApi = {
   login: (payload: Pick<User, 'email'> & { password: string }) =>
@@ -30,8 +30,8 @@ export const userApi = {
 };
 
 export const futsalApi = {
-  list: (params: { page?: number; size?: number } = {}) =>
-    api.get<PagedResponse<Futsal>>(`/futsals?${query({ page: params.page ?? 0, size: params.size ?? 12 })}`).then((res) => res.data),
+  list: (params: { page?: number; size?: number; q?: string; sort?: 'recommended' | 'price-low' | 'price-high' } = {}) =>
+    api.get<PagedResponse<Futsal>>(`/futsals?${query({ page: params.page ?? 0, size: params.size ?? 12, q: params.q, sort: params.sort ?? 'recommended' })}`).then((res) => res.data),
   get: (id: number) => api.get<Futsal>(`/futsals/${id}`).then((res) => res.data),
   create: (payload: FutsalPayload) => api.post<Futsal>('/futsals', payload).then((res) => res.data),
   update: (id: number, payload: FutsalPayload) => api.put<Futsal>(`/futsals/${id}`, payload).then((res) => res.data),
@@ -56,8 +56,11 @@ export const uploadApi = {
 export const slotApi = {
   available: (params: { futsalId?: number; slotDate?: string; page?: number; size?: number }) =>
     api.get<PagedResponse<TimeSlot>>(`/slots?${query(params)}`).then((res) => res.data),
+  public: (params: { futsalId?: number; slotDate?: string; page?: number; size?: number }) =>
+    api.get<PagedResponse<TimeSlot>>(`/slots/public?${query(params)}`).then((res) => res.data),
   all: (params: { futsalId?: number; slotDate?: string; page?: number; size?: number }) =>
     api.get<PagedResponse<TimeSlot>>(`/slots/all?${query(params)}`).then((res) => res.data),
+  generate: (payload: SlotGenerationPayload) => api.post<SlotGenerationResponse>('/slots/generate', payload).then((res) => res.data),
   create: (payload: TimeSlotPayload) => api.post<TimeSlot>('/slots', payload).then((res) => res.data),
   update: (id: number, payload: TimeSlotPayload) => api.put<TimeSlot>(`/slots/${id}`, payload).then((res) => res.data),
   delete: (id: number) => api.delete(`/slots/${id}`).then((res) => res.data)
@@ -66,8 +69,9 @@ export const slotApi = {
 export const bookingApi = {
   all: (params: { page?: number; size?: number; status?: BookingStatus | 'ALL' } = {}) =>
     api.get<PagedResponse<Booking>>(`/bookings?${query({ page: params.page ?? 0, size: params.size ?? 10, status: params.status ?? 'ALL' })}`).then((res) => res.data),
-  byUser: (userId: number, page = 0, size = 10) =>
-    api.get<PagedResponse<Booking>>(`/bookings/user/${userId}?${query({ page, size })}`).then((res) => res.data),
+  byUser: (userId: number, page = 0, size = 10, status?: BookingStatus | 'ALL') =>
+    api.get<PagedResponse<Booking>>(`/bookings/user/${userId}?${query({ page, size, status: status ?? 'ALL' })}`).then((res) => res.data),
+  get: (id: number) => api.get<Booking>(`/bookings/${id}`).then((res) => res.data),
   updateStatus: (id: number, status: BookingStatus) => api.put<Booking>(`/bookings/${id}/status`, { status }).then((res) => res.data),
   delete: (id: number) => api.delete(`/bookings/${id}`).then((res) => res.data)
 };

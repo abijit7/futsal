@@ -1,5 +1,8 @@
 package com.futsal.controller;
 
+import java.util.Arrays;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
@@ -18,9 +21,24 @@ public class CorsConfig implements WebMvcConfigurer {
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/api/**")
-                .allowedOrigins(allowedOrigins)
+                .allowedOrigins(resolveAllowedOrigins())
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*");
+    }
+
+    private String[] resolveAllowedOrigins() {
+        Set<String> origins = new LinkedHashSet<>();
+        Arrays.stream(allowedOrigins)
+                .map(String::trim)
+                .filter(origin -> !origin.isBlank())
+                .forEach(origins::add);
+
+        origins.add("http://localhost:5173");
+        origins.add("http://127.0.0.1:5173");
+        origins.add("http://localhost:5174");
+        origins.add("http://127.0.0.1:5174");
+
+        return origins.toArray(String[]::new);
     }
 
     @Override

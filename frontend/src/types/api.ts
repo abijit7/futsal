@@ -32,6 +32,9 @@ export type FutsalImage = {
   imageId?: number;
   url?: string;
   imageUrl?: string;
+  sortOrder?: number;
+  cover?: boolean;
+  caption?: string;
 };
 
 export type Futsal = {
@@ -42,9 +45,14 @@ export type Futsal = {
   phone: string;
   hourlyPrice: number;
   openingTime: string;
+  closingTime: string;
   imageUrl?: string;
   imageUrls?: string[];
   images?: FutsalImage[];
+  verified?: boolean;
+  courtType?: string;
+  rating?: number;
+  reviewCount?: number;
   description?: string;
   createdAt?: string;
 };
@@ -66,7 +74,28 @@ export type TimeSlotPayload = {
   slotDate: string;
   startTime: string;
   endTime: string;
-  available: boolean;
+  available?: boolean;
+};
+
+export type SlotGenerationPayload = {
+  futsalId: number;
+  startDate: string;
+  endDate: string;
+  startTime?: string;
+  endTime?: string;
+  slotMinutes: number;
+  holidayDates?: string[];
+  maintenanceBlocks?: {
+    date: string;
+    startTime: string;
+    endTime: string;
+  }[];
+};
+
+export type SlotGenerationResponse = {
+  created: number;
+  skippedExisting: number;
+  skippedBlocked: number;
 };
 
 export type Booking = {

@@ -1,56 +1,15 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Search, MapPin, Clock, Star, ChevronRight, Shield, Zap, Users, Trophy, ArrowRight, Calendar } from "lucide-react";
+import { Link } from "react-router-dom";
+import { futsalApi } from "../api/modules";
+import type { Futsal } from "../types/api";
+import { imageForVenue, money } from "../utils/format";
 
 type View = "landing" | "venues" | "venue-detail" | "booking" | "confirmation" | "user-dashboard" | "admin-dashboard";
 
 interface LandingPageProps {
   onNavigate: (view: View) => void;
 }
-
-const FEATURED_VENUES = [
-  {
-    id: 1,
-    name: "GreenZone Futsal Arena",
-    location: "Kuala Lumpur City Centre",
-    rating: 4.9,
-    reviews: 312,
-    price: 80,
-    courts: 4,
-    image: "https://images.unsplash.com/photo-1771909720886-a90afd1b37f5?w=600&h=400&fit=crop&auto=format",
-    tag: "Most Popular",
-    tagColor: "#16A34A",
-    amenities: ["Changing Room", "Parking", "Cafeteria"],
-    available: true,
-  },
-  {
-    id: 2,
-    name: "Urban Kick Sports Hub",
-    location: "Petaling Jaya, Selangor",
-    rating: 4.7,
-    reviews: 198,
-    price: 65,
-    courts: 3,
-    image: "https://images.unsplash.com/photo-1771909715670-083a55b7f354?w=600&h=400&fit=crop&auto=format",
-    tag: "Best Value",
-    tagColor: "#2563EB",
-    amenities: ["Parking", "Spectator Stand", "WiFi"],
-    available: true,
-  },
-  {
-    id: 3,
-    name: "ProField Elite Center",
-    location: "Shah Alam, Selangor",
-    rating: 4.8,
-    reviews: 241,
-    price: 95,
-    courts: 6,
-    image: "https://images.unsplash.com/photo-1771909718960-7fab338a09d3?w=600&h=400&fit=crop&auto=format",
-    tag: "Premium",
-    tagColor: "#B45309",
-    amenities: ["Changing Room", "Parking", "Cafeteria", "WiFi"],
-    available: false,
-  },
-];
 
 const STATS = [
   { label: "Active Venues", value: "200+", icon: MapPin },
@@ -69,8 +28,30 @@ const HOW_IT_WORKS = [
 export function LandingPage({ onNavigate }: LandingPageProps) {
   const [searchLocation, setSearchLocation] = useState("");
   const [searchDate, setSearchDate] = useState("");
+  const [featuredVenues, setFeaturedVenues] = useState<Futsal[]>([]);
+  const [loadingVenues, setLoadingVenues] = useState(true);
+  const [venueError, setVenueError] = useState("");
 
   const handleSearch = () => onNavigate("venues");
+
+  useEffect(() => {
+    let active = true;
+    setLoadingVenues(true);
+    setVenueError("");
+    futsalApi.list({ page: 0, size: 3, sort: "recommended" })
+      .then((data) => {
+        if (active) setFeaturedVenues(data.items || []);
+      })
+      .catch((err) => {
+        if (active) setVenueError(err instanceof Error ? err.message : "Failed to load venues");
+      })
+      .finally(() => {
+        if (active) setLoadingVenues(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   return (
     <div className="min-h-screen" style={{ background: "var(--background)" }}>
@@ -208,11 +189,28 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
           </button>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-6">
-          {FEATURED_VENUES.map((venue) => (
-            <VenueCard key={venue.id} venue={venue} onNavigate={onNavigate} />
-          ))}
-        </div>
+        {loadingVenues ? (
+          <div className="grid md:grid-cols-3 gap-6">
+            {[1, 2, 3].map((item) => (
+              <div key={item} className="h-80 animate-pulse rounded-2xl border bg-white" style={{ borderColor: "var(--border)" }} />
+            ))}
+          </div>
+        ) : venueError ? (
+          <div className="rounded-2xl border bg-white p-8 text-sm font-semibold" style={{ borderColor: "var(--border)", color: "var(--destructive)" }}>
+            {venueError}
+          </div>
+        ) : featuredVenues.length === 0 ? (
+          <div className="rounded-2xl border bg-white p-8" style={{ borderColor: "var(--border)" }}>
+            <h3 className="font-semibold mb-1" style={{ color: "var(--foreground)" }}>No venues added yet</h3>
+            <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>Add venues from the admin panel and they will appear here automatically.</p>
+          </div>
+        ) : (
+          <div className="grid md:grid-cols-3 gap-6">
+            {featuredVenues.map((venue) => (
+              <VenueCard key={venue.futsalId} venue={venue} />
+            ))}
+          </div>
+        )}
       </section>
 
       {/* How it Works */}
@@ -321,61 +319,62 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
   );
 }
 
-function VenueCard({ venue, onNavigate }: { venue: typeof FEATURED_VENUES[0]; onNavigate: (v: View) => void }) {
+function VenueCard({ venue }: { venue: Futsal }) {
+  const rating = Number(venue.rating || 0);
+  const reviews = Number(venue.reviewCount || 0);
+  const amenities = [venue.courtType || "Court", venue.verified ? "Verified" : "Listed", venue.description].filter(Boolean).slice(0, 3);
+  const tag = venue.verified ? "Verified" : "Live";
+  const tagColor = venue.verified ? "#16A34A" : "#2563EB";
+
   return (
-    <div
-      className="rounded-2xl overflow-hidden shadow-sm border group cursor-pointer transition-all hover:-translate-y-1 hover:shadow-lg"
+    <Link
+      to={`/venues/${venue.futsalId}`}
+      className="block rounded-2xl overflow-hidden shadow-sm border group cursor-pointer transition-all hover:-translate-y-1 hover:shadow-lg"
       style={{ background: "white", borderColor: "var(--border)" }}
-      onClick={() => onNavigate("venue-detail")}
     >
       <div className="relative overflow-hidden h-48 bg-slate-100">
         <img
-          src={venue.image}
+          src={imageForVenue(venue.imageUrl || venue.imageUrls?.[0])}
           alt={venue.name}
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
         <div className="absolute top-3 left-3">
-          <span className="text-xs font-bold px-2.5 py-1 rounded-full text-white shadow-sm" style={{ background: venue.tagColor }}>
-            {venue.tag}
+          <span className="text-xs font-bold px-2.5 py-1 rounded-full text-white shadow-sm" style={{ background: tagColor }}>
+            {tag}
           </span>
         </div>
-        {!venue.available && (
-          <div className="absolute inset-0 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.5)" }}>
-            <span className="text-white text-sm font-semibold px-4 py-2 rounded-full" style={{ background: "rgba(220,38,38,0.9)" }}>Fully Booked Today</span>
-          </div>
-        )}
       </div>
       <div className="p-5">
         <div className="flex items-start justify-between mb-2">
           <h3 className="font-semibold leading-snug pr-2" style={{ color: "var(--futsal-navy)" }}>{venue.name}</h3>
           <div className="flex items-center gap-1 shrink-0">
             <Star size={13} fill="#F59E0B" stroke="none" />
-            <span className="text-sm font-semibold" style={{ color: "var(--futsal-navy)" }}>{venue.rating}</span>
+            <span className="text-sm font-semibold" style={{ color: "var(--futsal-navy)" }}>{rating.toFixed(1)}</span>
           </div>
         </div>
         <div className="flex items-center gap-1 mb-3">
           <MapPin size={12} style={{ color: "var(--muted-foreground)" }} />
-          <span className="text-xs" style={{ color: "var(--muted-foreground)" }}>{venue.location}</span>
+          <span className="text-xs" style={{ color: "var(--muted-foreground)" }}>{venue.address}, {venue.city}</span>
         </div>
         <div className="flex flex-wrap gap-1.5 mb-4">
-          {venue.amenities.map((a) => (
-            <span key={a} className="text-xs px-2 py-0.5 rounded-full" style={{ background: "var(--secondary)", color: "var(--futsal-green-dark)" }}>
-              {a}
+          {amenities.map((item) => (
+            <span key={item} className="text-xs px-2 py-0.5 rounded-full" style={{ background: "var(--secondary)", color: "var(--futsal-green-dark)" }}>
+              {item}
             </span>
           ))}
         </div>
         <div className="flex items-center justify-between pt-3 border-t" style={{ borderColor: "var(--border)" }}>
           <div>
             <span className="text-xs" style={{ color: "var(--muted-foreground)" }}>From </span>
-            <span className="font-bold" style={{ color: "var(--futsal-navy)" }}>RM {venue.price}</span>
+            <span className="font-bold" style={{ color: "var(--futsal-navy)" }}>{money(venue.hourlyPrice)}</span>
             <span className="text-xs" style={{ color: "var(--muted-foreground)" }}>/hour</span>
           </div>
           <div className="flex items-center gap-1 text-xs" style={{ color: "var(--muted-foreground)" }}>
             <Users size={12} />
-            {venue.courts} courts
+            {reviews} reviews
           </div>
         </div>
       </div>
-    </div>
+    </Link>
   );
 }

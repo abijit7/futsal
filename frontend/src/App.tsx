@@ -1,6 +1,6 @@
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
-import { Layout } from './components/Layout';
+import { AdminLayout, Layout } from './components/Layout';
 import { AdminRoute, ProtectedRoute } from './components/ProtectedRoute';
 import { Home } from './pages/public/Home';
 import { Login } from './pages/public/Login';
@@ -14,6 +14,10 @@ import { Dashboard } from './pages/user/Dashboard';
 import { MyBookings } from './pages/user/MyBookings';
 import { Profile } from './pages/user/Profile';
 import { AdminDashboard } from './pages/admin/AdminDashboard';
+import { AdminFutsals } from './pages/admin/AdminFutsals';
+import { AdminSlots } from './pages/admin/AdminSlots';
+import { AdminBookings } from './pages/admin/AdminBookings';
+import { AdminUsers } from './pages/admin/AdminUsers';
 
 export default function App() {
   return (
@@ -37,11 +41,13 @@ export default function App() {
           </Route>
         </Route>
         <Route element={<AdminRoute />}>
-          <Route path="/admin" element={<AdminDashboard />} />
-          <Route path="/admin/futsals" element={<AdminDashboard />} />
-          <Route path="/admin/slots" element={<AdminDashboard />} />
-          <Route path="/admin/bookings" element={<AdminDashboard />} />
-          <Route path="/admin/users" element={<AdminDashboard />} />
+          <Route element={<AdminLayout />}>
+            <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin/futsals" element={<AdminFutsals />} />
+            <Route path="/admin/slots" element={<AdminSlots />} />
+            <Route path="/admin/bookings" element={<AdminBookings />} />
+            <Route path="/admin/users" element={<AdminUsers />} />
+          </Route>
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

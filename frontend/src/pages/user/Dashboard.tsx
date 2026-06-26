@@ -1,7 +1,5 @@
-import { UserDashboard } from '../../design/UserDashboard';
-import { useDesignNavigation } from '../../design/navigation';
+import { MyBookings } from './MyBookings';
 
 export function Dashboard() {
-  const onNavigate = useDesignNavigation();
-  return <UserDashboard onNavigate={onNavigate} />;
+  return <MyBookings />;
 }

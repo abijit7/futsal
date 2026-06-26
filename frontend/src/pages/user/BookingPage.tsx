@@ -1,7 +1,6 @@
-import { BookingFlow } from '../../design/BookingFlow';
-import { useDesignNavigation } from '../../design/navigation';
+import { Navigate, useParams } from 'react-router-dom';
 
 export function BookingPage() {
-  const onNavigate = useDesignNavigation();
-  return <BookingFlow onNavigate={onNavigate} />;
+  const { futsalId } = useParams();
+  return <Navigate to={futsalId ? `/venues/${futsalId}` : '/venues'} replace />;
 }
