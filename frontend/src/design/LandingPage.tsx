@@ -322,7 +322,7 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
 function VenueCard({ venue }: { venue: Futsal }) {
   const rating = Number(venue.rating || 0);
   const reviews = Number(venue.reviewCount || 0);
-  const amenities = [venue.courtType || "Court", venue.verified ? "Verified" : "Listed", venue.description].filter(Boolean).slice(0, 3);
+  const amenities = [venue.courtType, venue.verified ? "Verified" : "Listed", venue.description].filter(Boolean).slice(0, 3);
   const tag = venue.verified ? "Verified" : "Live";
   const tagColor = venue.verified ? "#16A34A" : "#2563EB";
 

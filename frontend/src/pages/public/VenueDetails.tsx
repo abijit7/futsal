@@ -1,4 +1,4 @@
-import { Calendar, ChevronLeft, ChevronRight, Clock, MapPin, Minus, Phone, Plus, ShieldCheck, Star, Users } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Clock, MapPin, Minus, Phone, Plus, ShieldCheck, Star } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { futsalApi, paymentApi, slotApi } from '../../api/modules';
@@ -16,7 +16,6 @@ export function VenueDetails() {
   const [futsal, setFutsal] = useState<Futsal | null>(null);
   const [slots, setSlots] = useState<TimeSlot[]>([]);
   const [selectedDate, setSelectedDate] = useState(todayInput());
-  const [selectedCourt, setSelectedCourt] = useState(1);
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('CASH_IN_HAND');
   const [notes, setNotes] = useState('');
@@ -121,21 +120,6 @@ export function VenueDetails() {
           </div>
 
           <section className="panel mt-7 p-6">
-            <h2 className="flex items-center gap-3 text-2xl font-black text-slate-950"><Users className="text-green-600" size={24} /> Select Court</h2>
-            <div className="mt-6 grid gap-3 sm:grid-cols-4">
-              {[1, 2, 3, 4].map((court) => (
-                <button
-                  key={court}
-                  className={`rounded-2xl border px-6 py-5 text-lg font-black transition ${selectedCourt === court ? 'border-slate-950 bg-slate-950 text-white' : 'border-slate-200 bg-slate-100 text-slate-900 hover:border-green-300'}`}
-                  onClick={() => setSelectedCourt(court)}
-                >
-                  Court {court}
-                </button>
-              ))}
-            </div>
-          </section>
-
-          <section className="panel mt-5 p-6">
             <h2 className="flex items-center gap-3 text-2xl font-black text-slate-950"><Calendar className="text-green-600" size={24} /> Select Date</h2>
             <div className="mt-6 flex gap-3 overflow-x-auto pb-2">
               {dates.map((date) => (
@@ -191,7 +175,7 @@ export function VenueDetails() {
             <p className="text-xs font-black uppercase text-slate-500">Selected slot</p>
             <div className="mt-3 flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-100 px-4 py-4 text-base font-black text-slate-500">
               <Clock size={18} />
-              <span>{selectedSlot ? `Court ${selectedCourt} · ${timeRange(selectedSlot.startTime, selectedSlot.endTime)}` : 'Select a time slot ->'}</span>
+              <span>{selectedSlot ? timeRange(selectedSlot.startTime, selectedSlot.endTime) : 'Select a time slot ->'}</span>
             </div>
 
             <p className="mt-6 text-xs font-black uppercase text-slate-500">Duration</p>

@@ -1,9 +1,13 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { Clock3, ImageIcon, MapPin, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
 import { futsalApi, uploadApi } from '../../api/modules';
 import { Pagination } from '../../components/Pagination';
 import { EmptyState, LoadingState } from '../../components/State';
 import type { Futsal, FutsalPayload } from '../../types/api';
 import { formatTime, imageForVenue, money } from '../../utils/format';
+
+type VenueSort = 'recommended' | 'price-low' | 'price-high';
+type FormTab = 'details' | 'location' | 'schedule' | 'media';
 
 const emptyForm: FutsalPayload = {
   name: '',
@@ -22,15 +26,28 @@ const emptyForm: FutsalPayload = {
   description: ''
 };
 
+const tabs: { id: FormTab; label: string }[] = [
+  { id: 'details', label: 'Details' },
+  { id: 'location', label: 'Location' },
+  { id: 'schedule', label: 'Schedule' },
+  { id: 'media', label: 'Media' }
+];
+
 export function AdminFutsals() {
   const [items, setItems] = useState<Futsal[]>([]);
   const [form, setForm] = useState<FutsalPayload>(emptyForm);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<FormTab>('details');
+  const [query, setQuery] = useState('');
+  const [sort, setSort] = useState<VenueSort>('recommended');
+  const [deleteTarget, setDeleteTarget] = useState<Futsal | null>(null);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
@@ -40,41 +57,33 @@ export function AdminFutsals() {
     setLoading(true);
     setError('');
     try {
-      const data = await futsalApi.list({ page, size: 8 });
+      const data = await futsalApi.list({ page, size: 8, q: query.trim() || undefined, sort });
       setItems(data.items || []);
       setTotalPages(data.totalPages || 0);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load futsals');
+      setError(err instanceof Error ? err.message : 'Failed to load venues');
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { load(); }, [page]);
+  useEffect(() => { load(); }, [page, query, sort]);
 
-  const submit = async (event: FormEvent) => {
-    event.preventDefault();
-    setError('');
+  const openCreate = () => {
+    setForm(emptyForm);
+    setEditingId(null);
+    setActiveTab('details');
     setMessage('');
-    setSaving(true);
-    try {
-      const payload = normalizePayload(form);
-      if (editingId) await futsalApi.update(editingId, payload);
-      else await futsalApi.create(payload);
-      setMessage(editingId ? 'Venue updated.' : 'Venue created.');
-      setForm(emptyForm);
-      setEditingId(null);
-      await load();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Save failed');
-    } finally {
-      setSaving(false);
-    }
+    setError('');
+    setDrawerOpen(true);
   };
 
-  const edit = (item: Futsal) => {
+  const openEdit = (item: Futsal) => {
     const urls = urlsFor(item);
     setEditingId(item.futsalId);
+    setActiveTab('details');
+    setMessage('');
+    setError('');
     setForm({
       name: item.name,
       address: item.address,
@@ -91,16 +100,55 @@ export function AdminFutsals() {
       reviewCount: item.reviewCount ?? 0,
       description: item.description || ''
     });
+    setDrawerOpen(true);
   };
 
-  const remove = async (id: number) => {
-    if (!confirm('Delete this venue? Active bookings or booking history will block deletion.')) return;
+  const closeDrawer = () => {
+    if (saving || uploading) return;
+    setDrawerOpen(false);
+    setEditingId(null);
+    setForm(emptyForm);
+  };
+
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
     setError('');
+    setMessage('');
+    setSaving(true);
     try {
-      await futsalApi.delete(id);
+      const payload = normalizePayload(form);
+      if (editingId) await futsalApi.update(editingId, payload);
+      else await futsalApi.create(payload);
+      setMessage(editingId ? 'Venue updated.' : 'Venue created.');
+      setDrawerOpen(false);
+      setForm(emptyForm);
+      setEditingId(null);
       await load();
     } catch (err) {
+      setError(err instanceof Error ? err.message : 'Save failed');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setError('');
+    setMessage('');
+    setDeletingId(deleteTarget.futsalId);
+    try {
+      await futsalApi.delete(deleteTarget.futsalId);
+      setMessage('Venue deleted.');
+      setDeleteTarget(null);
+      if (items.length === 1 && page > 0) {
+        setPage(page - 1);
+      } else {
+        await load();
+      }
+    } catch (err) {
       setError(err instanceof Error ? err.message : 'Delete failed');
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -148,80 +196,211 @@ export function AdminFutsals() {
   };
 
   return (
-    <section className="grid gap-6 xl:grid-cols-[430px_1fr]">
-      <form className="panel h-max p-6" onSubmit={submit}>
-        <h2 className="text-2xl font-black text-slate-950">{editingId ? 'Edit venue' : 'Add venue'}</h2>
-        <p className="mt-1 text-sm text-slate-500">Creates records through the backend futsal API.</p>
-        {message && <p className="mt-3 rounded-2xl bg-green-50 p-3 text-sm font-bold text-green-700">{message}</p>}
-        {error && <p className="mt-3 rounded-2xl bg-red-50 p-3 text-sm font-bold text-red-700">{error}</p>}
+    <section className="space-y-5">
+      <div className="panel overflow-hidden">
+        <div className="border-b border-slate-100 p-5">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="eyebrow">Venue Management</p>
+              <h2 className="mt-2 text-2xl font-black text-slate-950">Futsal venues</h2>
+              <p className="mt-1 text-sm text-slate-500">Manage customer-facing venue listings from one clean workspace.</p>
+            </div>
+            <button className="btn-primary" onClick={openCreate}>
+              <Plus size={18} />
+              Add venue
+            </button>
+          </div>
 
-        <div className="mt-5 grid gap-4">
-          <div><label className="label">Name</label><input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required minLength={3} maxLength={80} /></div>
-          <div><label className="label">Address</label><input className="input" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} required minLength={5} maxLength={120} /></div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div><label className="label">City</label><input className="input" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} required minLength={2} maxLength={50} /></div>
-            <div><label className="label">Phone</label><input className="input" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} required pattern="^(98|97|96)\d{8}$" placeholder="98XXXXXXXX" /></div>
+          {message && <p className="mt-4 rounded-2xl bg-green-50 p-3 text-sm font-bold text-green-700">{message}</p>}
+          {error && !drawerOpen && !deleteTarget && <p className="mt-4 rounded-2xl bg-red-50 p-3 text-sm font-bold text-red-700">{error}</p>}
+
+          <div className="mt-5 grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px_auto] lg:items-end">
+            <div>
+              <label className="label">Search venues</label>
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                <input
+                  className="input pl-11"
+                  value={query}
+                  onChange={(event) => { setQuery(event.target.value); setPage(0); }}
+                  placeholder="Name, city, address, or surface"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="label">Sort</label>
+              <select className="input" value={sort} onChange={(event) => { setSort(event.target.value as VenueSort); setPage(0); }}>
+                <option value="recommended">Recommended</option>
+                <option value="price-low">Price: low to high</option>
+                <option value="price-high">Price: high to low</option>
+              </select>
+            </div>
+            <button type="button" className="btn-soft" disabled={!query && sort === 'recommended'} onClick={() => { setQuery(''); setSort('recommended'); setPage(0); }}>
+              Clear filters
+            </button>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div><label className="label">Price/hour</label><input className="input" type="number" min={1} step="1" value={form.hourlyPrice} onChange={(e) => setForm({ ...form, hourlyPrice: Number(e.target.value) })} required /></div>
-            <div><label className="label">Court type</label><input className="input" value={form.courtType || ''} onChange={(e) => setForm({ ...form, courtType: e.target.value })} maxLength={60} placeholder="Indoor turf" /></div>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div><label className="label">Opening time</label><input className="input" type="time" value={toTimeInput(form.openingTime)} onChange={(e) => setForm({ ...form, openingTime: withSeconds(e.target.value) })} required /></div>
-            <div><label className="label">Closing time</label><input className="input" type="time" value={toTimeInput(form.closingTime)} onChange={(e) => setForm({ ...form, closingTime: withSeconds(e.target.value) })} required /></div>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div><label className="label">Rating</label><input className="input" type="number" min={0} max={5} step="0.1" value={form.rating ?? 0} onChange={(e) => setForm({ ...form, rating: Number(e.target.value) })} /></div>
-            <div><label className="label">Review count</label><input className="input" type="number" min={0} step="1" value={form.reviewCount ?? 0} onChange={(e) => setForm({ ...form, reviewCount: Number(e.target.value) })} /></div>
-          </div>
-          <label className="flex items-center justify-between rounded-2xl bg-slate-50 p-4 font-bold text-slate-700">
-            <span>Verified venue</span>
-            <input type="checkbox" checked={Boolean(form.verified)} onChange={(e) => setForm({ ...form, verified: e.target.checked })} />
-          </label>
-          <div><label className="label">Cover image</label><input className="input" type="file" accept="image/png,image/jpeg" disabled={uploading} onChange={(e) => uploadSingle(e.target.files?.[0])} /></div>
-          <div><label className="label">Gallery images</label><input className="input" type="file" accept="image/png,image/jpeg" multiple disabled={uploading} onChange={(e) => uploadMany(e.target.files)} /></div>
-          {imageUrls.length > 0 && (
-            <div className="grid grid-cols-3 gap-2">
-              {imageUrls.map((url) => (
-                <div key={url} className="relative overflow-hidden rounded-2xl border border-slate-200">
-                  <img src={url} alt="" className="h-20 w-full object-cover" />
-                  <button type="button" className="absolute right-1 top-1 rounded-full bg-white/90 px-2 py-0.5 text-xs font-black text-slate-700" onClick={() => removeImage(url)}>x</button>
+        </div>
+
+        <div className="p-5">
+          {loading ? <LoadingState /> : items.length === 0 ? (
+            <EmptyState title="No venues found" description="Create a venue or adjust your filters." action={<button className="btn-primary" onClick={openCreate}>Add venue</button>} />
+          ) : (
+            <div className="grid gap-4">
+              {items.map((item) => (
+                <div key={item.futsalId} className="rounded-3xl border border-slate-200 bg-white p-4 transition hover:border-green-200 hover:shadow-sm">
+                  <div className="grid gap-4 md:grid-cols-[176px_minmax(0,1fr)_auto] md:items-center">
+                    <img src={imageForVenue(item.imageUrl || item.imageUrls?.[0])} alt="" className="h-32 w-full rounded-2xl object-cover md:h-28" />
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="truncate text-lg font-black text-slate-950">{item.name}</h3>
+                        {item.verified && <span className="rounded-full bg-green-50 px-2 py-1 text-xs font-black text-green-700">Verified</span>}
+                        {item.courtType && <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-black text-slate-600">{item.courtType}</span>}
+                      </div>
+                      <p className="mt-2 flex items-center gap-2 text-sm font-bold text-slate-500"><MapPin size={15} className="text-green-600" /> {item.address}, {item.city}</p>
+                      <div className="mt-3 flex flex-wrap gap-3 text-sm text-slate-500">
+                        <span className="font-black text-slate-950">{money(item.hourlyPrice)}/hr</span>
+                        <span className="flex items-center gap-1"><Clock3 size={15} /> {formatTime(item.openingTime)} - {formatTime(item.closingTime)}</span>
+                        <span>{Number(item.rating || 0).toFixed(1)} rating</span>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 md:flex-col">
+                      <button className="btn-soft flex-1 px-4 py-2 md:flex-none" onClick={() => openEdit(item)}>
+                        <Pencil size={16} />
+                        Edit
+                      </button>
+                      <button className="btn-navy flex-1 px-4 py-2 md:flex-none" disabled={deletingId === item.futsalId} onClick={() => setDeleteTarget(item)}>
+                        <Trash2 size={16} />
+                        {deletingId === item.futsalId ? 'Deleting...' : 'Delete'}
+                      </button>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
           )}
-          <div><label className="label">Description</label><textarea className="input min-h-24" maxLength={250} value={form.description || ''} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
+          <Pagination page={page} totalPages={totalPages} onPage={setPage} />
         </div>
-        <div className="mt-6 flex gap-2">
-          <button className="btn-primary flex-1" disabled={saving || uploading}>{saving ? 'Saving...' : editingId ? 'Update' : 'Create'}</button>
-          {editingId && <button type="button" className="btn-soft" onClick={() => { setEditingId(null); setForm(emptyForm); }}>Cancel</button>}
-        </div>
-      </form>
-
-      <div>
-        {loading ? <LoadingState /> : items.length === 0 ? <EmptyState title="No venues added yet" /> : (
-          <div className="grid gap-4">
-            {items.map((item) => (
-              <div key={item.futsalId} className="panel flex flex-col gap-4 p-4 md:flex-row md:items-center">
-                <img src={imageForVenue(item.imageUrl || item.imageUrls?.[0])} alt="" className="h-28 w-full rounded-2xl object-cover md:w-40" />
-                <div className="flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="font-black text-slate-950">{item.name}</h3>
-                    {item.verified && <span className="rounded-full bg-green-50 px-2 py-1 text-xs font-black text-green-700">Verified</span>}
-                  </div>
-                  <p className="text-sm font-bold text-slate-500">{item.address}, {item.city}</p>
-                  <p className="mt-1 text-sm text-slate-500">{money(item.hourlyPrice)} · {formatTime(item.openingTime)} - {formatTime(item.closingTime)} · {item.courtType || 'Court'}</p>
-                </div>
-                <div className="flex gap-2">
-                  <button className="btn-soft px-4 py-2" onClick={() => edit(item)}>Edit</button>
-                  <button className="btn-navy px-4 py-2" onClick={() => remove(item.futsalId)}>Delete</button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-        <Pagination page={page} totalPages={totalPages} onPage={setPage} />
       </div>
+
+      {drawerOpen && (
+        <div className="admin-modal-backdrop fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4">
+          <button className="absolute inset-0 cursor-default" type="button" aria-label="Close venue form" onClick={closeDrawer} />
+          <form className="admin-modal-panel relative z-10 flex max-h-[88vh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl" onSubmit={submit}>
+            <div className="border-b border-slate-200 px-6 py-5">
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <p className="eyebrow">{editingId ? 'Edit venue' : 'New venue'}</p>
+                  <h3 className="mt-2 text-2xl font-black text-slate-950">{editingId ? form.name || 'Edit venue' : 'Add venue'}</h3>
+                  <p className="mt-1 text-sm text-slate-500">Only the selected section is shown to keep the form focused.</p>
+                </div>
+                <button
+                  type="button"
+                  aria-label="Close venue form"
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-green-200 hover:text-green-700 focus:outline-none focus:ring-4 focus:ring-green-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  onClick={closeDrawer}
+                  disabled={saving || uploading}
+                >
+                  <X size={20} strokeWidth={2.5} />
+                </button>
+              </div>
+              <div className="mt-5 grid grid-cols-4 gap-2 rounded-2xl bg-slate-100 p-1">
+                {tabs.map((tab) => (
+                  <button
+                    type="button"
+                    key={tab.id}
+                    className={`rounded-xl px-3 py-2 text-sm font-black transition ${activeTab === tab.id ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500 hover:text-slate-950'}`}
+                    onClick={() => setActiveTab(tab.id)}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="min-h-[380px] flex-1 overflow-y-auto px-6 py-5">
+              {error && <p className="mb-4 rounded-2xl bg-red-50 p-3 text-sm font-bold text-red-700">{error}</p>}
+
+              {activeTab === 'details' && (
+                <div className="grid gap-4">
+                  <div><label className="label">Venue name</label><input className="input" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} required minLength={3} maxLength={80} placeholder="Rave futsal" /></div>
+                  <div><label className="label">Surface type</label><input className="input" value={form.courtType || ''} onChange={(event) => setForm({ ...form, courtType: event.target.value })} maxLength={60} placeholder="Indoor turf" /></div>
+                  <div><label className="label">Description</label><textarea className="input min-h-28" maxLength={250} value={form.description || ''} onChange={(event) => setForm({ ...form, description: event.target.value })} placeholder="Parking, lighting, facilities, or short venue note" /></div>
+                  <label className="flex items-center justify-between rounded-2xl bg-slate-50 p-4 font-bold text-slate-700">
+                    <span>Verified venue</span>
+                    <input type="checkbox" checked={Boolean(form.verified)} onChange={(event) => setForm({ ...form, verified: event.target.checked })} />
+                  </label>
+                </div>
+              )}
+
+              {activeTab === 'location' && (
+                <div className="grid gap-4">
+                  <div><label className="label">Address</label><input className="input" value={form.address} onChange={(event) => setForm({ ...form, address: event.target.value })} required minLength={5} maxLength={120} placeholder="Kapan, Kathmandu" /></div>
+                  <div><label className="label">City</label><input className="input" value={form.city} onChange={(event) => setForm({ ...form, city: event.target.value })} required minLength={2} maxLength={50} placeholder="Kathmandu" /></div>
+                  <div><label className="label">Phone</label><input className="input" value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} required pattern="^(98|97|96)\d{8}$" placeholder="98XXXXXXXX" /></div>
+                </div>
+              )}
+
+              {activeTab === 'schedule' && (
+                <div className="grid gap-4">
+                  <div><label className="label">Price per hour</label><input className="input" type="number" min={1} step="1" value={form.hourlyPrice} onChange={(event) => setForm({ ...form, hourlyPrice: Number(event.target.value) })} required /></div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div><label className="label">Opening time</label><input className="input" type="time" value={toTimeInput(form.openingTime)} onChange={(event) => setForm({ ...form, openingTime: withSeconds(event.target.value) })} required /></div>
+                    <div><label className="label">Closing time</label><input className="input" type="time" value={toTimeInput(form.closingTime)} onChange={(event) => setForm({ ...form, closingTime: withSeconds(event.target.value) })} required /></div>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'media' && (
+                <div className="grid gap-4">
+                  <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-5 text-center">
+                    <ImageIcon className="mx-auto text-green-600" size={26} />
+                    <h4 className="mt-3 font-black text-slate-950">Upload venue images</h4>
+                    <p className="mt-1 text-sm text-slate-500">Use one clear cover photo and optional gallery images.</p>
+                  </div>
+                  <div><label className="label">Cover image</label><input className="input" type="file" accept="image/png,image/jpeg" disabled={uploading} onChange={(event) => uploadSingle(event.target.files?.[0])} /></div>
+                  <div><label className="label">Gallery images</label><input className="input" type="file" accept="image/png,image/jpeg" multiple disabled={uploading} onChange={(event) => uploadMany(event.target.files)} /></div>
+                  {imageUrls.length > 0 && (
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                      {imageUrls.map((url) => (
+                        <div key={url} className="relative overflow-hidden rounded-2xl border border-slate-200">
+                          <img src={url} alt="" className="h-28 w-full object-cover" />
+                          <button type="button" className="absolute right-2 top-2 rounded-full bg-white/90 px-2 py-0.5 text-xs font-black text-slate-700" onClick={() => removeImage(url)}>x</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="border-t border-slate-200 bg-white px-6 py-5">
+              <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end">
+                <button type="button" className="btn-soft min-w-32 px-6 py-3" onClick={closeDrawer} disabled={saving || uploading}>Cancel</button>
+                <button className="btn-primary min-w-44 px-6 py-3" disabled={saving || uploading}>{saving ? 'Saving...' : editingId ? 'Save changes' : 'Create venue'}</button>
+              </div>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4">
+          <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
+            <p className="eyebrow">Delete venue</p>
+            <h3 className="mt-2 text-2xl font-black text-slate-950">Remove {deleteTarget.name}?</h3>
+            <p className="mt-3 text-sm leading-6 text-slate-500">
+              The backend will block this if the venue has active bookings or booking history. This keeps historical booking data protected.
+            </p>
+            {error && <p className="mt-4 rounded-2xl bg-red-50 p-3 text-sm font-bold text-red-700">{error}</p>}
+            <div className="mt-6 flex gap-2">
+              <button className="btn-soft flex-1" disabled={deletingId !== null} onClick={() => setDeleteTarget(null)}>Cancel</button>
+              <button className="btn-navy flex-1" disabled={deletingId !== null} onClick={confirmDelete}>
+                {deletingId === deleteTarget.futsalId ? 'Deleting...' : 'Delete venue'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
