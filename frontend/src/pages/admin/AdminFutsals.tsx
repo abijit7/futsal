@@ -245,9 +245,9 @@ export function AdminFutsals() {
           {loading ? <LoadingState /> : items.length === 0 ? (
             <EmptyState title="No venues found" description="Create a venue or adjust your filters." action={<button className="btn-primary" onClick={openCreate}>Add venue</button>} />
           ) : (
-            <div className="grid gap-4">
+            <div className="motion-stagger grid gap-4">
               {items.map((item) => (
-                <div key={item.futsalId} className="rounded-3xl border border-slate-200 bg-white p-4 transition hover:border-green-200 hover:shadow-sm">
+                <div key={item.futsalId} className="rounded-3xl border border-slate-200 bg-white p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-green-200 hover:shadow-sm">
                   <div className="grid gap-4 md:grid-cols-[176px_minmax(0,1fr)_auto] md:items-center">
                     <img src={imageForVenue(item.imageUrl || item.imageUrls?.[0])} alt="" className="h-32 w-full rounded-2xl object-cover md:h-28" />
                     <div className="min-w-0">

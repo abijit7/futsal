@@ -63,7 +63,7 @@ export function Venues() {
 
       {error && <p className="mb-5 rounded-2xl bg-red-50 p-4 text-sm font-bold text-red-700">{error}</p>}
       {loading ? <LoadingState /> : items.length === 0 ? <EmptyState title="No venues found" /> : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="motion-stagger grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {items.map((item) => <VenueCard key={item.futsalId} futsal={item} />)}
         </div>
       )}

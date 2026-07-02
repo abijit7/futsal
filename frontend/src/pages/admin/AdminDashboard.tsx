@@ -24,7 +24,7 @@ const cards = [
 
 export function AdminDashboard() {
   return (
-    <section className="grid gap-5 lg:grid-cols-3">
+    <section className="motion-stagger grid gap-5 lg:grid-cols-3">
       {cards.map(({ title, text, href, icon: Icon }) => (
         <Link key={href} to={href} className="panel p-6 transition hover:-translate-y-0.5 hover:shadow-lg">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-green-50 text-green-700">

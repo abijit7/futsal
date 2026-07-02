@@ -1,19 +1,23 @@
 import { ArrowLeft } from 'lucide-react';
-import { Link, NavLink, Outlet } from 'react-router-dom';
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { Navbar } from './Navbar';
 import { useAuth } from '../context/AuthContext';
 
 export function Layout() {
+  const location = useLocation();
   return (
     <div className="app-shell">
       <Navbar />
-      <Outlet />
+      <div key={location.pathname} className="page-transition">
+        <Outlet />
+      </div>
     </div>
   );
 }
 
 export function AdminLayout() {
   const { user } = useAuth();
+  const location = useLocation();
   const links = [
     ['Overview', '/admin'],
     ['Futsals', '/admin/futsals'],
@@ -22,8 +26,8 @@ export function AdminLayout() {
     ['Users', '/admin/users']
   ];
   return (
-    <div className="container-page py-8">
-      <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+    <div className="container-page page-transition py-8">
+      <div className="motion-section mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <p className="eyebrow">Admin Console</p>
           <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-950">Operations dashboard</h1>
@@ -35,7 +39,7 @@ export function AdminLayout() {
         </Link>
       </div>
       <div className="admin-grid">
-        <aside className="panel h-max p-3">
+        <aside className="panel motion-section h-max p-3">
           <Link to="/" className="mb-3 flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-sm font-black text-slate-700 transition hover:border-green-200 hover:text-green-700">
             <ArrowLeft size={16} />
             Back to site
@@ -51,7 +55,9 @@ export function AdminLayout() {
             </NavLink>
           ))}
         </aside>
-        <Outlet />
+        <div key={location.pathname} className="admin-content-motion">
+          <Outlet />
+        </div>
       </div>
     </div>
   );

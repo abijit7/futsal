@@ -300,7 +300,7 @@ export function AdminSlots() {
                 No slots on this date.
               </div>
             ) : (
-              <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
+              <div className="motion-stagger mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
                 {slots.map((slot) => (
                   <button
                     key={slot.slotId}
@@ -325,7 +325,7 @@ export function AdminSlots() {
           ) : slots.length === 0 ? (
             <EmptyState title="No slots found" />
           ) : (
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            <div className="motion-stagger grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {slots.map((slot) => (
                 <article key={slot.slotId} className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
                   <div className="flex items-start justify-between gap-3">

@@ -60,7 +60,7 @@ export function MyBookings() {
 
       {error && <p className="mb-5 rounded-2xl bg-red-50 p-4 text-sm font-bold text-red-700">{error}</p>}
       {loading ? <LoadingState /> : items.length === 0 ? <EmptyState title="No bookings found" /> : (
-        <div className="grid gap-4">
+        <div className="motion-stagger grid gap-4">
           {items.map((booking) => (
             <article key={booking.bookingId} className="panel p-5">
               <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">

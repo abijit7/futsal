@@ -31,7 +31,7 @@ export function AdminUsers() {
         <div className="table-wrap">
           <table className="min-w-full text-left text-sm">
             <thead className="bg-slate-50 text-xs uppercase tracking-widest text-slate-500"><tr><th className="p-4">Name</th><th className="p-4">Email</th><th className="p-4">Phone</th><th className="p-4">Role</th><th className="p-4"></th></tr></thead>
-            <tbody>{items.map((user) => <tr key={user.userId} className="border-t border-slate-100"><td className="p-4 font-black">{user.name}</td><td className="p-4">{user.email}</td><td className="p-4">{user.phone}</td><td className="p-4"><span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black">{user.role}</span></td><td className="p-4 text-right"><button className="btn-navy px-4 py-2" onClick={() => remove(user.userId)}>Delete</button></td></tr>)}</tbody>
+            <tbody className="motion-stagger">{items.map((user) => <tr key={user.userId} className="border-t border-slate-100 transition-colors hover:bg-slate-50"><td className="p-4 font-black">{user.name}</td><td className="p-4">{user.email}</td><td className="p-4">{user.phone}</td><td className="p-4"><span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black">{user.role}</span></td><td className="p-4 text-right"><button className="btn-navy px-4 py-2" onClick={() => remove(user.userId)}>Delete</button></td></tr>)}</tbody>
           </table>
         </div>
       )}

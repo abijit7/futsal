@@ -1,19 +1,19 @@
 import { Bell, ChevronDown, LayoutDashboard, LogOut, Menu, Settings, User, X } from 'lucide-react';
-import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useAnimatedDisclosure } from '../hooks/useAnimatedDisclosure';
 
 export function Navbar() {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [profileOpen, setProfileOpen] = useState(false);
+  const mobileMenu = useAnimatedDisclosure(220);
+  const profileMenu = useAnimatedDisclosure(180);
   const { user, isAdmin, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const isLoggedIn = Boolean(user?.authToken);
 
   const go = (path: string) => {
-    setMenuOpen(false);
-    setProfileOpen(false);
+    mobileMenu.close();
+    profileMenu.close();
     if (path === '/#how-it-works') {
       navigate('/');
       window.setTimeout(() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
@@ -25,10 +25,10 @@ export function Navbar() {
   const isActive = (path: string) => path !== '/' && location.pathname.startsWith(path);
 
   return (
-    <nav className="sticky top-0 z-50 w-full" style={{ background: 'var(--futsal-navy)' }}>
+    <nav className="sticky top-0 z-50 w-full shadow-sm shadow-slate-950/10" style={{ background: 'var(--futsal-navy)' }}>
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
-          <button onClick={() => go('/')} className="flex items-center gap-2 focus:outline-none">
+          <button onClick={() => go('/')} className="motion-press flex items-center gap-2 focus:outline-none">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg" style={{ background: 'var(--futsal-green)' }}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <circle cx="12" cy="12" r="10" stroke="white" strokeWidth="2" />
@@ -47,21 +47,21 @@ export function Navbar() {
           <div className="hidden items-center gap-1 md:flex">
             <button
               onClick={() => go('/venues')}
-              className="rounded-lg px-4 py-2 text-sm font-medium transition-colors"
+              className="motion-press rounded-lg px-4 py-2 text-sm font-medium transition-colors"
               style={{ color: isActive('/venues') ? 'var(--futsal-green-light)' : '#94A3B8' }}
             >
               Find Venues
             </button>
             <button
               onClick={() => go('/#how-it-works')}
-              className="rounded-lg px-4 py-2 text-sm font-medium transition-colors"
+              className="motion-press rounded-lg px-4 py-2 text-sm font-medium transition-colors"
               style={{ color: '#94A3B8' }}
             >
               How it Works
             </button>
             <button
               onClick={() => go('/booking')}
-              className="rounded-lg px-4 py-2 text-sm font-medium transition-colors"
+              className="motion-press rounded-lg px-4 py-2 text-sm font-medium transition-colors"
               style={{ color: isActive('/booking') ? 'var(--futsal-green-light)' : '#94A3B8' }}
             >
               Pricing
@@ -70,7 +70,7 @@ export function Navbar() {
 
           <div className="flex items-center gap-3">
             {isLoggedIn && (
-              <button className="relative rounded-lg p-2 transition-colors" style={{ color: '#94A3B8' }} aria-label="Notifications">
+              <button className="motion-press relative rounded-lg p-2 transition-colors" style={{ color: '#94A3B8' }} aria-label="Notifications">
                 <Bell size={18} />
                 <span className="absolute right-1 top-1 h-2 w-2 rounded-full" style={{ background: 'var(--futsal-green)' }} />
               </button>
@@ -79,18 +79,18 @@ export function Navbar() {
             {isLoggedIn ? (
               <div className="relative">
                 <button
-                  onClick={() => setProfileOpen(!profileOpen)}
-                  className="flex items-center gap-2 rounded-lg px-3 py-1.5 transition-colors"
+                  onClick={profileMenu.toggle}
+                  className="motion-press flex items-center gap-2 rounded-lg px-3 py-1.5 transition-colors"
                   style={{ background: 'var(--futsal-navy-mid)' }}
                 >
                   <div className="flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold text-white" style={{ background: 'var(--futsal-green)' }}>
                     {isAdmin ? 'AD' : initials(user?.name)}
                   </div>
                   <span className="hidden text-sm font-medium text-white sm:block">{isAdmin ? 'Admin' : user?.name?.split(' ')[0] || 'User'}</span>
-                  <ChevronDown size={14} style={{ color: '#64748B' }} />
+                  <ChevronDown className={`transition-transform duration-200 ${profileMenu.isOpen ? 'rotate-180' : ''}`} size={14} style={{ color: '#64748B' }} />
                 </button>
-                {profileOpen && (
-                  <div className="absolute right-0 top-full z-50 mt-2 w-48 overflow-hidden rounded-xl border bg-white shadow-xl" style={{ borderColor: 'var(--border)' }}>
+                {profileMenu.isMounted && (
+                  <div className="motion-popover absolute right-0 top-full z-50 mt-2 w-48 overflow-hidden rounded-xl border bg-white shadow-xl" data-state={profileMenu.state} style={{ borderColor: 'var(--border)' }}>
                     <div className="border-b px-4 py-3" style={{ borderColor: 'var(--border)' }}>
                       <p className="text-sm font-semibold" style={{ color: 'var(--futsal-navy)' }}>{user?.name}</p>
                       <p className="text-xs" style={{ color: 'var(--muted-foreground)' }}>{user?.email}</p>
@@ -114,24 +114,24 @@ export function Navbar() {
               </div>
             ) : (
               <div className="hidden items-center gap-2 md:flex">
-                <Link to="/login" className="rounded-lg px-4 py-2 text-sm font-medium transition-colors" style={{ color: '#CBD5E1' }}>
+                <Link to="/login" className="motion-press rounded-lg px-4 py-2 text-sm font-medium transition-colors" style={{ color: '#CBD5E1' }}>
                   Sign In
                 </Link>
-                <Link to="/register" className="rounded-lg px-4 py-2 text-sm font-semibold transition-colors" style={{ background: 'var(--futsal-green)', color: 'white' }}>
+                <Link to="/register" className="motion-press rounded-lg px-4 py-2 text-sm font-semibold transition-colors" style={{ background: 'var(--futsal-green)', color: 'white' }}>
                   Get Started
                 </Link>
               </div>
             )}
 
-            <button onClick={() => setMenuOpen(!menuOpen)} className="rounded-lg p-2 md:hidden" style={{ color: '#94A3B8' }} aria-label="Toggle navigation">
-              {menuOpen ? <X size={20} /> : <Menu size={20} />}
+            <button onClick={mobileMenu.toggle} className="motion-press rounded-lg p-2 md:hidden" style={{ color: '#94A3B8' }} aria-label="Toggle navigation" aria-expanded={mobileMenu.isOpen}>
+              {mobileMenu.isOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
           </div>
         </div>
       </div>
 
-      {menuOpen && (
-        <div className="space-y-1 border-t px-4 py-3 md:hidden" style={{ background: 'var(--futsal-navy-mid)', borderColor: 'rgba(255,255,255,0.08)' }}>
+      {mobileMenu.isMounted && (
+        <div className="motion-mobile-menu space-y-1 border-t px-4 py-3 md:hidden" data-state={mobileMenu.state} style={{ background: 'var(--futsal-navy-mid)', borderColor: 'rgba(255,255,255,0.08)' }}>
           <button onClick={() => go('/venues')} className="block w-full rounded-lg px-3 py-2 text-left text-sm" style={{ color: '#CBD5E1' }}>Find Venues</button>
           <button onClick={() => go('/#how-it-works')} className="block w-full rounded-lg px-3 py-2 text-left text-sm" style={{ color: '#CBD5E1' }}>How it Works</button>
           <button onClick={() => go('/booking')} className="block w-full rounded-lg px-3 py-2 text-left text-sm" style={{ color: '#CBD5E1' }}>Pricing</button>

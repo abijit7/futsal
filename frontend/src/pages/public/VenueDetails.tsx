@@ -121,11 +121,11 @@ export function VenueDetails() {
 
           <section className="panel mt-7 p-6">
             <h2 className="flex items-center gap-3 text-2xl font-black text-slate-950"><Calendar className="text-green-600" size={24} /> Select Date</h2>
-            <div className="mt-6 flex gap-3 overflow-x-auto pb-2">
+            <div className="motion-stagger mt-6 flex gap-3 overflow-x-auto pb-2">
               {dates.map((date) => (
                 <button
                   key={date.value}
-                  className={`flex min-h-28 min-w-24 shrink-0 flex-col items-center justify-center rounded-2xl border px-5 py-4 text-center font-black transition ${selectedDate === date.value ? 'border-slate-950 bg-slate-950 text-white' : 'border-slate-200 bg-slate-100 text-slate-600 hover:border-green-300'}`}
+                  className={`flex min-h-28 min-w-24 shrink-0 flex-col items-center justify-center rounded-2xl border px-5 py-4 text-center font-black transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] ${selectedDate === date.value ? 'border-slate-950 bg-slate-950 text-white' : 'border-slate-200 bg-slate-100 text-slate-600 hover:border-green-300'}`}
                   onClick={() => setSelectedDate(date.value)}
                 >
                   <span className="text-sm uppercase">{date.weekday}</span>
@@ -146,14 +146,14 @@ export function VenueDetails() {
             </div>
             <div className="mt-6">
               {loadingSlots ? <LoadingState /> : slots.length === 0 ? <EmptyState title="No slots for this date" /> : (
-                <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-5">
+                <div className="motion-stagger grid gap-3 sm:grid-cols-3 xl:grid-cols-5">
                   {slots.map((slot) => {
                     const active = selectedSlot?.slotId === slot.slotId;
                     return (
                       <button
                         key={slot.slotId}
                         disabled={!slot.available}
-                        className={`rounded-2xl px-4 py-4 text-center text-base font-black transition ${active ? 'bg-slate-950 text-white shadow-lg shadow-slate-950/15' : slot.available ? 'bg-green-50 text-green-700 hover:bg-green-100' : 'cursor-not-allowed bg-slate-200 text-slate-500'}`}
+                        className={`rounded-2xl px-4 py-4 text-center text-base font-black transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] disabled:hover:translate-y-0 disabled:active:scale-100 ${active ? 'bg-slate-950 text-white shadow-lg shadow-slate-950/15' : slot.available ? 'bg-green-50 text-green-700 hover:bg-green-100' : 'cursor-not-allowed bg-slate-200 text-slate-500'}`}
                         onClick={() => setSelectedSlot(active ? null : slot)}
                       >
                         {formatTimeCompact(slot.startTime)}
