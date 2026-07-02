@@ -4,7 +4,8 @@ export function money(value?: number) {
 
 export function formatDate(value?: string) {
   if (!value) return 'Not set';
-  return new Date(`${value}T00:00:00`).toLocaleDateString('en-NP', {
+  const normalized = value.includes('T') ? value : `${value}T00:00:00`;
+  return new Date(normalized).toLocaleDateString('en-NP', {
     weekday: 'short',
     month: 'short',
     day: 'numeric',

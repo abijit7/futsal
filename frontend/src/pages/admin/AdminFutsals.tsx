@@ -303,7 +303,7 @@ export function AdminFutsals() {
                   <X size={20} strokeWidth={2.5} />
                 </button>
               </div>
-              <div className="mt-5 grid grid-cols-4 gap-2 rounded-2xl bg-slate-100 p-1">
+              <div className="mt-5 grid grid-cols-2 gap-2 rounded-2xl bg-slate-100 p-1 sm:grid-cols-4">
                 {tabs.map((tab) => (
                   <button
                     type="button"
@@ -364,7 +364,14 @@ export function AdminFutsals() {
                       {imageUrls.map((url) => (
                         <div key={url} className="relative overflow-hidden rounded-2xl border border-slate-200">
                           <img src={url} alt="" className="h-28 w-full object-cover" />
-                          <button type="button" className="absolute right-2 top-2 rounded-full bg-white/90 px-2 py-0.5 text-xs font-black text-slate-700" onClick={() => removeImage(url)}>x</button>
+                          <button
+                            type="button"
+                            className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-slate-700 shadow-sm transition hover:bg-white hover:text-red-600 focus:outline-none focus:ring-4 focus:ring-red-100"
+                            aria-label="Remove venue image"
+                            onClick={() => removeImage(url)}
+                          >
+                            <X size={16} strokeWidth={2.6} />
+                          </button>
                         </div>
                       ))}
                     </div>
@@ -392,7 +399,7 @@ export function AdminFutsals() {
               The backend will block this if the venue has active bookings or booking history. This keeps historical booking data protected.
             </p>
             {error && <p className="mt-4 rounded-2xl bg-red-50 p-3 text-sm font-bold text-red-700">{error}</p>}
-            <div className="mt-6 flex gap-2">
+            <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row">
               <button className="btn-soft flex-1" disabled={deletingId !== null} onClick={() => setDeleteTarget(null)}>Cancel</button>
               <button className="btn-navy flex-1" disabled={deletingId !== null} onClick={confirmDelete}>
                 {deletingId === deleteTarget.futsalId ? 'Deleting...' : 'Delete venue'}

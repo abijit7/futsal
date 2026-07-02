@@ -175,14 +175,14 @@ export function VenueDetails() {
             <p className="text-xs font-black uppercase text-slate-500">Selected slot</p>
             <div className="mt-3 flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-100 px-4 py-4 text-base font-black text-slate-500">
               <Clock size={18} />
-              <span>{selectedSlot ? timeRange(selectedSlot.startTime, selectedSlot.endTime) : 'Select a time slot ->'}</span>
+              <span>{selectedSlot ? timeRange(selectedSlot.startTime, selectedSlot.endTime) : 'Select a time slot'}</span>
             </div>
 
             <p className="mt-6 text-xs font-black uppercase text-slate-500">Duration</p>
             <div className="mt-3 flex items-center justify-between">
-              <button className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-950 disabled:opacity-40" disabled><Minus size={18} /></button>
+              <button className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-950 disabled:opacity-40" aria-label="Decrease duration" disabled><Minus size={18} /></button>
               <span className="font-black text-slate-950">{selectedSlot ? slotDuration(selectedSlot.startTime, selectedSlot.endTime) || '1 hr' : '1 hour'}</span>
-              <button className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-950 disabled:opacity-40" disabled><Plus size={18} /></button>
+              <button className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-950 disabled:opacity-40" aria-label="Increase duration" disabled><Plus size={18} /></button>
             </div>
 
             <div className="mt-6 rounded-3xl bg-slate-100 p-5 text-slate-600">

@@ -53,12 +53,37 @@
   --futsal-navy-light: #243B55;
   --navy: var(--futsal-navy);
   --green: var(--futsal-green);
+  --surface-page: #F8FAFC;
+  --surface-card: #FFFFFF;
+  --surface-muted: #F1F5F9;
+  --text-strong: #020617;
+  --text-body: #334155;
+  --text-muted: #64748B;
+  --border-subtle: #E2E8F0;
+  --border-strong: #CBD5E1;
+  --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.06), 0 14px 34px rgba(15, 23, 42, 0.04);
+  --shadow-float: 0 18px 48px rgba(15, 23, 42, 0.16);
+  --radius-sm: 0.75rem;
+  --radius-md: 1rem;
+  --radius-lg: 1.5rem;
+  --radius-xl: 2rem;
+  --control-sm: 2.5rem;
+  --control-md: 3rem;
+  --control-lg: 3.5rem;
+  --table-row-md: 4.25rem;
+  --z-nav: 50;
+  --z-popover: 60;
+  --z-modal: 70;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --transition-fast: 160ms var(--ease-out);
+  --transition-med: 240ms var(--ease-out);
 }
 
 body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  overflow-x: hidden;
   background: var(--background);
   font-family: var(--font-body);
   color: var(--foreground);
@@ -95,7 +120,9 @@ textarea:disabled,
 }
 
 .app-shell {
-  @apply min-h-screen bg-slate-50 text-slate-950;
+  background: var(--surface-page);
+  color: var(--text-strong);
+  @apply min-h-screen;
 }
 
 .container-page {
@@ -103,7 +130,10 @@ textarea:disabled,
 }
 
 .panel {
-  @apply rounded-3xl border border-slate-200 bg-white shadow-sm transition-all duration-300;
+  border-color: var(--border-subtle);
+  background: var(--surface-card);
+  box-shadow: var(--shadow-card);
+  @apply rounded-3xl border transition-all duration-300;
 }
 
 .btn-primary {
@@ -119,7 +149,8 @@ textarea:disabled,
 }
 
 .input {
-  @apply w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition-all duration-200 placeholder:text-slate-400 focus:-translate-y-0.5 focus:border-green-400 focus:ring-4 focus:ring-green-100;
+  min-height: var(--control-md);
+  @apply w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition-all duration-200 placeholder:text-slate-400 focus:-translate-y-0.5 focus:border-green-400 focus:ring-4 focus:ring-green-100 disabled:bg-slate-100 disabled:text-slate-400;
 }
 
 select.input {
@@ -144,6 +175,42 @@ select.input option {
   @apply bg-white text-slate-900;
 }
 
+input[type="date"].input,
+input[type="time"].input {
+  @apply cursor-pointer font-semibold text-slate-800 hover:border-green-200;
+}
+
+input[type="date"].input::-webkit-calendar-picker-indicator,
+input[type="time"].input::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+input[type="file"].input {
+  @apply cursor-pointer text-sm font-semibold text-slate-600;
+}
+
+input[type="file"].input::file-selector-button {
+  margin: -0.35rem 0.75rem -0.35rem -0.5rem;
+  border: 0;
+  border-radius: 0.9rem;
+  background: #f1f5f9;
+  color: #0f172a;
+  cursor: pointer;
+  font-weight: 800;
+  padding: 0.55rem 0.9rem;
+  transition: background 160ms ease, color 160ms ease;
+}
+
+input[type="file"].input::file-selector-button:hover {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+input[type="checkbox"] {
+  accent-color: var(--futsal-green);
+}
+
 .label {
   @apply mb-2 block text-sm font-bold text-slate-700;
 }
@@ -154,6 +221,35 @@ select.input option {
 
 .table-wrap {
   @apply overflow-x-auto rounded-3xl border border-slate-200 bg-white shadow-sm;
+}
+
+.table-wrap table {
+  min-width: 720px;
+}
+
+.table-wrap th,
+.table-wrap td {
+  white-space: nowrap;
+}
+
+.table-wrap tbody tr {
+  min-height: var(--table-row-md);
+}
+
+.data-section-title {
+  @apply text-lg font-black tracking-tight text-slate-950;
+}
+
+.data-section-description {
+  @apply mt-1 text-sm font-semibold leading-6 text-slate-500;
+}
+
+.mobile-data-card {
+  @apply rounded-3xl border border-slate-200 bg-white p-4 shadow-sm;
+}
+
+.focus-ring {
+  @apply focus:outline-none focus:ring-4 focus:ring-green-100;
 }
 
 .admin-grid {

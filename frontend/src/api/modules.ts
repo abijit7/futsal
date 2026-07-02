@@ -15,7 +15,7 @@ export const authApi = {
 export const userApi = {
   list: (page = 0, size = 10) => api.get<PagedResponse<User>>(`/users?${query({ page, size })}`).then((res) => res.data),
   get: (id: number) => api.get<User>(`/users/${id}`).then((res) => res.data),
-  update: (id: number, payload: { name: string; phone: string }) => api.put<User>(`/users/${id}`, payload).then((res) => res.data),
+  update: (id: number, payload: { name?: string; phone?: string }) => api.put<User>(`/users/${id}`, payload).then((res) => res.data),
   changePassword: (id: number, payload: { currentPassword: string; newPassword: string }) =>
     api.put<{ message: string }>(`/users/${id}/password`, payload).then((res) => res.data),
   requestEmailVerification: (id: number) =>

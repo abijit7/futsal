@@ -3,6 +3,7 @@ import { CalendarDays, Clock3, Pencil, Plus, Trash2, Wand2, X } from 'lucide-rea
 import { futsalApi, slotApi } from '../../api/modules';
 import { Pagination } from '../../components/Pagination';
 import { EmptyState, LoadingState } from '../../components/State';
+import { StatusBadge } from '../../components/StatusBadge';
 import type { Futsal, SlotGenerationPayload, TimeSlot, TimeSlotPayload } from '../../types/api';
 import { formatDate, formatTimeCompact, slotDuration, timeRange, todayInput } from '../../utils/format';
 
@@ -235,7 +236,7 @@ export function AdminSlots() {
                 {selectedFutsal ? selectedFutsal.name : 'Select a venue'} - {formatDate(filterDate)}
               </p>
             </div>
-            <div className="grid gap-3 md:grid-cols-[minmax(210px,280px)_180px_auto_auto_auto] md:items-end">
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(210px,280px)_180px_auto_auto_auto] xl:items-end">
               <div>
                 <label className="label">Venue</label>
                 <select
@@ -338,7 +339,7 @@ export function AdminSlots() {
                         {slotDuration(slot.startTime, slot.endTime) || 'Custom duration'} - {formatDate(slot.slotDate)}
                       </p>
                     </div>
-                    <StatusBadge available={slot.available} />
+                    <StatusBadge status={slot.available ? 'AVAILABLE' : 'UNAVAILABLE'} label={slot.available ? 'Available' : 'Booked'} />
                   </div>
                   <p className="mt-4 truncate text-sm font-bold text-slate-600">{slot.futsal?.name || 'Futsal'}</p>
                   <div className="mt-4 flex gap-2">
@@ -401,7 +402,7 @@ export function AdminSlots() {
                 Availability is controlled by booking state. Editing keeps the current slot status.
               </div>
             </div>
-            <div className="flex justify-end gap-3 border-t border-slate-200 bg-white px-5 py-4">
+            <div className="flex flex-col-reverse gap-3 border-t border-slate-200 bg-white px-5 py-4 sm:flex-row sm:justify-end">
               <button type="button" className="btn-soft px-4 py-2 text-sm" onClick={() => setModal(null)}>Cancel</button>
               <button className="btn-primary px-4 py-2 text-sm" disabled={saving}>
                 {saving ? 'Saving' : editingId ? 'Update slot' : 'Create slot'}
@@ -461,7 +462,7 @@ export function AdminSlots() {
                 <input className="input py-2.5" value={holidayInput} onChange={(event) => setHolidayInput(event.target.value)} placeholder="2026-07-01, 2026-07-04" />
               </div>
             </div>
-            <div className="flex justify-end gap-3 border-t border-slate-200 bg-white px-5 py-4">
+            <div className="flex flex-col-reverse gap-3 border-t border-slate-200 bg-white px-5 py-4 sm:flex-row sm:justify-end">
               <button type="button" className="btn-soft px-4 py-2 text-sm" onClick={() => setModal(null)}>Cancel</button>
               <button className="btn-navy px-4 py-2 text-sm" disabled={generating}>
                 {generating ? 'Generating' : 'Generate slots'}
@@ -486,7 +487,7 @@ export function AdminSlots() {
             <p className="mt-4 text-sm font-semibold text-slate-500">
               {formatDate(deleteTarget.slotDate)} - {timeRange(deleteTarget.startTime, deleteTarget.endTime)}
             </p>
-            <div className="mt-6 flex justify-end gap-3">
+            <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
               <button type="button" className="btn-soft px-4 py-2 text-sm" onClick={() => setDeleteTarget(null)}>Cancel</button>
               <button type="button" className="btn-navy px-4 py-2 text-sm" disabled={deletingId === deleteTarget.slotId} onClick={confirmDelete}>
                 {deletingId === deleteTarget.slotId ? 'Deleting' : 'Delete slot'}
@@ -505,14 +506,6 @@ function Stat({ label, value, tone }: { label: string; value: number; tone?: 'gr
       <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">{label}</p>
       <p className={`mt-1 text-2xl font-black ${tone === 'green' ? 'text-green-600' : 'text-slate-950'}`}>{value}</p>
     </div>
-  );
-}
-
-function StatusBadge({ available }: { available: boolean }) {
-  return (
-    <span className={`rounded-full px-3 py-1 text-xs font-black ${available ? 'bg-green-50 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
-      {available ? 'Available' : 'Booked'}
-    </span>
   );
 }
 
