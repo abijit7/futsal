@@ -97,38 +97,17 @@ export function AdminUsers() {
       {error && !loading && <ErrorState message={error} retry={load} />}
       {loading ? <LoadingState /> : !error && filteredItems.length === 0 ? <EmptyState title="No users found" description="No account matches the current filters." /> : (
         <>
-          <div className="hidden md:block">
-            <div className="table-wrap">
-              <table className="min-w-full text-left text-sm">
-                <thead className="bg-slate-50 text-xs uppercase tracking-widest text-slate-500">
-                  <tr>
-                    <th className="p-4">User</th>
-                    <th className="p-4">Contact</th>
-                    <th className="p-4">Role</th>
-                    <th className="p-4">Verification</th>
-                    <th className="p-4">Joined</th>
-                    <th className="p-4"></th>
-                  </tr>
-                </thead>
-                <tbody className="motion-stagger">
-                  {filteredItems.map((user) => (
-                    <tr key={user.userId} className="border-t border-slate-100 transition-colors hover:bg-slate-50">
-                      <td className="p-4"><UserIdentity user={user} /></td>
-                      <td className="p-4"><ContactBlock user={user} /></td>
-                      <td className="p-4"><RoleBadge user={user} /></td>
-                      <td className="p-4"><div className="flex flex-wrap gap-2"><VerificationGroup user={user} /></div></td>
-                      <td className="p-4 font-semibold text-slate-500">{user.createdAt ? formatDate(user.createdAt) : 'Not recorded'}</td>
-                      <td className="p-4 text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button type="button" variant="outline" size="sm" onClick={() => setSelected(user)}><Eye size={16} /> View</Button>
-                          <Button type="button" variant="destructive" size="sm" onClick={() => setDeleteTarget(user)}><Trash2 size={16} /> Delete</Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+          <div className="motion-stagger hidden gap-3 md:grid">
+            {filteredItems.map((user) => (
+              <article key={user.userId} className="panel grid min-w-0 gap-4 p-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1.35fr)_minmax(0,1fr)] xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1.25fr)_auto_minmax(0,1fr)_minmax(8rem,0.75fr)_auto] xl:items-center">
+                <UserIdentity user={user} />
+                <ContactBlock user={user} />
+                <RoleBadge user={user} />
+                <div className="flex min-w-0 flex-wrap gap-2"><VerificationGroup user={user} /></div>
+                <InfoMeta label="Joined" value={user.createdAt ? formatDate(user.createdAt) : 'Not recorded'} />
+                <UserActions user={user} onView={setSelected} onDelete={setDeleteTarget} />
+              </article>
+            ))}
           </div>
 
           <div className="motion-stagger grid gap-3 md:hidden">
@@ -178,6 +157,24 @@ export function AdminUsers() {
         </ModalShell>
       )}
     </section>
+  );
+}
+
+function UserActions({ user, onView, onDelete }: { user: User; onView: (user: User) => void; onDelete: (user: User) => void }) {
+  return (
+    <div className="flex min-w-0 flex-wrap gap-2 xl:justify-end">
+      <Button type="button" variant="outline" size="sm" className="flex-1 xl:flex-none" onClick={() => onView(user)}><Eye size={16} /> View</Button>
+      <Button type="button" variant="destructive" size="sm" className="flex-1 xl:flex-none" onClick={() => onDelete(user)}><Trash2 size={16} /> Delete</Button>
+    </div>
+  );
+}
+
+function InfoMeta({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0">
+      <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">{label}</p>
+      <p className="mt-1 truncate text-sm font-bold text-slate-600">{value}</p>
+    </div>
   );
 }
 

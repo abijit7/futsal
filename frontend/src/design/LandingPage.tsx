@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { Search, MapPin, Clock, Star, ChevronRight, Shield, Zap, Users, Trophy, ArrowRight, Calendar } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { futsalApi } from "../api/modules";
 import type { Futsal } from "../types/api";
-import { imageForVenue, money } from "../utils/format";
+import { imageForVenue, money, todayInput } from "../utils/format";
 
 type View = "landing" | "venues" | "venue-detail" | "booking" | "confirmation" | "user-dashboard" | "admin-dashboard";
 
@@ -26,13 +26,21 @@ const HOW_IT_WORKS = [
 ];
 
 export function LandingPage({ onNavigate }: LandingPageProps) {
+  const navigate = useNavigate();
   const [searchLocation, setSearchLocation] = useState("");
   const [searchDate, setSearchDate] = useState("");
   const [featuredVenues, setFeaturedVenues] = useState<Futsal[]>([]);
   const [loadingVenues, setLoadingVenues] = useState(true);
   const [venueError, setVenueError] = useState("");
 
-  const handleSearch = () => onNavigate("venues");
+  const handleSearch = (location = searchLocation) => {
+    const params = new URLSearchParams();
+    const query = location.trim();
+    if (query) params.set("q", query);
+    if (searchDate) params.set("date", searchDate);
+    navigate(`/venues${params.toString() ? `?${params.toString()}` : ""}`);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   useEffect(() => {
     let active = true;
@@ -115,13 +123,14 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
                 <Calendar size={18} style={{ color: "var(--futsal-green-light)" }} />
                 <input
                   type="date"
+                  min={todayInput()}
                   value={searchDate}
                   onChange={(e) => setSearchDate(e.target.value)}
                   className="bg-transparent text-sm focus:outline-none text-slate-400"
                 />
               </div>
               <button
-                onClick={handleSearch}
+                onClick={() => handleSearch()}
                 className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm transition-all hover:opacity-90 active:scale-95"
                 style={{ background: "var(--futsal-green)", color: "white", minWidth: 140 }}
               >
@@ -134,7 +143,7 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
               {["Kuala Lumpur", "Petaling Jaya", "Shah Alam", "Subang Jaya", "Johor Bahru"].map((city) => (
                 <button
                   key={city}
-                  onClick={handleSearch}
+                  onClick={() => handleSearch(city)}
                   className="text-xs px-3 py-1.5 rounded-full transition-colors hover:opacity-80"
                   style={{ background: "rgba(255,255,255,0.08)", color: "#94A3B8", border: "1px solid rgba(255,255,255,0.1)" }}
                 >

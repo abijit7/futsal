@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
-import { CalendarDays, CreditCard, Eye, Mail, Phone, Search, Trash2, UserRound } from 'lucide-react';
+import { AlertTriangle, Ban, CalendarDays, CheckCircle2, Clock3, CreditCard, Eye, Mail, Phone, Search, Trash2, UserRound, XCircle } from 'lucide-react';
 import { bookingApi } from '../../api/modules';
 import { Pagination } from '../../components/Pagination';
 import { StatusBadge } from '../../components/StatusBadge';
@@ -19,7 +19,9 @@ export function AdminBookings() {
   const [search, setSearch] = useState('');
   const [dateFilter, setDateFilter] = useState('');
   const [selected, setSelected] = useState<Booking | null>(null);
-  const [confirm, setConfirm] = useState<{ title: string; text: string; action: () => Promise<void>; variant?: 'destructive' | 'primary' } | null>(null);
+  const [statusAction, setStatusAction] = useState<{ booking: Booking; next: BookingStatus } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Booking | null>(null);
+  const [mutatingId, setMutatingId] = useState<number | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -40,21 +42,27 @@ export function AdminBookings() {
 
   const update = async (id: number, next: BookingStatus) => {
     setError('');
+    setMutatingId(id);
     try {
       await bookingApi.updateStatus(id, next);
       await load();
     } catch {
       setError('Booking status could not be updated.');
+    } finally {
+      setMutatingId(null);
     }
   };
 
   const remove = async (id: number) => {
     setError('');
+    setMutatingId(id);
     try {
       await bookingApi.delete(id);
       await load();
     } catch {
       setError('Booking could not be deleted.');
+    } finally {
+      setMutatingId(null);
     }
   };
 
@@ -116,8 +124,8 @@ export function AdminBookings() {
       {loading ? <LoadingState /> : !error && filteredItems.length === 0 ? <EmptyState title="No bookings found" description="No booking matches the current filters." /> : (
         <div className="motion-stagger grid gap-4">
           {filteredItems.map((booking) => (
-            <article key={booking.bookingId} className="panel overflow-hidden">
-              <div className="flex flex-col gap-5 p-5 xl:flex-row xl:items-start xl:justify-between">
+            <article key={booking.bookingId} className="panel overflow-hidden border-slate-200">
+              <div className="grid gap-5 p-5 xl:grid-cols-[minmax(0,1fr)_260px]">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0">
@@ -139,20 +147,45 @@ export function AdminBookings() {
                       <span className="truncate">{booking.user.email}</span>
                     </div>
                   )}
+                  {booking.notes && (
+                    <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-3 text-sm font-semibold leading-6 text-slate-500">
+                      <span className="font-black text-slate-700">Note:</span> {booking.notes}
+                    </div>
+                  )}
                 </div>
 
-                <div className="flex flex-col gap-2 sm:flex-row xl:w-56 xl:flex-col">
-                  <Button type="button" variant="outline" size="sm" className="w-full" onClick={() => setSelected(booking)}>
-                    <Eye size={16} /> Details
-                  </Button>
-                  {nextAdminStatuses(booking.status).map((next) => (
-                    <Button key={next} type="button" variant={next === 'APPROVED' ? 'primary' : 'outline'} size="sm" className="w-full" onClick={() => setConfirm({ title: `${labelFor(next)} booking?`, text: `This will change booking #${booking.bookingId} to ${labelFor(next).toLowerCase()}.`, action: () => update(booking.bookingId, next), variant: next === 'CANCELLED' || next === 'REJECTED' ? 'destructive' : 'primary' })}>
-                      {labelFor(next)}
+                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-3">
+                  <div className="mb-3 flex items-center justify-between gap-3 px-1">
+                    <div>
+                      <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Admin action</p>
+                      <p className="text-sm font-black text-slate-900">{actionSummary(booking.status)}</p>
+                    </div>
+                    <Clock3 size={18} className="text-green-600" />
+                  </div>
+                  <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
+                    <Button type="button" variant="outline" size="sm" className="w-full bg-white" disabled={mutatingId === booking.bookingId} onClick={() => setSelected(booking)}>
+                      <Eye size={16} /> Details
                     </Button>
-                  ))}
-                  <Button type="button" variant="destructive" size="sm" className="w-full" onClick={() => setConfirm({ title: 'Delete booking?', text: `Booking #${booking.bookingId} will be permanently removed if the backend allows it.`, action: () => remove(booking.bookingId), variant: 'destructive' })}>
-                    <Trash2 size={16} /> Delete
-                  </Button>
+                    {nextAdminStatuses(booking.status).map((next) => {
+                      const config = actionConfig(next);
+                      return (
+                        <Button
+                          key={next}
+                          type="button"
+                          variant={config.variant}
+                          size="sm"
+                          className="w-full"
+                          disabled={mutatingId === booking.bookingId}
+                          onClick={() => setStatusAction({ booking, next })}
+                        >
+                          {config.icon} {config.buttonLabel}
+                        </Button>
+                      );
+                    })}
+                    <Button type="button" variant="destructive" size="sm" className="w-full" loading={mutatingId === booking.bookingId} onClick={() => setDeleteTarget(booking)}>
+                      <Trash2 size={16} /> Delete
+                    </Button>
+                  </div>
                 </div>
               </div>
             </article>
@@ -173,20 +206,61 @@ export function AdminBookings() {
         </ModalShell>
       )}
 
-      {confirm && (
+      {statusAction && (
         <ModalShell
-          title={confirm.title}
-          eyebrow="Confirm action"
-          description={confirm.text}
-          onClose={() => setConfirm(null)}
+          title={actionConfig(statusAction.next).modalTitle}
+          eyebrow="Booking decision"
+          description={actionConfig(statusAction.next).modalDescription}
+          onClose={() => setStatusAction(null)}
+          maxWidth="max-w-xl"
           footer={(
             <>
-              <Button type="button" variant="outline" onClick={() => setConfirm(null)}>Cancel</Button>
-              <Button type="button" variant={confirm.variant === 'destructive' ? 'destructive' : 'primary'} onClick={async () => { const action = confirm.action; setConfirm(null); await action(); }}>Confirm</Button>
+              <Button type="button" variant="outline" onClick={() => setStatusAction(null)}>Keep current status</Button>
+              <Button
+                type="button"
+                variant={actionConfig(statusAction.next).variant}
+                loading={mutatingId === statusAction.booking.bookingId}
+                onClick={async () => {
+                  const { booking, next } = statusAction;
+                  setStatusAction(null);
+                  await update(booking.bookingId, next);
+                }}
+              >
+                {actionConfig(statusAction.next).icon} {actionConfig(statusAction.next).confirmLabel}
+              </Button>
             </>
           )}
         >
-          <p className="text-sm font-semibold leading-6 text-slate-500">This keeps high-impact booking changes intentional and reversible only when the backend supports it.</p>
+          <DecisionPreview booking={statusAction.booking} next={statusAction.next} />
+        </ModalShell>
+      )}
+
+      {deleteTarget && (
+        <ModalShell
+          title="Delete booking?"
+          eyebrow="Permanent action"
+          description={`Booking #${deleteTarget.bookingId} will be removed if the backend allows it.`}
+          onClose={() => setDeleteTarget(null)}
+          maxWidth="max-w-xl"
+          footer={(
+            <>
+              <Button type="button" variant="outline" onClick={() => setDeleteTarget(null)}>Cancel</Button>
+              <Button
+                type="button"
+                variant="destructive"
+                loading={mutatingId === deleteTarget.bookingId}
+                onClick={async () => {
+                  const target = deleteTarget;
+                  setDeleteTarget(null);
+                  await remove(target.bookingId);
+                }}
+              >
+                <Trash2 size={16} /> Delete booking
+              </Button>
+            </>
+          )}
+        >
+          <DecisionPreview booking={deleteTarget} next="CANCELLED" destructive />
         </ModalShell>
       )}
     </section>
@@ -207,6 +281,46 @@ function paymentLabel(booking: Booking) {
   return booking.paymentRef ? `${method} · ${booking.paymentRef}` : method;
 }
 
+function DecisionPreview({ booking, next, destructive = false }: { booking: Booking; next: BookingStatus; destructive?: boolean }) {
+  const config = actionConfig(next);
+  return (
+    <div className="space-y-4">
+      <div className={`rounded-3xl border p-4 ${destructive ? 'border-red-100 bg-red-50' : config.noticeClass}`}>
+        <div className="flex gap-3">
+          <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${destructive ? 'bg-red-600 text-white' : config.iconClass}`}>
+            {destructive ? <AlertTriangle size={21} /> : config.icon}
+          </div>
+          <div>
+            <p className={`text-sm font-black ${destructive ? 'text-red-900' : config.titleClass}`}>{destructive ? 'This cannot be undone from this screen.' : config.noticeTitle}</p>
+            <p className={`mt-1 text-sm font-semibold leading-6 ${destructive ? 'text-red-700' : config.bodyClass}`}>{destructive ? 'Use delete only for invalid or duplicate records. Reject or cancel is safer when history should remain visible.' : config.noticeText}</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <InfoItem icon={<UserRound size={16} />} label="Customer" value={booking.user?.name || 'Unknown user'} />
+        <InfoItem icon={<Phone size={16} />} label="Phone" value={booking.user?.phone || 'Not provided'} />
+        <InfoItem icon={<CalendarDays size={16} />} label="Slot" value={`${formatDate(booking.timeSlot?.slotDate)} · ${timeRangeWithDuration(booking.timeSlot?.startTime, booking.timeSlot?.endTime)}`} />
+        <InfoItem icon={<CreditCard size={16} />} label="Payment" value={paymentLabel(booking)} />
+      </div>
+
+      {destructive ? (
+        <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-red-100 bg-white p-3">
+          <span className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Record action</span>
+          <span className="inline-flex rounded-full bg-red-50 px-3 py-1 text-xs font-black uppercase tracking-wide text-red-700 ring-1 ring-red-200">Delete booking</span>
+        </div>
+      ) : (
+        <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-white p-3">
+          <span className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Status change</span>
+          <StatusBadge status={booking.status} />
+          <span className="text-sm font-black text-slate-400">to</span>
+          <StatusBadge status={next} />
+        </div>
+      )}
+    </div>
+  );
+}
+
 function labelForFilter(status: BookingStatus | 'ALL') {
   if (status === 'ALL') return 'All';
   return labelFor(status);
@@ -216,6 +330,63 @@ function nextAdminStatuses(status: BookingStatus): BookingStatus[] {
   if (status === 'PENDING') return ['APPROVED', 'REJECTED', 'CANCELLED'];
   if (status === 'APPROVED') return ['CANCELLED'];
   return [];
+}
+
+function actionSummary(status: BookingStatus) {
+  if (status === 'PENDING') return 'Needs review';
+  if (status === 'APPROVED') return 'Approved slot';
+  if (status === 'REJECTED') return 'Rejected request';
+  if (status === 'CANCELLED') return 'Cancelled booking';
+  return 'Review booking';
+}
+
+function actionConfig(status: BookingStatus) {
+  if (status === 'APPROVED') {
+    return {
+      buttonLabel: 'Approve',
+      confirmLabel: 'Approve booking',
+      modalTitle: 'Approve this booking?',
+      modalDescription: 'Confirm the customer, slot, and payment reference before approving.',
+      noticeTitle: 'The slot will be confirmed for this customer.',
+      noticeText: 'Approving marks this request as accepted and removes it from the pending review queue.',
+      icon: <CheckCircle2 size={16} />,
+      variant: 'primary' as const,
+      noticeClass: 'border-green-100 bg-green-50',
+      iconClass: 'bg-green-600 text-white',
+      titleClass: 'text-green-900',
+      bodyClass: 'text-green-700'
+    };
+  }
+  if (status === 'REJECTED') {
+    return {
+      buttonLabel: 'Reject',
+      confirmLabel: 'Reject booking',
+      modalTitle: 'Reject this booking?',
+      modalDescription: 'Reject only when the request cannot be accepted.',
+      noticeTitle: 'The customer request will be rejected.',
+      noticeText: 'Use this when payment, customer details, or slot availability cannot be validated.',
+      icon: <XCircle size={16} />,
+      variant: 'outline' as const,
+      noticeClass: 'border-red-100 bg-red-50',
+      iconClass: 'bg-red-600 text-white',
+      titleClass: 'text-red-900',
+      bodyClass: 'text-red-700'
+    };
+  }
+  return {
+    buttonLabel: 'Cancel',
+    confirmLabel: 'Cancel booking',
+    modalTitle: 'Cancel this booking?',
+    modalDescription: 'Cancel keeps the booking record but removes it from active operations.',
+    noticeTitle: 'This booking will no longer be active.',
+    noticeText: 'Use cancel when the customer or venue cannot proceed after the booking was created.',
+    icon: <Ban size={16} />,
+    variant: 'outline' as const,
+    noticeClass: 'border-amber-100 bg-amber-50',
+    iconClass: 'bg-amber-500 text-white',
+    titleClass: 'text-amber-900',
+    bodyClass: 'text-amber-700'
+  };
 }
 
 function labelFor(status: BookingStatus) {

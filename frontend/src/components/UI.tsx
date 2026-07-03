@@ -1,5 +1,6 @@
 import { X } from 'lucide-react';
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from 'react';
+import { createPortal } from 'react-dom';
 
 type Tone = 'green' | 'navy' | 'amber' | 'red' | 'slate';
 
@@ -171,9 +172,9 @@ export function Field({
     <label className={`block ${className}`}>
       {label && <span className="label">{label}{required && <span className="text-red-500"> *</span>}</span>}
       <span className="relative block">
-        {prefix && <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">{prefix}</span>}
-        <input className={`input min-h-12 ${prefix ? 'pl-11' : ''} ${suffix ? 'pr-11' : ''} ${error ? 'border-red-300 focus:border-red-400 focus:ring-red-100' : ''}`} required={required} {...props} />
-        {suffix && <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400">{suffix}</span>}
+        {prefix && <span className="input-icon input-icon-left pointer-events-none text-slate-400">{prefix}</span>}
+        <input className={`input min-h-12 ${prefix ? 'input-with-prefix' : ''} ${suffix ? 'input-with-suffix' : ''} ${error ? 'border-red-300 focus:border-red-400 focus:ring-red-100' : ''}`} required={required} {...props} />
+        {suffix && <span className="input-icon input-icon-right text-slate-400">{suffix}</span>}
       </span>
       {(helper || error) && <span className={`mt-2 block text-xs font-semibold ${error ? 'text-red-600' : 'text-slate-400'}`}>{error || helper}</span>}
     </label>
@@ -234,7 +235,7 @@ export function ModalShell({
   onClose: () => void;
   maxWidth?: string;
 }) {
-  return (
+  const modal = (
     <div className="admin-modal-backdrop fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-slate-950/45 p-4">
       <button type="button" aria-label="Close modal" className="absolute inset-0 cursor-default" onClick={onClose} />
       <section className={`admin-modal-panel relative z-10 w-full ${maxWidth} overflow-hidden rounded-3xl bg-white shadow-2xl`}>
@@ -251,4 +252,6 @@ export function ModalShell({
       </section>
     </div>
   );
+
+  return typeof document === 'undefined' ? modal : createPortal(modal, document.body);
 }

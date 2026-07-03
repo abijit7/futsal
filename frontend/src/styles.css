@@ -153,6 +153,34 @@ textarea:disabled,
   @apply w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition-all duration-200 placeholder:text-slate-400 focus:-translate-y-0.5 focus:border-green-400 focus:ring-4 focus:ring-green-100 disabled:bg-slate-100 disabled:text-slate-400;
 }
 
+.input.input-with-prefix {
+  padding-left: 3rem;
+}
+
+.input.input-with-suffix {
+  padding-right: 3rem;
+}
+
+.input-icon {
+  position: absolute;
+  top: 50%;
+  z-index: 1;
+  display: inline-flex;
+  height: 1.25rem;
+  width: 1.25rem;
+  align-items: center;
+  justify-content: center;
+  transform: translateY(-50%);
+}
+
+.input-icon-left {
+  left: 1rem;
+}
+
+.input-icon-right {
+  right: 1rem;
+}
+
 select.input {
   @apply cursor-pointer pr-12 font-semibold text-slate-800 hover:border-green-200;
   appearance: none;
@@ -253,7 +281,7 @@ input[type="checkbox"] {
 }
 
 .admin-grid {
-  @apply grid gap-5 lg:grid-cols-[250px_minmax(0,1fr)];
+  @apply grid gap-5 lg:grid-cols-[280px_minmax(0,1fr)];
 }
 
 .page-transition {
