@@ -1,0 +1,76 @@
+package com.futsal.dto;
+
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.List;
+
+public class FutsalResponse {
+    private Long futsalId;
+    private String name;
+    private String address;
+    private String city;
+    private String phone;
+    private java.math.BigDecimal hourlyPrice;
+    private LocalTime openingTime;
+    private LocalTime closingTime;
+    private String imageUrl;
+    private List<String> imageUrls;
+    private List<FutsalImageResponse> images;
+    private boolean verified;
+    private String courtType;
+    private java.math.BigDecimal rating;
+    private Integer reviewCount;
+    private String description;
+    private LocalDateTime createdAt;
+
+    public Long getFutsalId() { return futsalId; }
+    public void setFutsalId(Long futsalId) { this.futsalId = futsalId; }
+
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+
+    public String getAddress() { return address; }
+    public void setAddress(String address) { this.address = address; }
+
+    public String getCity() { return city; }
+    public void setCity(String city) { this.city = city; }
+
+    public String getPhone() { return phone; }
+    public void setPhone(String phone) { this.phone = phone; }
+
+    public java.math.BigDecimal getHourlyPrice() { return hourlyPrice; }
+    public void setHourlyPrice(java.math.BigDecimal hourlyPrice) { this.hourlyPrice = hourlyPrice; }
+
+    public LocalTime getOpeningTime() { return openingTime; }
+    public void setOpeningTime(LocalTime openingTime) { this.openingTime = openingTime; }
+
+    public LocalTime getClosingTime() { return closingTime; }
+    public void setClosingTime(LocalTime closingTime) { this.closingTime = closingTime; }
+
+    public String getImageUrl() { return imageUrl; }
+    public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
+
+    public List<String> getImageUrls() { return imageUrls; }
+    public void setImageUrls(List<String> imageUrls) { this.imageUrls = imageUrls; }
+
+    public List<FutsalImageResponse> getImages() { return images; }
+    public void setImages(List<FutsalImageResponse> images) { this.images = images; }
+
+    public boolean isVerified() { return verified; }
+    public void setVerified(boolean verified) { this.verified = verified; }
+
+    public String getCourtType() { return courtType; }
+    public void setCourtType(String courtType) { this.courtType = courtType; }
+
+    public java.math.BigDecimal getRating() { return rating; }
+    public void setRating(java.math.BigDecimal rating) { this.rating = rating; }
+
+    public Integer getReviewCount() { return reviewCount; }
+    public void setReviewCount(Integer reviewCount) { this.reviewCount = reviewCount; }
+
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
+
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+}

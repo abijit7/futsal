@@ -1,0 +1,152 @@
+package com.futsal.service;
+
+import com.futsal.dto.UserUpdateRequest;
+import com.futsal.model.User;
+import com.futsal.model.enums.Role;
+import com.futsal.repository.UserRepository;
+import com.futsal.repository.VerificationCodeRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.stereotype.Service;
+
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Base64;
+
+@Service
+public class UserService {
+
+    private static final BCryptPasswordEncoder PASSWORD_ENCODER = new BCryptPasswordEncoder(12);
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private VerificationCodeRepository verificationCodeRepository;
+
+    // ── Hash password using BCrypt ────────────────────────────────────────────
+    public String hashPassword(String password) {
+        return PASSWORD_ENCODER.encode(password);
+    }
+
+    public boolean verifyPassword(String rawPassword, String storedPassword) {
+        return passwordMatches(rawPassword, storedPassword);
+    }
+
+    // ── Register new user ─────────────────────────────────────────────────────
+    public User register(User user) {
+        user.setEmail(normalizeEmail(user.getEmail()));
+        if (userRepository.existsByEmailIgnoreCase(user.getEmail())) {
+            throw new RuntimeException("Email is already registered. Please use a different email.");
+        }
+        user.setPassword(hashPassword(user.getPassword()));
+        user.setRole(Role.USER);
+        user.setEmailVerified(false);
+        user.setPhoneVerified(false);
+        user.setAuthVersion(0);
+        return userRepository.save(user);
+    }
+
+    // ── Login ─────────────────────────────────────────────────────────────────
+    public User login(String email, String password) {
+        User user = userRepository.findByEmailIgnoreCase(normalizeEmail(email))
+                .orElseThrow(() -> new RuntimeException("No account found with this email."));
+
+        if (!passwordMatches(password, user.getPassword())) {
+            throw new RuntimeException("Incorrect password. Please try again.");
+        }
+        if (!isBcryptHash(user.getPassword())) {
+            user.setPassword(hashPassword(password));
+            user = userRepository.save(user);
+        }
+        return user;
+    }
+
+    // ── Get all users (admin) ─────────────────────────────────────────────────
+    public Page<User> getAllUsers(String query, Pageable pageable) {
+        String term = query == null ? "" : query.trim();
+        return userRepository.search(term, pageable);
+    }
+
+    // ── Get user by ID ────────────────────────────────────────────────────────
+    public User getUserById(Long id) {
+        return userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+    }
+
+    // ── Update user profile ───────────────────────────────────────────────────
+    public User updateUser(Long id, UserUpdateRequest updatedUser) {
+        User existing = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        if (updatedUser.getName() != null && !updatedUser.getName().isBlank()) {
+            existing.setName(updatedUser.getName());
+        }
+        if (updatedUser.getPhone() != null && !updatedUser.getPhone().isBlank()) {
+            if (!updatedUser.getPhone().equals(existing.getPhone())) {
+                existing.setPhoneVerified(false);
+            }
+            existing.setPhone(updatedUser.getPhone());
+        }
+        return userRepository.save(existing);
+    }
+
+    public void changePassword(Long id, String currentPassword, String newPassword) {
+        User existing = getUserById(id);
+        if (!passwordMatches(currentPassword, existing.getPassword())) {
+            throw new IllegalArgumentException("Current password is incorrect");
+        }
+        if (passwordMatches(newPassword, existing.getPassword())) {
+            throw new IllegalArgumentException("New password must be different from the current password");
+        }
+        setNewPassword(existing, newPassword);
+    }
+
+    public void resetPassword(User user, String newPassword) {
+        setNewPassword(user, newPassword);
+    }
+
+    private void setNewPassword(User user, String newPassword) {
+        user.setPassword(hashPassword(newPassword));
+        user.setAuthVersion(user.getAuthVersion() + 1);
+        userRepository.save(user);
+    }
+
+    // ── Delete user (admin) ───────────────────────────────────────────────────
+    public void deleteUser(Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        verificationCodeRepository.deleteByUser(user);
+        userRepository.delete(user);
+    }
+
+    private boolean passwordMatches(String rawPassword, String storedPassword) {
+        if (storedPassword == null || storedPassword.isBlank()) {
+            return false;
+        }
+        if (isBcryptHash(storedPassword)) {
+            return PASSWORD_ENCODER.matches(rawPassword, storedPassword);
+        }
+        return storedPassword.equals(legacySha256(rawPassword));
+    }
+
+    private boolean isBcryptHash(String password) {
+        return password.startsWith("$2a$") || password.startsWith("$2b$") || password.startsWith("$2y$");
+    }
+
+    private String legacySha256(String password) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            byte[] hash = md.digest(password.getBytes(StandardCharsets.UTF_8));
+            return Base64.getEncoder().encodeToString(hash);
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("Hashing error", e);
+        }
+    }
+
+    private String normalizeEmail(String email) {
+        return email == null ? "" : email.trim().toLowerCase();
+    }
+}
