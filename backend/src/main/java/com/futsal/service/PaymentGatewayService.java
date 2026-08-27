@@ -31,7 +31,7 @@ import java.util.UUID;
 
 @Service
 public class PaymentGatewayService {
-
+//payment gateway logic
     private static final Logger log = LoggerFactory.getLogger(PaymentGatewayService.class);
 
     @Autowired
