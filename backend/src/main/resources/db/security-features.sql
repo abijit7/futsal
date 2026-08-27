@@ -2,11 +2,11 @@
 -- The development profile uses ddl-auto=update and creates these changes automatically.
 
 ALTER TABLE users
-    ADD COLUMN email_verified BOOLEAN NOT NULL DEFAULT FALSE,
-    ADD COLUMN phone_verified BOOLEAN NOT NULL DEFAULT FALSE,
-    ADD COLUMN auth_version INT NOT NULL DEFAULT 0;
+    ADD COLUMN IF NOT EXISTS email_verified BOOLEAN NOT NULL DEFAULT FALSE,
+    ADD COLUMN IF NOT EXISTS phone_verified BOOLEAN NOT NULL DEFAULT FALSE,
+    ADD COLUMN IF NOT EXISTS auth_version INT NOT NULL DEFAULT 0;
 
-CREATE TABLE verification_codes (
+CREATE TABLE IF NOT EXISTS verification_codes (
     verification_code_id BIGINT NOT NULL AUTO_INCREMENT,
     user_id BIGINT NOT NULL,
     purpose VARCHAR(32) NOT NULL,

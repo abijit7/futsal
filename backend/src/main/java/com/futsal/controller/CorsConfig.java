@@ -5,6 +5,7 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -17,6 +18,12 @@ public class CorsConfig implements WebMvcConfigurer {
 
     @Value("${app.cors.allowed-origins:http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174}")
     private String[] allowedOrigins;
+
+    private final Environment environment;
+
+    public CorsConfig(Environment environment) {
+        this.environment = environment;
+    }
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
@@ -33,12 +40,16 @@ public class CorsConfig implements WebMvcConfigurer {
                 .filter(origin -> !origin.isBlank())
                 .forEach(origins::add);
 
-        origins.add("http://localhost:5173");
-        origins.add("http://127.0.0.1:5173");
-        origins.add("http://localhost:5174");
-        origins.add("http://127.0.0.1:5174");
+        if (origins.isEmpty() && isProductionProfile()) {
+            throw new IllegalStateException("CORS_ALLOWED_ORIGINS must be configured for the prod profile");
+        }
 
         return origins.toArray(String[]::new);
+    }
+
+    private boolean isProductionProfile() {
+        return Arrays.stream(environment.getActiveProfiles())
+                .anyMatch(profile -> "prod".equalsIgnoreCase(profile));
     }
 
     @Override
