@@ -10,6 +10,7 @@ Run these checks before deploying MeroFutsal to production.
 - Use a strong `JWT_SECRET` and a separate strong `VERIFICATION_SECRET`.
 - Set `CORS_ALLOWED_ORIGINS` to the real frontend origin only.
 - Mount `UPLOAD_DIR` to persistent storage so uploaded venue images survive redeploys.
+- Configure the `PAYMENT_ESEWA_*` and `PAYMENT_KHALTI_*` gateway variables before enabling online payments.
 - Enable `VERIFICATION_EMAIL_ENABLED=true` and configure SMTP before using email verification or password reset.
 - Configure `SMS_WEBHOOK_URL` before using phone verification in production.
 
