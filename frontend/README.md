@@ -17,7 +17,9 @@ http://127.0.0.1:5174
 
 ## Environment
 
-Create `.env` from `.env.example` if needed:
+Local development can run without `.env`; Vite proxies `/api` and `/uploads` to the backend at `http://localhost:9090`.
+
+Create `.env` from `.env.example` only when you need to point the frontend at a different backend:
 
 ```env
 VITE_API_BASE_URL=http://localhost:9090
