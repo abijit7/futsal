@@ -77,8 +77,6 @@ export const bookingApi = {
 };
 
 export const paymentApi = {
-  initiate: (payload: { userId: number; slotId: number; method: PaymentMethod; amount: number; notes?: string; successUrl?: string; failureUrl?: string; cancelUrl?: string }) =>
-    api.post<{ paymentUrl: string; paymentToken: string; transactionId: string; message: string }>('/payments/initiate', payload).then((res) => res.data),
   confirm: (payload: { userId: number; slotId: number; method: PaymentMethod; notes?: string }) =>
     api.post<Booking>('/payments/confirm', payload).then((res) => res.data)
 };

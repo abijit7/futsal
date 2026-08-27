@@ -63,39 +63,17 @@ export function VenueDetails() {
     setError('');
     setMessage('');
     try {
-      if (paymentMethod === 'CASH_IN_HAND') {
-        // For cash payment, use the old confirm endpoint
-        await paymentApi.confirm({
-          userId: user.userId,
-          slotId: selectedSlot.slotId,
-          method: paymentMethod,
-          notes
-        });
-        setMessage('Booking created successfully. You can track it from My Bookings.');
-        setSelectedSlot(null);
-        setNotes('');
-        const data = await slotApi.public({ futsalId, slotDate: selectedDate, page: 0, size: 80 });
-        setSlots(data.items || []);
-      } else {
-        // For ESEWA and KHALTI, use the new initiate endpoint
-        const response = await paymentApi.initiate({
-          userId: user.userId,
-          slotId: selectedSlot.slotId,
-          method: paymentMethod,
-          amount: total,
-          notes,
-          successUrl: `${window.location.origin}/payment/success`,
-          failureUrl: `${window.location.origin}/payment/failure`,
-          cancelUrl: `${window.location.origin}/payment/cancel`
-        });
-
-        if (response.paymentUrl) {
-          // Redirect to payment gateway
-          window.location.href = response.paymentUrl;
-        } else {
-          setError('Payment initiation failed - no payment URL returned');
-        }
-      }
+      await paymentApi.confirm({
+        userId: user.userId,
+        slotId: selectedSlot.slotId,
+        method: paymentMethod,
+        notes
+      });
+      setMessage('Booking created successfully. You can track it from My Bookings.');
+      setSelectedSlot(null);
+      setNotes('');
+      const data = await slotApi.public({ futsalId, slotDate: selectedDate, page: 0, size: 80 });
+      setSlots(data.items || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Booking failed');
     } finally {

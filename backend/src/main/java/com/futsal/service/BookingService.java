@@ -74,18 +74,7 @@ public class BookingService {
     // ── Create a new booking (payment required) ─────────────────────────────
     @Transactional
     public Booking createBooking(Long userId, Long slotId, String notes) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        TimeSlot slot = timeSlotRepository.findById(slotId)
-                .orElseThrow(() -> new RuntimeException("Time slot not found"));
-
-        // Create a pending booking without marking slot as unavailable
-        Booking booking = new Booking(user, slot, notes, PaymentMethod.CASH_IN_HAND, "PENDING");
-        booking.setStatus(BookingStatus.PENDING);
-        booking.addStatusHistory(new BookingStatusHistory(booking, BookingStatus.PENDING, "user:" + userId, "Booking created - pending payment"));
-
-        return bookingRepository.save(booking);
+        throw new RuntimeException("Payment required. Use the payment confirmation flow.");
     }
 
     // ── Get all bookings (admin) ──────────────────────────────────────────────

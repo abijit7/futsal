@@ -8,8 +8,6 @@ import { Register } from './pages/public/Register';
 import { ForgotPassword } from './pages/public/ForgotPassword';
 import { Venues } from './pages/public/Venues';
 import { VenueDetails } from './pages/public/VenueDetails';
-import { PaymentSuccess } from './pages/public/PaymentSuccess';
-import { PaymentFailure } from './pages/public/PaymentFailure';
 import { BookingPage } from './pages/user/BookingPage';
 import { ConfirmationPage } from './pages/user/ConfirmationPage';
 import { Dashboard } from './pages/user/Dashboard';
@@ -33,8 +31,6 @@ export default function App() {
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/venues" element={<Venues />} />
           <Route path="/venues/:id" element={<VenueDetails />} />
-          <Route path="/payment/success" element={<PaymentSuccess />} />
-          <Route path="/payment/failure" element={<PaymentFailure />} />
           <Route element={<ProtectedRoute />}>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/booking" element={<BookingPage />} />

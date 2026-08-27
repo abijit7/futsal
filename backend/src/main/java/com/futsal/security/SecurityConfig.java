@@ -58,7 +58,6 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/futsals/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/slots", "/api/slots/public").permitAll()
                         .requestMatchers(new RegexRequestMatcher("^/api/slots/\\d+$", "GET")).permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/payments/webhook/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/users").access(SecurityConfig::isAdminRequest)
                         .requestMatchers(HttpMethod.DELETE, "/api/users/**").access(SecurityConfig::isAdminRequest)
                         .requestMatchers(HttpMethod.GET, "/api/bookings").access(SecurityConfig::isAdminRequest)
