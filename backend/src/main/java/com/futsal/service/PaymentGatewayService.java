@@ -31,7 +31,7 @@ import java.util.UUID;
 
 @Service
 public class PaymentGatewayService {
-//payment gateway logic
+//payment gateway service handles payment initiation and webhook processing for ESEWA and KHALTI payment gateways. It also supports cash payments.
     private static final Logger log = LoggerFactory.getLogger(PaymentGatewayService.class);
 
     @Autowired
