@@ -56,6 +56,12 @@ public class RateLimitFilter extends OncePerRequestFilter {
         if (!path.startsWith("/api")) {
             return false;
         }
+
+        // Exclude login and register endpoints from rate limiting
+        if (path.equals("/api/users/login") || path.equals("/api/users/register")) {
+            return false;
+        }
+
         String method = request.getMethod();
         return !("GET".equalsIgnoreCase(method) || "HEAD".equalsIgnoreCase(method));
     }
