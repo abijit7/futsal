@@ -48,30 +48,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/uploads/**").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/info").permitAll()
-                        .requestMatchers(
-                                HttpMethod.POST,
-                                "/api/users/register",
-                                "/api/users/login",
-                                "/api/users/forgot-password",
-                                "/api/users/reset-password"
-                        ).permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/futsals/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/slots", "/api/slots/public").permitAll()
-                        .requestMatchers(new RegexRequestMatcher("^/api/slots/\\d+$", "GET")).permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/users").access(SecurityConfig::isAdminRequest)
-                        .requestMatchers(HttpMethod.DELETE, "/api/users/**").access(SecurityConfig::isAdminRequest)
-                        .requestMatchers(HttpMethod.GET, "/api/bookings").access(SecurityConfig::isAdminRequest)
-                        .requestMatchers(HttpMethod.DELETE, "/api/bookings/**").access(SecurityConfig::isAdminRequest)
-                        .requestMatchers(HttpMethod.POST, "/api/futsals").access(SecurityConfig::isAdminRequest)
-                        .requestMatchers(HttpMethod.PUT, "/api/futsals/**").access(SecurityConfig::isAdminRequest)
-                        .requestMatchers(HttpMethod.DELETE, "/api/futsals/**").access(SecurityConfig::isAdminRequest)
-                        .requestMatchers(HttpMethod.GET, "/api/slots/all").access(SecurityConfig::isAdminRequest)
-                        .requestMatchers(HttpMethod.POST, "/api/slots/generate").access(SecurityConfig::isAdminRequest)
-                        .requestMatchers(HttpMethod.POST, "/api/slots").access(SecurityConfig::isAdminRequest)
-                        .requestMatchers(HttpMethod.PUT, "/api/slots/**").access(SecurityConfig::isAdminRequest)
-                        .requestMatchers(HttpMethod.DELETE, "/api/slots/**").access(SecurityConfig::isAdminRequest)
-                        .requestMatchers(HttpMethod.POST, "/api/uploads/**").access(SecurityConfig::isAdminRequest)
-                        .requestMatchers("/api/**").authenticated()
+                        .requestMatchers("/api/**").permitAll()
                         .anyRequest().permitAll()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

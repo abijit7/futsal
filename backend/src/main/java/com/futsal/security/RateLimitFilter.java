@@ -52,12 +52,8 @@ public class RateLimitFilter extends OncePerRequestFilter {
     }
 
     private boolean shouldRateLimit(HttpServletRequest request) {
-        String path = request.getRequestURI();
-        if (!path.startsWith("/api")) {
-            return false;
-        }
-        String method = request.getMethod();
-        return !("GET".equalsIgnoreCase(method) || "HEAD".equalsIgnoreCase(method));
+        // Temporarily disable rate limiting to diagnose 403 error
+        return false;
     }
 
     private String resolveClientKey(HttpServletRequest request) {
