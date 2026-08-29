@@ -180,9 +180,9 @@ export function VenueDetails() {
 
             <p className="mt-6 text-xs font-black uppercase text-slate-500">Duration</p>
             <div className="mt-3 flex items-center justify-between">
-              <button className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-950 disabled:opacity-40" aria-label="Decrease duration" disabled><Minus size={18} /></button>
+              <button className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-950 disabled:opacity-40 disabled:cursor-not-allowed" aria-label="Decrease duration" disabled><Minus size={18} /></button>
               <span className="font-black text-slate-950">{selectedSlot ? slotDuration(selectedSlot.startTime, selectedSlot.endTime) || '1 hr' : '1 hour'}</span>
-              <button className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-950 disabled:opacity-40" aria-label="Increase duration" disabled><Plus size={18} /></button>
+              <button className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-950 disabled:opacity-40 disabled:cursor-not-allowed" aria-label="Increase duration" disabled><Plus size={18} /></button>
             </div>
 
             <div className="mt-6 rounded-3xl bg-slate-100 p-5 text-slate-600">
@@ -201,20 +201,22 @@ export function VenueDetails() {
             </div>
 
             <div className="mt-5">
-              <label className="label">Payment method</label>
-              <select className="input" value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}>
+              <label className="label" htmlFor="payment-method">Payment method</label>
+              <select id="payment-method" className="input" value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}>
                 <option value="CASH_IN_HAND">Cash in hand</option>
                 <option value="ESEWA">Esewa</option>
                 <option value="KHALTI">Khalti</option>
               </select>
             </div>
             <div className="mt-4">
-              <label className="label">Notes</label>
-              <textarea className="input min-h-24" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional booking notes" />
+              <label className="label" htmlFor="booking-notes">Notes</label>
+              <textarea id="booking-notes" className="input min-h-24" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional booking notes" />
             </div>
             {message && <p className="mt-4 rounded-2xl bg-green-50 p-3 text-sm font-bold text-green-700">{message}</p>}
             {error && <p className="mt-4 rounded-2xl bg-red-50 p-3 text-sm font-bold text-red-700">{error}</p>}
-            <button className="btn-primary mt-5 w-full py-4" disabled={!selectedSlot || booking} onClick={submitBooking}>{booking ? 'Booking...' : user?.authToken ? 'Confirm booking' : <>Sign in to Book <ChevronRight size={18} /></>}</button>
+            <button className="btn-primary mt-5 w-full py-4" disabled={!selectedSlot || booking} onClick={submitBooking}>
+              {booking ? 'Booking...' : user?.authToken ? 'Confirm booking' : <>Sign in to Book <ChevronRight size={18} /></>}
+            </button>
             <p className="mt-5 flex items-center justify-center gap-2 text-sm font-bold text-slate-500"><ShieldCheck size={16} className="text-green-600" /> Free cancellation up to 2 hours before</p>
           </div>
         </aside>

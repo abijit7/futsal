@@ -72,7 +72,7 @@ export function Navbar() {
             {isLoggedIn && (
               <button className="motion-press relative rounded-lg p-2 transition-colors" style={{ color: '#94A3B8' }} aria-label="Notifications">
                 <Bell size={18} />
-                <span className="absolute right-1 top-1 h-2 w-2 rounded-full" style={{ background: 'var(--futsal-green)' }} />
+                <span className="absolute right-1 top-1 h-2 w-2 rounded-full" style={{ background: 'var(--futsal-green)' }} aria-hidden="true" />
               </button>
             )}
 
@@ -123,7 +123,7 @@ export function Navbar() {
               </div>
             )}
 
-            <button onClick={mobileMenu.toggle} className="motion-press rounded-lg p-2 md:hidden" style={{ color: '#94A3B8' }} aria-label="Toggle navigation" aria-expanded={mobileMenu.isOpen}>
+            <button onClick={mobileMenu.toggle} className="motion-press rounded-lg p-2 md:hidden" style={{ color: '#94A3B8' }} aria-label="Toggle navigation" aria-expanded={mobileMenu.isOpen} aria-controls="mobile-menu">
               {mobileMenu.isOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
           </div>
@@ -131,7 +131,7 @@ export function Navbar() {
       </div>
 
       {mobileMenu.isMounted && (
-        <div className="motion-mobile-menu space-y-1 border-t px-4 py-3 md:hidden" data-state={mobileMenu.state} style={{ background: 'var(--futsal-navy-mid)', borderColor: 'rgba(255,255,255,0.08)' }}>
+        <div id="mobile-menu" className="motion-mobile-menu space-y-1 border-t px-4 py-3 md:hidden" data-state={mobileMenu.state} style={{ background: 'var(--futsal-navy-mid)', borderColor: 'rgba(255,255,255,0.08)' }}>
           <button onClick={() => go('/venues')} className="block w-full rounded-lg px-3 py-2 text-left text-sm" style={{ color: '#CBD5E1' }}>Find Venues</button>
           <button onClick={() => go('/#how-it-works')} className="block w-full rounded-lg px-3 py-2 text-left text-sm" style={{ color: '#CBD5E1' }}>How it Works</button>
           <button onClick={() => go('/booking')} className="block w-full rounded-lg px-3 py-2 text-left text-sm" style={{ color: '#CBD5E1' }}>Pricing</button>

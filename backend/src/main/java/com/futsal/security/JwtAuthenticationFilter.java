@@ -30,15 +30,23 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
-        String authorizationHeader = request.getHeader("Authorization");
+        String method = request.getMethod();
+        String path = request.getRequestURI();
+
+        // Skip JWT processing for OPTIONS requests (CORS preflight)
+        if ("OPTIONS".equalsIgnoreCase(method)) {
+            filterChain.doFilter(request, response);
+            return;
+        }
 
         // Skip JWT processing for login endpoint and other public endpoints
-        String path = request.getRequestURI();
         if (path.equals("/api/users/login") || path.equals("/api/users/register") ||
             path.equals("/api/users/forgot-password") || path.equals("/api/users/reset-password")) {
             filterChain.doFilter(request, response);
             return;
         }
+
+        String authorizationHeader = request.getHeader("Authorization");
 
         if (authorizationHeader == null || authorizationHeader.isBlank()) {
             filterChain.doFilter(request, response);

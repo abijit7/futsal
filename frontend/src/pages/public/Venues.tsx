@@ -89,7 +89,7 @@ export function Venues() {
           <option value="price-low">Price: low to high</option>
           <option value="price-high">Price: high to low</option>
         </SelectField>
-        <Button className="w-full px-6">Search</Button>
+        <Button className="w-full px-6" type="submit">Search</Button>
       </form>
 
       {(q || date || sort !== 'recommended') && (

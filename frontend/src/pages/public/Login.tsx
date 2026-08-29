@@ -46,7 +46,7 @@ export function Login() {
           </p>
         </section>
 
-        <form onSubmit={submit} className="rounded-3xl border bg-white p-7 shadow-sm sm:p-8" style={{ borderColor: 'var(--border)' }}>
+        <form onSubmit={submit} className="w-full max-w-md rounded-3xl border bg-white p-7 shadow-sm sm:p-8" style={{ borderColor: 'var(--border)' }}>
           <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--futsal-green)' }}>Welcome back</p>
           <h2 className="mt-2 text-4xl font-black uppercase" style={{ fontFamily: 'var(--font-display)', color: 'var(--futsal-navy)' }}>Sign In</h2>
           <p className="mt-2 text-sm" style={{ color: 'var(--muted-foreground)' }}>Access bookings, payments, and dashboards.</p>
@@ -56,25 +56,25 @@ export function Login() {
 
           <div className="mt-6 space-y-4">
             <label className="block">
-              <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted-foreground)' }}>Email</span>
+              <span className="label" htmlFor="login-email">Email</span>
               <span className="flex items-center gap-3 rounded-xl border px-3 py-2.5" style={{ background: 'var(--input-background)', borderColor: 'var(--border)' }}>
                 <Mail size={16} style={{ color: 'var(--muted-foreground)' }} />
-                <input className="flex-1 bg-transparent text-sm outline-none" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                <input id="login-email" className="flex-1 bg-transparent text-sm outline-none" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
               </span>
             </label>
             <label className="block">
-              <span className="mb-1.5 flex items-center justify-between gap-3 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--muted-foreground)' }}>
-                Password
-                <Link className="normal-case tracking-normal" style={{ color: 'var(--futsal-green)' }} to="/forgot-password">Forgot?</Link>
+              <span className="mb-1.5 flex items-center justify-between gap-3 label">
+                <span htmlFor="login-password">Password</span>
+                <Link className="normal-case tracking-normal font-semibold" style={{ color: 'var(--futsal-green)' }} to="/forgot-password">Forgot?</Link>
               </span>
               <span className="flex items-center gap-3 rounded-xl border px-3 py-2.5" style={{ background: 'var(--input-background)', borderColor: 'var(--border)' }}>
                 <Lock size={16} style={{ color: 'var(--muted-foreground)' }} />
-                <input className="flex-1 bg-transparent text-sm outline-none" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                <input id="login-password" className="flex-1 bg-transparent text-sm outline-none" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
               </span>
             </label>
           </div>
 
-          <button className="mt-6 w-full rounded-xl py-3 text-sm font-semibold transition-all hover:opacity-90" style={{ background: 'var(--futsal-green)', color: 'white' }} disabled={loading}>
+          <button className="btn-primary mt-6 w-full" disabled={loading}>
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
           <p className="mt-5 text-center text-sm" style={{ color: 'var(--muted-foreground)' }}>

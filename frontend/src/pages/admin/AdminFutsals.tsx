@@ -205,7 +205,7 @@ export function AdminFutsals() {
               <h2 className="mt-2 text-2xl font-black text-slate-950">Futsal venues</h2>
               <p className="mt-1 text-sm text-slate-500">Manage customer-facing venue listings from one clean workspace.</p>
             </div>
-            <button className="btn-primary" onClick={openCreate}>
+            <button className="btn-primary" onClick={openCreate} type="button">
               <Plus size={18} />
               Add venue
             </button>
@@ -216,10 +216,11 @@ export function AdminFutsals() {
 
           <div className="mt-5 grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px_auto] lg:items-end">
             <div>
-              <label className="label">Search venues</label>
+              <label className="label" htmlFor="venue-search">Search venues</label>
               <div className="relative">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                 <input
+                  id="venue-search"
                   className="input pl-11"
                   value={query}
                   onChange={(event) => { setQuery(event.target.value); setPage(0); }}
@@ -228,8 +229,8 @@ export function AdminFutsals() {
               </div>
             </div>
             <div>
-              <label className="label">Sort</label>
-              <select className="input" value={sort} onChange={(event) => { setSort(event.target.value as VenueSort); setPage(0); }}>
+              <label className="label" htmlFor="venue-sort">Sort</label>
+              <select id="venue-sort" className="input" value={sort} onChange={(event) => { setSort(event.target.value as VenueSort); setPage(0); }}>
                 <option value="recommended">Recommended</option>
                 <option value="price-low">Price: low to high</option>
                 <option value="price-high">Price: high to low</option>

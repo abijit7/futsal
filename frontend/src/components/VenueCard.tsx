@@ -7,7 +7,7 @@ export function VenueCard({ futsal }: { futsal: Futsal }) {
   return (
     <article className="group overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-slate-950/10">
       <div className="relative aspect-[4/3] overflow-hidden bg-slate-100">
-        <img src={imageForVenue(futsal.imageUrl || futsal.imageUrls?.[0])} alt={futsal.name} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+        <img src={imageForVenue(futsal.imageUrl || futsal.imageUrls?.[0])} alt={futsal.name} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" loading="lazy" />
         <div className="absolute left-4 top-4 rounded-full bg-green-600 px-3 py-1 text-xs font-black text-white">Available</div>
       </div>
       <div className="p-6">
@@ -27,7 +27,7 @@ export function VenueCard({ futsal }: { futsal: Futsal }) {
             <div className="text-xs font-black uppercase text-slate-400">From</div>
             <div className="text-xl font-black text-slate-950">{money(futsal.hourlyPrice)}<span className="text-sm text-slate-400">/hr</span></div>
           </div>
-          <Link to={`/venues/${futsal.futsalId}`} className="btn-navy h-14 w-14 rounded-2xl p-0" aria-label={`View ${futsal.name}`}>
+          <Link to={`/venues/${futsal.futsalId}`} className="btn-navy h-14 w-14 rounded-2xl p-0 flex items-center justify-center" aria-label={`View ${futsal.name}`}>
             <ArrowRight />
           </Link>
         </div>

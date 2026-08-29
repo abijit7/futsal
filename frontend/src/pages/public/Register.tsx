@@ -35,13 +35,36 @@ export function Register() {
           {error && <div className="mt-5 rounded-2xl bg-red-50 p-4 text-sm font-semibold text-red-700">{error}</div>}
 
           <div className="mt-6 grid gap-4 sm:grid-cols-2">
-            <Field icon={<UserRound size={16} />} label="Full name" value={form.name} onChange={(value) => setForm({ ...form, name: value })} />
-            <Field icon={<Phone size={16} />} label="Phone" value={form.phone} onChange={(value) => setForm({ ...form, phone: value })} />
-            <Field icon={<Mail size={16} />} label="Email" type="email" value={form.email} onChange={(value) => setForm({ ...form, email: value })} />
-            <Field label="Password" type="password" value={form.password} onChange={(value) => setForm({ ...form, password: value })} />
+            <label className="block">
+              <span className="label" htmlFor="register-name">Full name</span>
+              <span className="flex items-center gap-3 rounded-xl border px-3 py-2.5" style={{ background: 'var(--input-background)', borderColor: 'var(--border)' }}>
+                <UserRound size={16} style={{ color: 'var(--muted-foreground)' }} />
+                <input id="register-name" className="flex-1 bg-transparent text-sm outline-none" type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
+              </span>
+            </label>
+            <label className="block">
+              <span className="label" htmlFor="register-phone">Phone</span>
+              <span className="flex items-center gap-3 rounded-xl border px-3 py-2.5" style={{ background: 'var(--input-background)', borderColor: 'var(--border)' }}>
+                <Phone size={16} style={{ color: 'var(--muted-foreground)' }} />
+                <input id="register-phone" className="flex-1 bg-transparent text-sm outline-none" type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} required />
+              </span>
+            </label>
+            <label className="block">
+              <span className="label" htmlFor="register-email">Email</span>
+              <span className="flex items-center gap-3 rounded-xl border px-3 py-2.5" style={{ background: 'var(--input-background)', borderColor: 'var(--border)' }}>
+                <Mail size={16} style={{ color: 'var(--muted-foreground)' }} />
+                <input id="register-email" className="flex-1 bg-transparent text-sm outline-none" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
+              </span>
+            </label>
+            <label className="block">
+              <span className="label" htmlFor="register-password">Password</span>
+              <span className="flex items-center gap-3 rounded-xl border px-3 py-2.5" style={{ background: 'var(--input-background)', borderColor: 'var(--border)' }}>
+                <input id="register-password" className="flex-1 bg-transparent text-sm outline-none" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
+              </span>
+            </label>
           </div>
 
-          <button className="mt-6 w-full rounded-xl py-3 text-sm font-semibold transition-all hover:opacity-90" style={{ background: 'var(--futsal-green)', color: 'white' }} disabled={loading}>
+          <button className="btn-primary mt-6 w-full" disabled={loading}>
             {loading ? 'Creating account...' : 'Get Started'}
           </button>
           <p className="mt-5 text-center text-sm" style={{ color: 'var(--muted-foreground)' }}>

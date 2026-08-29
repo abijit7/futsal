@@ -238,8 +238,9 @@ export function AdminSlots() {
             </div>
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(210px,280px)_180px_auto_auto_auto] xl:items-end">
               <div>
-                <label className="label">Venue</label>
+                <label className="label" htmlFor="slot-venue">Venue</label>
                 <select
+                  id="slot-venue"
                   className="input py-2.5"
                   value={selectedFutsalId}
                   onChange={(event) => setSelectedFutsal(Number(event.target.value))}
@@ -251,8 +252,9 @@ export function AdminSlots() {
                 </select>
               </div>
               <div>
-                <label className="label">Date</label>
+                <label className="label" htmlFor="slot-date">Date</label>
                 <input
+                  id="slot-date"
                   className="input py-2.5"
                   type="date"
                   value={filterDate}

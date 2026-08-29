@@ -300,7 +300,9 @@ export function Profile() {
                 </div>
                 <PasswordRequirements password={passwords.newPassword} matches={passwords.newPassword === passwords.confirmPassword && Boolean(passwords.confirmPassword)} />
                 <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-                  <Button type="button" variant="outline" disabled={!passwordDirty || savingPassword} onClick={() => setPasswords(emptyPasswords)}>Clear</Button>
+                  <Button type="button" variant="outline" disabled={!passwordDirty || savingPassword} onClick={() => setPasswords(emptyPasswords)}>
+                    Clear
+                  </Button>
                   <Button type="submit" variant="secondary" disabled={!passwordValid || savingPassword} loading={savingPassword}>
                     <RefreshCw size={18} />
                     Change password

@@ -131,8 +131,8 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
               </div>
               <button
                 onClick={() => handleSearch()}
-                className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm transition-all hover:opacity-90 active:scale-95"
-                style={{ background: "var(--futsal-green)", color: "white", minWidth: 140 }}
+                className="btn-primary flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm"
+                style={{ minWidth: 140 }}
               >
                 <Search size={16} />
                 Search Courts
@@ -273,10 +273,10 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
               List your courts on FutsalGo and reach thousands of players. Manage bookings, track revenue, and grow your business — all from one dashboard.
             </p>
             <div className="flex flex-wrap gap-3">
-              <button className="flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm transition-all hover:opacity-90" style={{ background: "var(--futsal-navy)", color: "white" }}>
+              <button className="btn-navy flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm">
                 List Your Venue <ChevronRight size={16} />
               </button>
-              <button className="flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm transition-all hover:bg-white/10" style={{ color: "white", border: "1px solid rgba(255,255,255,0.4)" }}>
+              <button className="btn-soft flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm" style={{ color: "white", background: "rgba(255,255,255,0.1)", borderColor: "rgba(255,255,255,0.3)" }}>
                 Learn More
               </button>
             </div>
@@ -346,6 +346,7 @@ function VenueCard({ venue }: { venue: Futsal }) {
           src={imageForVenue(venue.imageUrl || venue.imageUrls?.[0])}
           alt={venue.name}
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          loading="lazy"
         />
         <div className="absolute top-3 left-3">
           <span className="text-xs font-bold px-2.5 py-1 rounded-full text-white shadow-sm" style={{ background: tagColor }}>
