@@ -56,17 +56,17 @@ export function Login() {
 
           <div className="mt-6 space-y-4">
             <label className="block">
-              <span className="label" htmlFor="login-email">Email</span>
+              <label className="label" htmlFor="login-email">Email</label>
               <span className="flex items-center gap-3 rounded-xl border px-3 py-2.5" style={{ background: 'var(--input-background)', borderColor: 'var(--border)' }}>
                 <Mail size={16} style={{ color: 'var(--muted-foreground)' }} />
                 <input id="login-email" className="flex-1 bg-transparent text-sm outline-none" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
               </span>
             </label>
             <label className="block">
-              <span className="mb-1.5 flex items-center justify-between gap-3 label">
-                <span htmlFor="login-password">Password</span>
+              <div className="mb-1.5 flex items-center justify-between gap-3">
+                <label className="label" htmlFor="login-password">Password</label>
                 <Link className="normal-case tracking-normal font-semibold" style={{ color: 'var(--futsal-green)' }} to="/forgot-password">Forgot?</Link>
-              </span>
+              </div>
               <span className="flex items-center gap-3 rounded-xl border px-3 py-2.5" style={{ background: 'var(--input-background)', borderColor: 'var(--border)' }}>
                 <Lock size={16} style={{ color: 'var(--muted-foreground)' }} />
                 <input id="login-password" className="flex-1 bg-transparent text-sm outline-none" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />

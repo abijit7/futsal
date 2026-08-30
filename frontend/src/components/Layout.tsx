@@ -70,7 +70,6 @@ export function AdminLayout() {
                   end={path === '/admin'}
                   to={path}
                   className={({ isActive }) => `flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-bold transition ${isActive ? 'bg-slate-950 text-white shadow-lg shadow-slate-950/10' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950'}`}
-                  aria-current={isActive ? 'page' : undefined}
                 >
                   <span className="shrink-0">{icon}</span>
                   {label}

@@ -10,9 +10,12 @@ export const api = axios.create({
   }
 });
 
+const publicAuthEndpoints = ['/users/login', '/users/register', '/users/forgot-password', '/users/reset-password'];
+
 api.interceptors.request.use((config) => {
   const rawUser = localStorage.getItem('futsal_user');
-  if (rawUser) {
+  const isPublicAuth = config.url && publicAuthEndpoints.some((ep) => config.url!.includes(ep));
+  if (rawUser && !isPublicAuth) {
     try {
       const user = JSON.parse(rawUser) as { authToken?: string };
       if (user.authToken) {

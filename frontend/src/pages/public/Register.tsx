@@ -36,28 +36,28 @@ export function Register() {
 
           <div className="mt-6 grid gap-4 sm:grid-cols-2">
             <label className="block">
-              <span className="label" htmlFor="register-name">Full name</span>
+              <label className="label" htmlFor="register-name">Full name</label>
               <span className="flex items-center gap-3 rounded-xl border px-3 py-2.5" style={{ background: 'var(--input-background)', borderColor: 'var(--border)' }}>
                 <UserRound size={16} style={{ color: 'var(--muted-foreground)' }} />
                 <input id="register-name" className="flex-1 bg-transparent text-sm outline-none" type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
               </span>
             </label>
             <label className="block">
-              <span className="label" htmlFor="register-phone">Phone</span>
+              <label className="label" htmlFor="register-phone">Phone</label>
               <span className="flex items-center gap-3 rounded-xl border px-3 py-2.5" style={{ background: 'var(--input-background)', borderColor: 'var(--border)' }}>
                 <Phone size={16} style={{ color: 'var(--muted-foreground)' }} />
                 <input id="register-phone" className="flex-1 bg-transparent text-sm outline-none" type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} required />
               </span>
             </label>
             <label className="block">
-              <span className="label" htmlFor="register-email">Email</span>
+              <label className="label" htmlFor="register-email">Email</label>
               <span className="flex items-center gap-3 rounded-xl border px-3 py-2.5" style={{ background: 'var(--input-background)', borderColor: 'var(--border)' }}>
                 <Mail size={16} style={{ color: 'var(--muted-foreground)' }} />
                 <input id="register-email" className="flex-1 bg-transparent text-sm outline-none" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
               </span>
             </label>
             <label className="block">
-              <span className="label" htmlFor="register-password">Password</span>
+              <label className="label" htmlFor="register-password">Password</label>
               <span className="flex items-center gap-3 rounded-xl border px-3 py-2.5" style={{ background: 'var(--input-background)', borderColor: 'var(--border)' }}>
                 <input id="register-password" className="flex-1 bg-transparent text-sm outline-none" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
               </span>
