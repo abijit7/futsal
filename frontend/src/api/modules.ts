@@ -1,5 +1,5 @@
 import { api, query } from './client';
-import type { Booking, BookingStatus, Futsal, FutsalPayload, PagedResponse, PaymentMethod, SlotGenerationPayload, SlotGenerationResponse, TimeSlot, TimeSlotPayload, User, VerificationIssueResponse } from '../types/api';
+import type { Booking, BookingStatus, Futsal, FutsalPayload, PagedResponse, PaymentInitiation, PaymentMethod, PaymentVerification, SlotGenerationPayload, SlotGenerationResponse, TimeSlot, TimeSlotPayload, User, VerificationIssueResponse } from '../types/api';
 
 export const authApi = {
   login: (payload: Pick<User, 'email'> & { password: string }) =>
@@ -13,7 +13,8 @@ export const authApi = {
 };
 
 export const userApi = {
-  list: (page = 0, size = 10) => api.get<PagedResponse<User>>(`/users?${query({ page, size })}`).then((res) => res.data),
+  list: (params: { page?: number; size?: number; q?: string; role?: 'USER' | 'ADMIN' } = {}) =>
+    api.get<PagedResponse<User>>(`/users?${query({ page: params.page ?? 0, size: params.size ?? 10, q: params.q, role: params.role })}`).then((res) => res.data),
   get: (id: number) => api.get<User>(`/users/${id}`).then((res) => res.data),
   update: (id: number, payload: { name?: string; phone?: string }) => api.put<User>(`/users/${id}`, payload).then((res) => res.data),
   changePassword: (id: number, payload: { currentPassword: string; newPassword: string }) =>
@@ -67,8 +68,8 @@ export const slotApi = {
 };
 
 export const bookingApi = {
-  all: (params: { page?: number; size?: number; status?: BookingStatus | 'ALL' } = {}) =>
-    api.get<PagedResponse<Booking>>(`/bookings?${query({ page: params.page ?? 0, size: params.size ?? 10, status: params.status ?? 'ALL' })}`).then((res) => res.data),
+  all: (params: { page?: number; size?: number; status?: BookingStatus | 'ALL'; q?: string; slotDate?: string } = {}) =>
+    api.get<PagedResponse<Booking>>(`/bookings?${query({ page: params.page ?? 0, size: params.size ?? 10, status: params.status ?? 'ALL', q: params.q, slotDate: params.slotDate })}`).then((res) => res.data),
   byUser: (userId: number, page = 0, size = 10, status?: BookingStatus | 'ALL') =>
     api.get<PagedResponse<Booking>>(`/bookings/user/${userId}?${query({ page, size, status: status ?? 'ALL' })}`).then((res) => res.data),
   get: (id: number) => api.get<Booking>(`/bookings/${id}`).then((res) => res.data),
@@ -77,6 +78,18 @@ export const bookingApi = {
 };
 
 export const paymentApi = {
-  confirm: (payload: { userId: number; slotId: number; method: PaymentMethod; notes?: string }) =>
-    api.post<Booking>('/payments/confirm', payload).then((res) => res.data)
+  /**
+   * Starts a payment. The amount is NOT sent: the server prices the slot from the venue's hourly
+   * rate, so the client cannot choose what to pay.
+   */
+  initiate: (payload: { userId: number; slotId: number; method: PaymentMethod; notes?: string }) =>
+    api.post<PaymentInitiation>('/payments/initiate', payload).then((res) => res.data),
+
+  /** Confirms a gateway payment after the redirect back. */
+  verify: (payload: { data?: string; pidx?: string }) =>
+    api.post<PaymentVerification>('/payments/verify', payload).then((res) => res.data),
+
+  /** Releases the slot hold when the user abandons checkout. */
+  cancel: (transactionId: string) =>
+    api.post<PaymentVerification>(`/payments/cancel/${transactionId}`).then((res) => res.data)
 };

@@ -48,6 +48,21 @@ public interface TimeSlotRepository extends JpaRepository<TimeSlot, Long> {
             LocalTime startTime
     );
 
+    boolean existsByFutsalAndSlotDateAndStartTimeAndEndTime(
+            Futsal futsal,
+            LocalDate slotDate,
+            LocalTime startTime,
+            LocalTime endTime
+    );
+
+    boolean existsByFutsalAndSlotDateAndStartTimeAndEndTimeAndSlotIdNot(
+            Futsal futsal,
+            LocalDate slotDate,
+            LocalTime startTime,
+            LocalTime endTime,
+            Long slotId
+    );
+
     boolean existsByFutsalAndSlotDateAndStartTimeLessThanAndEndTimeGreaterThanAndSlotIdNot(
             Futsal futsal,
             LocalDate slotDate,

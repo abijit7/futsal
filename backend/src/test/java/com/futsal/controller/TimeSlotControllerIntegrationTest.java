@@ -4,6 +4,7 @@ import com.futsal.dto.SlotGenerationRequest;
 import com.futsal.dto.SlotGenerationResponse;
 import com.futsal.model.Futsal;
 import com.futsal.model.TimeSlot;
+import com.futsal.security.SecurityAuth;
 import com.futsal.service.TimeSlotService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,6 +35,13 @@ class TimeSlotControllerIntegrationTest {
         TimeSlotController controller = new TimeSlotController();
         service = new FakeTimeSlotService();
         ReflectionTestUtils.setField(controller, "timeSlotService", service);
+        // Admin authorization is enforced imperatively; this standalone setup has no
+        // SecurityContext, so stub the check out and cover it in SecurityRulesTest instead.
+        ReflectionTestUtils.setField(controller, "securityAuth", new SecurityAuth() {
+            @Override
+            public void requireAdmin() {
+            }
+        });
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new ApiExceptionHandler())
                 .build();

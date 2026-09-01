@@ -12,7 +12,7 @@ npm run dev
 The dev server is configured for:
 
 ```txt
-http://127.0.0.1:5174
+http://localhost:5173
 ```
 
 ## Environment
@@ -25,7 +25,7 @@ Create `.env` from `.env.example` only when you need to point the frontend at a 
 VITE_API_BASE_URL=http://localhost:9090
 ```
 
-The prompt mentioned `8080`, but this repository's current backend config uses `server.port=9090`.
+The backend uses `server.port=9090` by default, overridable with `PORT`.
 
 ## Backend Integration
 
@@ -34,11 +34,12 @@ The frontend uses a central Axios client in `src/api/client.ts`.
 - Auth: `/api/users/login`, `/api/users/register`
 - Futsals: `/api/futsals`
 - Slots: `/api/slots`, `/api/slots/all`
-- Booking confirmation: `/api/payments/confirm`
+- Payments: `/api/payments/initiate`, `/api/payments/verify`, `/api/payments/cancel/{id}`
 - Bookings: `/api/bookings`
 - Uploads: `/api/uploads/futsal-image`
 
-Booking intentionally uses `/api/payments/confirm`, not direct booking creation.
+Booking always goes through the payment flow, never `POST /api/bookings` (which rejects every
+request by design). `/api/payments/confirm` handles cash only.
 
 ## Verification
 

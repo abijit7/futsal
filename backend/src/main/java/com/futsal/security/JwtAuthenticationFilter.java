@@ -1,6 +1,8 @@
 package com.futsal.security;
 
 import com.futsal.repository.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -15,6 +17,8 @@ import java.io.IOException;
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
+
+    private static final Logger log = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
 
     private static final String BEARER_PREFIX = "Bearer ";
 
@@ -54,6 +58,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         if (!authorizationHeader.startsWith(BEARER_PREFIX)) {
+            log.warn("Rejected Authorization header without Bearer prefix for {} {}", method, path);
             SecurityContextHolder.clearContext();
             filterChain.doFilter(request, response);
             return;
@@ -76,6 +81,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
             SecurityContextHolder.getContext().setAuthentication(authentication);
         } catch (RuntimeException ex) {
+            // Never let a bad token authenticate, but do leave a trail: an expired token and a
+            // forged one are otherwise indistinguishable from an anonymous request in the logs.
+            log.warn("Rejected JWT for {} {}: {}", method, path, ex.getMessage());
             SecurityContextHolder.clearContext();
         }
 

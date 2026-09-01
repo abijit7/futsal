@@ -2,6 +2,7 @@ package com.futsal.repository;
 
 import com.futsal.model.Booking;
 import com.futsal.model.PaymentTransaction;
+import com.futsal.model.enums.PaymentStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
@@ -9,6 +10,8 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import jakarta.persistence.LockModeType;
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -25,4 +28,7 @@ public interface PaymentTransactionRepository extends JpaRepository<PaymentTrans
     Optional<PaymentTransaction> findByIdForUpdate(@Param("transactionId") Long transactionId);
 
     boolean existsByIdempotencyKey(String idempotencyKey);
+
+    /** Abandoned checkouts: still PENDING after the gateway's payment link has expired. */
+    List<PaymentTransaction> findByStatusAndCreatedAtBefore(PaymentStatus status, LocalDateTime cutoff);
 }

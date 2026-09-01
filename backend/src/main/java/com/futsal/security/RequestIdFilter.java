@@ -5,6 +5,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.MDC;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -12,7 +13,12 @@ import java.io.IOException;
 import java.util.UUID;
 
 @Component
+@Order(RequestIdFilter.ORDER)
 public class RequestIdFilter extends OncePerRequestFilter {
+    // Ahead of Spring Security (Boot registers its chain at -100) so the requestId
+    // is present in the MDC for authentication and authorization logging too.
+    public static final int ORDER = -150;
+
     private static final String HEADER = "X-Request-Id";
 
     @Override

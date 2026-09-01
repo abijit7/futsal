@@ -24,7 +24,7 @@ export function AdminUsers() {
     setLoading(true);
     setError('');
     try {
-      const data = await userApi.list(page, 10);
+      const data = await userApi.list({ page, size: 10, q: search.trim() || undefined, role: role === 'ALL' ? undefined : role });
       setItems(data.items || []);
       setTotalPages(data.totalPages || 0);
     } catch {
@@ -35,7 +35,7 @@ export function AdminUsers() {
       setLoading(false);
     }
   };
-  useEffect(() => { load(); }, [page]);
+  useEffect(() => { load(); }, [page, search, role]);
 
   const remove = async (id: number) => {
     setError('');
@@ -47,12 +47,7 @@ export function AdminUsers() {
     }
   };
 
-  const filteredItems = items.filter((user) => {
-    const haystack = `${user.name} ${user.email} ${user.phone}`.toLowerCase();
-    const matchesSearch = !search.trim() || haystack.includes(search.trim().toLowerCase());
-    const matchesRole = role === 'ALL' || user.role === role;
-    return matchesSearch && matchesRole;
-  });
+  const filteredItems = items;
 
   const counts = {
     total: items.length,
@@ -79,25 +74,25 @@ export function AdminUsers() {
 
       <FilterBar className="md:grid-cols-[1fr_220px_auto] md:items-end">
         <Field label="Search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Name, email, or phone" prefix={<Search size={18} />} />
-        <SelectField label="Role" value={role} onChange={(event) => setRole(event.target.value as RoleFilter)}>
+        <SelectField label="Role" value={role} onChange={(event) => { setRole(event.target.value as RoleFilter); setPage(0); }}>
           <option value="ALL">All roles</option>
           <option value="USER">Users</option>
           <option value="ADMIN">Admins</option>
         </SelectField>
-        <Button type="button" variant="outline" onClick={() => { setSearch(''); setRole('ALL'); }}>Clear filters</Button>
+        <Button type="button" variant="outline" onClick={() => { setSearch(''); setRole('ALL'); setPage(0); }}>Clear filters</Button>
       </FilterBar>
 
       {(search || role !== 'ALL') && (
         <div className="flex flex-wrap gap-2">
-          {search && <Chip onRemove={() => setSearch('')}>Search: {search}</Chip>}
-          {role !== 'ALL' && <Chip tone="green" onRemove={() => setRole('ALL')}>Role: {role}</Chip>}
+          {search && <Chip onRemove={() => { setSearch(''); setPage(0); }}>Search: {search}</Chip>}
+          {role !== 'ALL' && <Chip tone="green" onRemove={() => { setRole('ALL'); setPage(0); }}>Role: {role}</Chip>}
         </div>
       )}
 
       {error && !loading && <ErrorState message={error} retry={load} />}
       {loading ? <LoadingState /> : !error && filteredItems.length === 0 ? <EmptyState title="No users found" description="No account matches the current filters." /> : (
         <>
-          <div className="motion-stagger hidden gap-3 md:grid">
+          <div className="motion-stagger hidden gap-3 md:grid" aria-live="polite">
             {filteredItems.map((user) => (
               <article key={user.userId} className="panel grid min-w-0 gap-4 p-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1.35fr)_minmax(0,1fr)] xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1.25fr)_auto_minmax(0,1fr)_minmax(8rem,0.75fr)_auto] xl:items-center">
                 <UserIdentity user={user} />
@@ -110,7 +105,7 @@ export function AdminUsers() {
             ))}
           </div>
 
-          <div className="motion-stagger grid gap-3 md:hidden">
+          <div className="motion-stagger grid gap-3 md:hidden" aria-live="polite">
             {filteredItems.map((user) => (
               <article key={user.userId} className="mobile-data-card">
                 <div className="flex items-start justify-between gap-3">
@@ -172,7 +167,7 @@ function UserActions({ user, onView, onDelete }: { user: User; onView: (user: Us
 function InfoMeta({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-w-0">
-      <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">{label}</p>
+      <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">{label}</p>
       <p className="mt-1 truncate text-sm font-bold text-slate-600">{value}</p>
     </div>
   );
@@ -186,7 +181,7 @@ function UserIdentity({ user }: { user: User }) {
       </div>
       <div className="min-w-0">
         <p className="truncate font-black text-slate-950">{user.name}</p>
-        <p className="text-xs font-bold text-slate-400">ID {user.userId}</p>
+        <p className="text-xs font-bold text-slate-500">ID {user.userId}</p>
       </div>
     </div>
   );
@@ -204,7 +199,7 @@ function ContactBlock({ user }: { user: User }) {
 function RoleBadge({ user }: { user: User }) {
   const admin = user.role === 'ADMIN';
   return (
-    <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-black ${admin ? 'bg-slate-950 text-white' : 'bg-slate-100 text-slate-700'}`}>
+    <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-black ring-1 ${admin ? 'bg-slate-950 text-white ring-slate-900' : 'bg-slate-100 text-slate-700 ring-slate-200'}`}>
       <ShieldCheck size={14} />
       {user.role}
     </span>
@@ -222,7 +217,7 @@ function VerificationGroup({ user }: { user: User }) {
 
 function VerificationBadge({ verified, label }: { verified: boolean; label: string }) {
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-black ${verified ? 'bg-green-50 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
+    <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-black ring-1 ${verified ? 'bg-green-50 text-green-700 ring-green-200' : 'bg-slate-100 text-slate-500 ring-slate-200'}`}>
       {verified ? <CheckCircle2 size={14} /> : <XCircle size={14} />}
       {label}
     </span>

@@ -1,53 +1,79 @@
 package com.futsal.service;
 
-import com.futsal.dto.EsewaWebhookPayload;
-import com.futsal.dto.KhaltiWebhookPayload;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.futsal.dto.DtoMapper;
 import com.futsal.dto.PaymentInitiationRequest;
 import com.futsal.dto.PaymentInitiationResponse;
+import com.futsal.dto.PaymentVerifyRequest;
+import com.futsal.dto.PaymentVerifyResponse;
 import com.futsal.model.Booking;
+import com.futsal.model.Futsal;
 import com.futsal.model.PaymentTransaction;
 import com.futsal.model.TimeSlot;
-import com.futsal.model.TimeSlotStatusHistory;
+import com.futsal.model.enums.BookingStatus;
 import com.futsal.model.enums.PaymentMethod;
 import com.futsal.model.enums.PaymentStatus;
-import com.futsal.repository.BookingRepository;
 import com.futsal.repository.PaymentTransactionRepository;
 import com.futsal.repository.TimeSlotRepository;
-import com.futsal.repository.UserRepository;
-import com.google.gson.Gson;
+import com.futsal.security.SecurityAuth;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.util.UriComponentsBuilder;
 
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.time.Clock;
+import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.HashMap;
+import java.util.Base64;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * eSewa ePay v2 and Khalti ePayment v2 integration.
+ *
+ * <p>Neither gateway uses a server-to-server webhook, so there is no webhook endpoint here:
+ *
+ * <ul>
+ *   <li><b>eSewa</b> takes an auto-submitted HTML form POST carrying an HMAC-SHA256 signature over
+ *       {@code total_amount,transaction_uuid,product_code}, and returns a base64-encoded JSON blob
+ *       on the success URL. That blob's signature is recomputed here and then confirmed against
+ *       eSewa's transaction status API.</li>
+ *   <li><b>Khalti</b> is API-first: the server initiates and receives a {@code pidx}, and the
+ *       browser is redirected. The return URL's query string is trivially forgeable, so the
+ *       lookup API is the only thing treated as proof of payment.</li>
+ * </ul>
+ *
+ * <p>The price is always computed here from the venue's hourly rate and the slot duration; it is
+ * never taken from the client.
+ */
 @Service
 public class PaymentGatewayService {
-//payment gateway service handles payment initiation and webhook processing for ESEWA and KHALTI payment gateways. It also supports cash payments.
+
     private static final Logger log = LoggerFactory.getLogger(PaymentGatewayService.class);
 
-    @Autowired
-    private PaymentTransactionRepository paymentTransactionRepository;
+    /** eSewa signs these fields, in this order. */
+    private static final List<String> ESEWA_SIGNED_FIELDS = List.of("total_amount", "transaction_uuid", "product_code");
 
-    @Autowired
-    private BookingRepository bookingRepository;
-
-    @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
-    private TimeSlotRepository timeSlotRepository;
-
-    @Autowired
-    private BookingService bookingService;
+    private final PaymentTransactionRepository paymentTransactionRepository;
+    private final TimeSlotRepository timeSlotRepository;
+    private final BookingService bookingService;
+    private final ObjectMapper objectMapper;
+    private final Clock clock;
+    private final SecurityAuth securityAuth;
+    private final RestClient restClient = RestClient.create();
 
     @Value("${payment.esewa.merchant.code}")
     private String esewaMerchantCode;
@@ -55,381 +81,479 @@ public class PaymentGatewayService {
     @Value("${payment.esewa.merchant.secret}")
     private String esewaMerchantSecret;
 
-    @Value("${payment.esewa.api.url}")
-    private String esewaApiUrl;
+    @Value("${payment.esewa.form-url}")
+    private String esewaFormUrl;
+
+    @Value("${payment.esewa.status-url}")
+    private String esewaStatusUrl;
 
     @Value("${payment.khalti.secret}")
     private String khaltiSecret;
 
-    @Value("${payment.khalti.public.key}")
-    private String khaltiPublicKey;
-
     @Value("${payment.khalti.api.url}")
     private String khaltiApiUrl;
 
-    private final Gson gson = new Gson();
+    @Value("${app.payment.return-base-url}")
+    private String returnBaseUrl;
 
-    /**
-     * Initiate payment with the specified payment gateway
-     */
+    @Value("${app.payment.hold-minutes:60}")
+    private int holdMinutes;
+
+    public PaymentGatewayService(
+            PaymentTransactionRepository paymentTransactionRepository,
+            TimeSlotRepository timeSlotRepository,
+            BookingService bookingService,
+            ObjectMapper objectMapper,
+            Clock clock,
+            SecurityAuth securityAuth
+    ) {
+        this.paymentTransactionRepository = paymentTransactionRepository;
+        this.timeSlotRepository = timeSlotRepository;
+        this.bookingService = bookingService;
+        this.objectMapper = objectMapper;
+        this.clock = clock;
+        this.securityAuth = securityAuth;
+    }
+
+    // ── Initiation ────────────────────────────────────────────────────────────
+
     @Transactional
-    public PaymentInitiationResponse initiatePayment(PaymentInitiationRequest request) {
-        try {
-            // Validate user and slot
-            var user = userRepository.findById(request.getUserId())
-                    .orElseThrow(() -> new RuntimeException("User not found"));
+    public PaymentInitiationResponse initiate(PaymentInitiationRequest request) {
+        PaymentMethod method = parsePaymentMethod(request.getMethod());
 
-            var slot = timeSlotRepository.findByIdForUpdate(request.getSlotId())
-                    .orElseThrow(() -> new RuntimeException("Time slot not found"));
+        // Locks the slot row, so two concurrent checkouts for the same slot serialise here.
+        TimeSlot slot = timeSlotRepository.findByIdForUpdate(request.getSlotId())
+                .orElseThrow(() -> new IllegalArgumentException("Time slot not found"));
 
-            if (!slot.isAvailable()) {
-                throw new RuntimeException("This slot is no longer available");
+        BigDecimal amount = priceFor(slot);
+        String transactionUuid = newTransactionUuid();
+
+        // createPaidBooking performs the availability checks and marks the slot unavailable,
+        // holding it for the duration of the checkout. The uuid stands in as the payment
+        // reference until the gateway confirms and settleGatewayPayment swaps in the real one.
+        Booking booking = bookingService.createPaidBooking(
+                request.getUserId(), request.getSlotId(), request.getNotes(), method, transactionUuid);
+
+        PaymentTransaction transaction = new PaymentTransaction(booking, method, amount, transactionUuid);
+        transaction.setCreatedAt(LocalDateTime.now(clock));
+        transaction = paymentTransactionRepository.save(transaction);
+
+        PaymentInitiationResponse response = new PaymentInitiationResponse();
+        response.setTransactionId(String.valueOf(transaction.getTransactionId()));
+        response.setMethod(method);
+        response.setAmount(amount);
+
+        switch (method) {
+            case ESEWA -> {
+                response.setFormUrl(esewaFormUrl);
+                response.setFormFields(esewaFormFields(transactionUuid, amount));
+                response.setMessage("Submit the returned form fields to eSewa to complete payment.");
             }
-
-            // Generate idempotency key
-            String idempotencyKey = UUID.randomUUID().toString();
-
-            // Check for duplicate requests
-            if (paymentTransactionRepository.existsByIdempotencyKey(idempotencyKey)) {
-                throw new RuntimeException("Duplicate payment request");
+            case KHALTI -> {
+                response.setRedirectUrl(startKhaltiPayment(transaction, booking, amount));
+                response.setMessage("Redirect to Khalti to complete payment.");
             }
-
-            // Parse payment method
-            PaymentMethod paymentMethod = parsePaymentMethod(request.getMethod());
-
-            // For ESEWA and KHALTI, mark slot as temporarily unavailable
-            if (paymentMethod == PaymentMethod.ESEWA || paymentMethod == PaymentMethod.KHALTI) {
-                slot.setAvailable(false);
-                slot.addStatusHistory(new TimeSlotStatusHistory(slot, false, "payment:" + idempotencyKey, "Payment initiated"));
-                timeSlotRepository.save(slot);
-            }
-
-            // Create a temporary booking (pending payment)
-            Booking booking = bookingService.createBooking(request.getUserId(), request.getSlotId(), request.getNotes());
-            booking.setPaymentMethod(paymentMethod);
-
-            // Create payment transaction record
-            PaymentTransaction transaction = new PaymentTransaction(
-                    booking,
-                    paymentMethod,
-                    request.getAmount(),
-                    idempotencyKey
-            );
-            transaction = paymentTransactionRepository.save(transaction);
-
-            // Initiate payment with gateway
-            PaymentInitiationResponse response;
-            switch (paymentMethod) {
-                case ESEWA:
-                    response = initiateEsewaPayment(transaction, request);
-                    break;
-                case KHALTI:
-                    response = initiateKhaltiPayment(transaction, request);
-                    break;
-                case CASH_IN_HAND:
-                    response = handleCashPayment(transaction);
-                    break;
-                default:
-                    throw new RuntimeException("Unsupported payment method");
-            }
-
-            log.info("Payment initiated successfully: Transaction ID={}, Method={}",
-                    transaction.getTransactionId(), paymentMethod);
-
-            return response;
-
-        } catch (Exception e) {
-            log.error("Payment initiation failed: {}", e.getMessage(), e);
-            throw new RuntimeException("Payment initiation failed: " + e.getMessage());
-        }
-    }
-
-    /**
-     * Initiate ESEWA payment
-     */
-    private PaymentInitiationResponse initiateEsewaPayment(PaymentTransaction transaction, PaymentInitiationRequest request) {
-        try {
-            // ESEWA payment parameters
-            Map<String, String> params = new HashMap<>();
-            params.put("amt", transaction.getAmount().toString());
-            params.put("psc", "0"); // Service charge
-            params.put("pdc", "0"); // Delivery charge
-            params.put("txAmt", "0"); // Tax amount
-            params.put("tAmt", transaction.getAmount().toString()); // Total amount
-            params.put("pid", transaction.getTransactionId().toString()); // Product ID
-            params.put("scd", esewaMerchantCode); // Service code
-            params.put("su", request.getSuccessUrl() != null ? request.getSuccessUrl() : "http://localhost:5174/payment/success");
-            params.put("fu", request.getFailureUrl() != null ? request.getFailureUrl() : "http://localhost:5174/payment/failure");
-
-            // Build ESEWA payment URL
-            String paymentUrl = esewaApiUrl + "?" + buildQueryString(params);
-
-            PaymentInitiationResponse response = new PaymentInitiationResponse();
-            response.setPaymentUrl(paymentUrl);
-            response.setTransactionId(transaction.getTransactionId().toString());
-            response.setMessage("ESEWA payment initiated successfully");
-
-            return response;
-
-        } catch (Exception e) {
-            log.error("ESEWA payment initiation failed: {}", e.getMessage(), e);
-            throw new RuntimeException("ESEWA payment initiation failed: " + e.getMessage());
-        }
-    }
-
-    /**
-     * Initiate KHALTI payment
-     */
-    private PaymentInitiationResponse initiateKhaltiPayment(PaymentTransaction transaction, PaymentInitiationRequest request) {
-        try {
-            // KHALTI payment parameters
-            Map<String, Object> payload = new HashMap<>();
-            payload.put("return_url", request.getSuccessUrl() != null ? request.getSuccessUrl() : "http://localhost:5174/payment/success");
-            payload.put("website_url", "http://localhost:5174");
-            payload.put("amount", transaction.getAmount().multiply(new BigDecimal("100")).longValue()); // Amount in paisa
-            payload.put("purchase_order_id", transaction.getTransactionId().toString());
-            payload.put("purchase_order_name", "Futsal Booking - " + transaction.getBooking().getTimeSlot().getSlotId());
-
-            Map<String, Object> customerInfo = new HashMap<>();
-            customerInfo.put("name", "Customer");
-            customerInfo.put("email", "customer@example.com");
-            customerInfo.put("phone", "9800000000");
-            payload.put("customer_info", customerInfo);
-
-            // For demo purposes, return a mock response
-            // In production, you would make an actual API call to KHALTI
-            PaymentInitiationResponse response = new PaymentInitiationResponse();
-            response.setPaymentUrl(khaltiApiUrl + "/v2/epayment/initiate/");
-            response.setPaymentToken(gson.toJson(payload));
-            response.setTransactionId(transaction.getTransactionId().toString());
-            response.setMessage("KHALTI payment initiated successfully");
-
-            return response;
-
-        } catch (Exception e) {
-            log.error("KHALTI payment initiation failed: {}", e.getMessage(), e);
-            throw new RuntimeException("KHALTI payment initiation failed: " + e.getMessage());
-        }
-    }
-
-    /**
-     * Handle cash payment (no gateway integration needed)
-     */
-    private PaymentInitiationResponse handleCashPayment(PaymentTransaction transaction) {
-        // Create a paid booking directly
-        try {
-            Booking booking = bookingService.createPaidBooking(
-                    transaction.getBooking().getUser().getUserId(),
-                    transaction.getBooking().getTimeSlot().getSlotId(),
-                    transaction.getBooking().getNotes(),
-                    PaymentMethod.CASH_IN_HAND,
-                    "CASH-" + transaction.getTransactionId()
-            );
-
-            // Update transaction status
-            transaction.setStatus(PaymentStatus.COMPLETED);
-            transaction.setGatewayTransactionId("CASH-" + transaction.getTransactionId());
-            transaction.setCompletedAt(LocalDateTime.now());
-            paymentTransactionRepository.save(transaction);
-
-            PaymentInitiationResponse response = new PaymentInitiationResponse();
-            response.setTransactionId(transaction.getTransactionId().toString());
-            response.setMessage("Cash payment booking created successfully");
-
-            return response;
-
-        } catch (Exception e) {
-            log.error("Cash payment handling failed: {}", e.getMessage(), e);
-            throw new RuntimeException("Cash payment handling failed: " + e.getMessage());
-        }
-    }
-
-    /**
-     * Handle ESEWA webhook callback
-     */
-    @Transactional
-    public void handleEsewaWebhook(EsewaWebhookPayload payload) {
-        try {
-            log.info("Processing ESEWA webhook: Transaction ID={}, Status={}", payload.getTransactionId(), payload.getStatus());
-
-            // Find transaction by gateway transaction ID
-            PaymentTransaction transaction = paymentTransactionRepository.findByGatewayTransactionId(payload.getTransactionId())
-                    .orElseThrow(() -> new RuntimeException("Transaction not found"));
-
-            // Verify signature
-            if (!verifyEsewaSignature(payload)) {
-                log.error("ESEWA signature verification failed for transaction: {}", payload.getTransactionId());
-                throw new RuntimeException("Invalid signature");
-            }
-
-            // Update transaction status
-            if ("Complete".equalsIgnoreCase(payload.getStatus())) {
+            case CASH_IN_HAND -> {
                 transaction.setStatus(PaymentStatus.COMPLETED);
-                transaction.setGatewayTransactionId(payload.getRefId());
-                transaction.setCompletedAt(LocalDateTime.now());
-                transaction.setGatewayResponse(gson.toJson(payload));
-
-                // Complete the booking
-                completeBooking(transaction.getBooking(), payload.getRefId());
-
-            } else {
-                transaction.setStatus(PaymentStatus.FAILED);
-                transaction.setFailureReason(payload.getMessage());
-                transaction.setGatewayResponse(gson.toJson(payload));
-
-                // Mark slot as available again
-                revertSlotAvailability(transaction.getBooking().getTimeSlot());
+                transaction.setGatewayTransactionId(transactionUuid);
+                transaction.setCompletedAt(LocalDateTime.now(clock));
+                paymentTransactionRepository.save(transaction);
+                response.setBooking(DtoMapper.toBookingResponse(booking));
+                response.setMessage("Booking created. Pay at the venue.");
             }
-
-            paymentTransactionRepository.save(transaction);
-            log.info("ESEWA webhook processed successfully: Transaction ID={}", transaction.getTransactionId());
-
-        } catch (Exception e) {
-            log.error("ESEWA webhook processing failed: {}", e.getMessage(), e);
-            throw new RuntimeException("ESEWA webhook processing failed: " + e.getMessage());
         }
+
+        log.info("Payment initiated: transactionId={}, method={}, amount={}",
+                transaction.getTransactionId(), method, amount);
+        return response;
     }
 
-    /**
-     * Handle KHALTI webhook callback
-     */
+    private Map<String, String> esewaFormFields(String transactionUuid, BigDecimal amount) {
+        // The signature must cover the exact strings submitted, so format once and reuse.
+        String totalAmount = amount.setScale(2, RoundingMode.HALF_UP).toPlainString();
+
+        Map<String, String> fields = new LinkedHashMap<>();
+        fields.put("amount", totalAmount);
+        fields.put("tax_amount", "0");
+        fields.put("total_amount", totalAmount);
+        fields.put("transaction_uuid", transactionUuid);
+        fields.put("product_code", esewaMerchantCode);
+        fields.put("product_service_charge", "0");
+        fields.put("product_delivery_charge", "0");
+        fields.put("success_url", returnUrl("/payment/success"));
+        fields.put("failure_url", returnUrl("/payment/failure"));
+        fields.put("signed_field_names", String.join(",", ESEWA_SIGNED_FIELDS));
+        fields.put("signature", esewaSignature(Map.of(
+                "total_amount", totalAmount,
+                "transaction_uuid", transactionUuid,
+                "product_code", esewaMerchantCode
+        ), ESEWA_SIGNED_FIELDS));
+        return fields;
+    }
+
+    private String startKhaltiPayment(PaymentTransaction transaction, Booking booking, BigDecimal amount) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("return_url", returnUrl("/payment/success"));
+        payload.put("website_url", returnBaseUrl);
+        payload.put("amount", toPaisa(amount));
+        payload.put("purchase_order_id", transaction.getIdempotencyKey());
+        payload.put("purchase_order_name", "Futsal booking " + booking.getBookingId());
+        payload.put("customer_info", Map.of(
+                "name", booking.getUser().getName(),
+                "email", booking.getUser().getEmail(),
+                "phone", booking.getUser().getPhone()
+        ));
+
+        JsonNode body = khaltiPost("/epayment/initiate/", payload);
+        String pidx = text(body, "pidx");
+        String paymentUrl = text(body, "payment_url");
+        if (pidx == null || paymentUrl == null) {
+            throw new IllegalStateException("Khalti did not return a payment link");
+        }
+
+        // pidx is how the payment is looked up later, so it must be persisted before redirecting.
+        transaction.setGatewayTransactionId(pidx);
+        paymentTransactionRepository.save(transaction);
+        return paymentUrl;
+    }
+
+    // ── Verification ──────────────────────────────────────────────────────────
+
     @Transactional
-    public void handleKhaltiWebhook(KhaltiWebhookPayload payload) {
-        try {
-            log.info("Processing KHALTI webhook: Transaction ID={}, Status={}", payload.getTransaction_id(), payload.getStatus());
-
-            // Find transaction by purchase order ID
-            PaymentTransaction transaction = paymentTransactionRepository.findById(Long.parseLong(payload.getTransaction_id()))
-                    .orElseThrow(() -> new RuntimeException("Transaction not found"));
-
-            // Verify signature
-            if (!verifyKhaltiSignature(payload)) {
-                log.error("KHALTI signature verification failed for transaction: {}", payload.getTransaction_id());
-                throw new RuntimeException("Invalid signature");
-            }
-
-            // Update transaction status
-            if ("Completed".equalsIgnoreCase(payload.getStatus())) {
-                transaction.setStatus(PaymentStatus.COMPLETED);
-                transaction.setGatewayTransactionId(payload.getIdx());
-                transaction.setCompletedAt(LocalDateTime.now());
-                transaction.setGatewayResponse(gson.toJson(payload));
-
-                // Complete the booking
-                completeBooking(transaction.getBooking(), payload.getIdx());
-
-            } else {
-                transaction.setStatus(PaymentStatus.FAILED);
-                transaction.setFailureReason("Payment failed: " + payload.getStatus());
-                transaction.setGatewayResponse(gson.toJson(payload));
-
-                // Mark slot as available again
-                revertSlotAvailability(transaction.getBooking().getTimeSlot());
-            }
-
-            paymentTransactionRepository.save(transaction);
-            log.info("KHALTI webhook processed successfully: Transaction ID={}", transaction.getTransactionId());
-
-        } catch (Exception e) {
-            log.error("KHALTI webhook processing failed: {}", e.getMessage(), e);
-            throw new RuntimeException("KHALTI webhook processing failed: " + e.getMessage());
+    public PaymentVerifyResponse verify(PaymentVerifyRequest request) {
+        if (request.getData() != null && !request.getData().isBlank()) {
+            return verifyEsewa(request.getData());
         }
+        if (request.getPidx() != null && !request.getPidx().isBlank()) {
+            return verifyKhalti(request.getPidx());
+        }
+        throw new IllegalArgumentException("Nothing to verify: expected eSewa 'data' or Khalti 'pidx'.");
+    }
+
+    private PaymentVerifyResponse verifyEsewa(String encodedData) {
+        JsonNode payload;
+        try {
+            payload = objectMapper.readTree(Base64.getDecoder().decode(encodedData.trim()));
+        } catch (Exception ex) {
+            throw new IllegalArgumentException("Malformed eSewa response payload");
+        }
+
+        String transactionUuid = text(payload, "transaction_uuid");
+        if (transactionUuid == null) {
+            throw new IllegalArgumentException("eSewa response is missing transaction_uuid");
+        }
+
+        PaymentTransaction transaction = paymentTransactionRepository.findByIdempotencyKey(transactionUuid)
+                .orElseThrow(() -> new IllegalArgumentException("Unknown payment transaction"));
+        requireOwner(transaction);
+
+        PaymentVerifyResponse settled = alreadySettled(transaction);
+        if (settled != null) {
+            return settled;
+        }
+
+        // 1. The blob is signed. Recompute over exactly the fields eSewa says it signed, using the
+        //    strings as returned - eSewa formats total_amount inconsistently and any normalisation
+        //    here would break the comparison.
+        List<String> signedFields = List.of(String.valueOf(text(payload, "signed_field_names")).split(","));
+        String expected = esewaSignature(flatten(payload), signedFields);
+        String actual = text(payload, "signature");
+        if (actual == null || !MessageDigest.isEqual(
+                expected.getBytes(StandardCharsets.UTF_8), actual.getBytes(StandardCharsets.UTF_8))) {
+            log.warn("eSewa signature mismatch for transaction_uuid={}", transactionUuid);
+            return fail(transaction, "Payment signature verification failed");
+        }
+
+        // 2. A valid signature only proves the blob came from eSewa, not that it is current.
+        //    The status API is authoritative.
+        String totalAmount = transaction.getAmount().setScale(2, RoundingMode.HALF_UP).toPlainString();
+        JsonNode status = esewaStatus(transactionUuid, totalAmount);
+        if (!"COMPLETE".equalsIgnoreCase(text(status, "status"))) {
+            return fail(transaction, "eSewa reports the payment as " + text(status, "status"));
+        }
+
+        // 3. The amount eSewa settled must match what we asked for.
+        if (!amountMatches(transaction.getAmount(), text(status, "total_amount"))) {
+            log.warn("eSewa amount mismatch for {}: expected {}, gateway reported {}",
+                    transactionUuid, transaction.getAmount(), text(status, "total_amount"));
+            return fail(transaction, "Paid amount does not match the booking price");
+        }
+
+        String reference = firstNonBlank(text(status, "ref_id"), text(payload, "transaction_code"), transactionUuid);
+        return succeed(transaction, reference, payload);
+    }
+
+    private PaymentVerifyResponse verifyKhalti(String pidx) {
+        PaymentTransaction transaction = paymentTransactionRepository.findByGatewayTransactionId(pidx)
+                .orElseThrow(() -> new IllegalArgumentException("Unknown payment transaction"));
+        requireOwner(transaction);
+
+        PaymentVerifyResponse settled = alreadySettled(transaction);
+        if (settled != null) {
+            return settled;
+        }
+
+        JsonNode lookup = khaltiPost("/epayment/lookup/", Map.of("pidx", pidx));
+        String status = text(lookup, "status");
+        if (!"Completed".equalsIgnoreCase(status)) {
+            // Pending and Initiated are not failures yet; leave the hold for the sweep to expire.
+            if ("Pending".equalsIgnoreCase(status) || "Initiated".equalsIgnoreCase(status)) {
+                return new PaymentVerifyResponse(PaymentStatus.PENDING,
+                        "Khalti is still processing this payment.", pidx, null);
+            }
+            return fail(transaction, "Khalti reports the payment as " + status);
+        }
+
+        long expectedPaisa = toPaisa(transaction.getAmount());
+        long paidPaisa = lookup.path("total_amount").asLong(-1);
+        if (paidPaisa != expectedPaisa) {
+            log.warn("Khalti amount mismatch for pidx={}: expected {} paisa, gateway reported {}",
+                    pidx, expectedPaisa, paidPaisa);
+            return fail(transaction, "Paid amount does not match the booking price");
+        }
+
+        return succeed(transaction, firstNonBlank(text(lookup, "transaction_id"), pidx), lookup);
     }
 
     /**
-     * Complete booking after successful payment
+     * Only the booking's owner (or an admin) may settle or cancel its payment. The owner is not
+     * known until the transaction is resolved from the gateway identifier, so the check lives here
+     * rather than in the controller.
      */
-    private void completeBooking(Booking booking, String gatewayTransactionId) {
-        try {
-            // Create paid booking
-            Booking paidBooking = bookingService.createPaidBooking(
-                    booking.getUser().getUserId(),
-                    booking.getTimeSlot().getSlotId(),
-                    booking.getNotes(),
-                    booking.getPaymentMethod(),
-                    gatewayTransactionId
-            );
-
-            // Update original booking
-            booking.setTimeSlot(paidBooking.getTimeSlot());
-            booking.setStatus(paidBooking.getStatus());
-            booking.setPaymentRef(gatewayTransactionId);
-            bookingRepository.save(booking);
-
-        } catch (Exception e) {
-            log.error("Failed to complete booking: {}", e.getMessage(), e);
-            throw new RuntimeException("Failed to complete booking: " + e.getMessage());
+    private void requireOwner(PaymentTransaction transaction) {
+        Booking booking = transaction.getBooking();
+        if (booking == null || booking.getUser() == null) {
+            throw new IllegalStateException("Payment transaction has no owning booking");
         }
+        securityAuth.requireUserOrAdmin(booking.getUser().getUserId());
+    }
+
+    /** Verification is idempotent: a replayed callback returns the booking rather than re-settling. */
+    private PaymentVerifyResponse alreadySettled(PaymentTransaction transaction) {
+        if (transaction.getStatus() != PaymentStatus.COMPLETED) {
+            return null;
+        }
+        return new PaymentVerifyResponse(
+                PaymentStatus.COMPLETED,
+                "Payment already confirmed.",
+                transaction.getGatewayTransactionId(),
+                DtoMapper.toBookingResponse(transaction.getBooking()));
+    }
+
+    private PaymentVerifyResponse succeed(PaymentTransaction transaction, String reference, JsonNode raw) {
+        transaction.setStatus(PaymentStatus.COMPLETED);
+        transaction.setGatewayTransactionId(reference);
+        transaction.setCompletedAt(LocalDateTime.now(clock));
+        transaction.setGatewayResponse(raw.toString());
+        paymentTransactionRepository.save(transaction);
+
+        Booking booking = bookingService.settleGatewayPayment(
+                transaction.getBooking().getBookingId(), reference);
+
+        log.info("Payment confirmed: transactionId={}, reference={}", transaction.getTransactionId(), reference);
+        return new PaymentVerifyResponse(PaymentStatus.COMPLETED, "Payment confirmed.", reference,
+                DtoMapper.toBookingResponse(booking));
+    }
+
+    private PaymentVerifyResponse fail(PaymentTransaction transaction, String reason) {
+        transaction.setStatus(PaymentStatus.FAILED);
+        transaction.setFailureReason(reason);
+        paymentTransactionRepository.save(transaction);
+        releaseHold(transaction, "Payment failed");
+        return new PaymentVerifyResponse(PaymentStatus.FAILED, reason, null, null);
+    }
+
+    // ── Cancellation and expiry ───────────────────────────────────────────────
+
+    /** Called when the user abandons the gateway, so the slot does not stay held. */
+    @Transactional
+    public PaymentVerifyResponse cancel(Long transactionId) {
+        PaymentTransaction transaction = paymentTransactionRepository.findByIdForUpdate(transactionId)
+                .orElseThrow(() -> new IllegalArgumentException("Unknown payment transaction"));
+        requireOwner(transaction);
+
+        PaymentVerifyResponse settled = alreadySettled(transaction);
+        if (settled != null) {
+            return settled;
+        }
+
+        transaction.setStatus(PaymentStatus.CANCELLED);
+        paymentTransactionRepository.save(transaction);
+        releaseHold(transaction, "Payment cancelled");
+        return new PaymentVerifyResponse(PaymentStatus.CANCELLED, "Payment cancelled.", null, null);
     }
 
     /**
-     * Revert slot availability when payment fails
+     * Frees slots held by checkouts nobody finished.
+     *
+     * <p>Without this an abandoned checkout blocks its slot forever: the hold is taken at
+     * initiation and only released on an explicit success or failure that never arrives.
      */
-    private void revertSlotAvailability(TimeSlot slot) {
-        try {
-            if (!slot.isAvailable()) {
-                slot.setAvailable(true);
-                timeSlotRepository.save(slot);
+    @Scheduled(fixedDelayString = "${app.payment.sweep-interval-ms:300000}")
+    @Transactional
+    public void releaseExpiredHolds() {
+        LocalDateTime cutoff = LocalDateTime.now(clock).minusMinutes(holdMinutes);
+        List<PaymentTransaction> expired =
+                paymentTransactionRepository.findByStatusAndCreatedAtBefore(PaymentStatus.PENDING, cutoff);
+        if (expired.isEmpty()) {
+            return;
+        }
+        for (PaymentTransaction transaction : expired) {
+            try {
+                transaction.setStatus(PaymentStatus.CANCELLED);
+                transaction.setFailureReason("Checkout abandoned; hold expired after " + holdMinutes + " minutes");
+                paymentTransactionRepository.save(transaction);
+                releaseHold(transaction, "Payment hold expired");
+            } catch (RuntimeException ex) {
+                log.error("Could not release expired hold for transactionId={}",
+                        transaction.getTransactionId(), ex);
             }
-        } catch (Exception e) {
-            log.error("Failed to revert slot availability: {}", e.getMessage(), e);
         }
+        log.info("Released {} expired payment hold(s)", expired.size());
     }
 
     /**
-     * Verify ESEWA signature
+     * Cancels the placeholder booking, which frees the slot and writes the history entries.
+     * Reuses the normal status transition so the audit trail matches a user-initiated cancel.
      */
-    private boolean verifyEsewaSignature(EsewaWebhookPayload payload) {
+    private void releaseHold(PaymentTransaction transaction, String reason) {
+        Booking booking = transaction.getBooking();
+        if (booking == null) {
+            return;
+        }
         try {
-            // ESEWA signature verification logic
-            // This is a simplified version - implement actual signature verification based on ESEWA documentation
-            String signature = payload.getSignature();
-            return signature != null && !signature.isEmpty();
+            if (booking.getStatus() == BookingStatus.PENDING || booking.getStatus() == BookingStatus.APPROVED) {
+                bookingService.updateStatus(booking.getBookingId(), BookingStatus.CANCELLED, "payment");
+            }
+        } catch (RuntimeException ex) {
+            log.error("Could not release slot hold for bookingId={} ({})", booking.getBookingId(), reason, ex);
+        }
+    }
 
-        } catch (Exception e) {
-            log.error("ESEWA signature verification error: {}", e.getMessage(), e);
+    // ── Gateway calls ─────────────────────────────────────────────────────────
+
+    private JsonNode khaltiPost(String path, Object payload) {
+        try {
+            return restClient.post()
+                    .uri(khaltiApiUrl + path)
+                    .header("Authorization", "Key " + khaltiSecret)
+                    .header("Content-Type", "application/json")
+                    .body(payload)
+                    .retrieve()
+                    .body(JsonNode.class);
+        } catch (RuntimeException ex) {
+            log.error("Khalti call to {} failed: {}", path, ex.getMessage());
+            throw new IllegalStateException("Could not reach Khalti. Please try again.");
+        }
+    }
+
+    private JsonNode esewaStatus(String transactionUuid, String totalAmount) {
+        try {
+            String uri = UriComponentsBuilder.fromUriString(esewaStatusUrl)
+                    .queryParam("product_code", esewaMerchantCode)
+                    .queryParam("total_amount", totalAmount)
+                    .queryParam("transaction_uuid", transactionUuid)
+                    .toUriString();
+            return restClient.get().uri(uri).retrieve().body(JsonNode.class);
+        } catch (RuntimeException ex) {
+            log.error("eSewa status check failed for {}: {}", transactionUuid, ex.getMessage());
+            throw new IllegalStateException("Could not reach eSewa. Please try again.");
+        }
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
+    /**
+     * eSewa's HMAC-SHA256 covers {@code name=value} pairs joined by commas, in the order given by
+     * signed_field_names, base64 encoded.
+     */
+    String esewaSignature(Map<String, String> values, List<String> signedFields) {
+        StringBuilder message = new StringBuilder();
+        for (String field : signedFields) {
+            String key = field.trim();
+            if (!message.isEmpty()) {
+                message.append(',');
+            }
+            message.append(key).append('=').append(values.getOrDefault(key, ""));
+        }
+        try {
+            Mac mac = Mac.getInstance("HmacSHA256");
+            mac.init(new SecretKeySpec(esewaMerchantSecret.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+            return Base64.getEncoder().encodeToString(mac.doFinal(message.toString().getBytes(StandardCharsets.UTF_8)));
+        } catch (Exception ex) {
+            throw new IllegalStateException("Could not sign the eSewa request", ex);
+        }
+    }
+
+    /** Price = the venue's hourly rate pro-rated over the slot's duration. */
+    private BigDecimal priceFor(TimeSlot slot) {
+        Futsal futsal = slot.getFutsal();
+        if (futsal == null || futsal.getHourlyPrice() == null || futsal.getHourlyPrice().signum() <= 0) {
+            throw new IllegalStateException("This venue has no hourly price configured.");
+        }
+        long minutes = Duration.between(slot.getStartTime(), slot.getEndTime()).toMinutes();
+        if (minutes <= 0) {
+            throw new IllegalStateException("This slot has an invalid duration.");
+        }
+        return futsal.getHourlyPrice()
+                .multiply(BigDecimal.valueOf(minutes))
+                .divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
+    }
+
+    private long toPaisa(BigDecimal amount) {
+        return amount.multiply(BigDecimal.valueOf(100)).setScale(0, RoundingMode.HALF_UP).longValueExact();
+    }
+
+    /** eSewa may return amounts with grouping separators, e.g. "1,800.0". */
+    private boolean amountMatches(BigDecimal expected, String reported) {
+        if (reported == null) {
+            return false;
+        }
+        try {
+            BigDecimal actual = new BigDecimal(reported.replace(",", "").trim());
+            return expected.compareTo(actual) == 0;
+        } catch (NumberFormatException ex) {
             return false;
         }
     }
 
-    /**
-     * Verify KHALTI signature
-     */
-    private boolean verifyKhaltiSignature(KhaltiWebhookPayload payload) {
-        try {
-            // KHALTI signature verification logic
-            // This is a simplified version - implement actual signature verification based on KHALTI documentation
-            String signature = payload.getSignature();
-            return signature != null && !signature.isEmpty();
-
-        } catch (Exception e) {
-            log.error("KHALTI signature verification error: {}", e.getMessage(), e);
-            return false;
-        }
+    private Map<String, String> flatten(JsonNode node) {
+        Map<String, String> values = new LinkedHashMap<>();
+        node.fields().forEachRemaining(entry -> values.put(entry.getKey(), entry.getValue().asText()));
+        return values;
     }
 
-    /**
-     * Build query string from parameters
-     */
-    private String buildQueryString(Map<String, String> params) {
-        StringBuilder query = new StringBuilder();
-        for (Map.Entry<String, String> entry : params.entrySet()) {
-            if (query.length() > 0) {
-                query.append("&");
+    private String text(JsonNode node, String field) {
+        if (node == null) {
+            return null;
+        }
+        JsonNode value = node.get(field);
+        return value == null || value.isNull() ? null : value.asText();
+    }
+
+    private String firstNonBlank(String... candidates) {
+        for (String candidate : candidates) {
+            if (candidate != null && !candidate.isBlank()) {
+                return candidate;
             }
-            query.append(entry.getKey()).append("=").append(entry.getValue());
         }
-        return query.toString();
+        return null;
     }
 
-    /**
-     * Parse payment method from string
-     */
+    private String returnUrl(String path) {
+        return returnBaseUrl.replaceAll("/+$", "") + path;
+    }
+
+    private String newTransactionUuid() {
+        // eSewa requires an alphanumeric/hyphen transaction_uuid that is unique per attempt.
+        return "FUTSAL-" + UUID.randomUUID().toString().replace("-", "").substring(0, 20).toUpperCase();
+    }
+
     private PaymentMethod parsePaymentMethod(String method) {
         try {
-            return PaymentMethod.valueOf(method.toUpperCase());
-        } catch (IllegalArgumentException e) {
-            throw new RuntimeException("Invalid payment method: " + method);
+            return PaymentMethod.valueOf(method.trim().toUpperCase());
+        } catch (RuntimeException ex) {
+            throw new IllegalArgumentException("Invalid payment method: " + method);
         }
     }
 }

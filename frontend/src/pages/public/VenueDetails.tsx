@@ -1,4 +1,4 @@
-import { Calendar, ChevronLeft, ChevronRight, Clock, MapPin, Minus, Phone, Plus, ShieldCheck, Star } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Clock, MapPin, Phone, ShieldCheck, Star } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { futsalApi, paymentApi, slotApi } from '../../api/modules';
@@ -6,6 +6,7 @@ import { EmptyState, LoadingState } from '../../components/State';
 import { useAuth } from '../../context/AuthContext';
 import type { Futsal, PaymentMethod, TimeSlot } from '../../types/api';
 import { formatTime, formatTimeCompact, imageForVenue, money, slotDuration, timeRange, todayInput } from '../../utils/format';
+import { handOffToGateway } from '../../utils/gatewayCheckout';
 
 export function VenueDetails() {
   const { id } = useParams();
@@ -63,13 +64,21 @@ export function VenueDetails() {
     setError('');
     setMessage('');
     try {
-      await paymentApi.confirm({
+      // Cash is settled here and now. eSewa and Khalti hold the slot, then hand the browser to
+      // the gateway; the booking is only confirmed once /payments/verify says the money moved.
+      const initiation = await paymentApi.initiate({
         userId: user.userId,
         slotId: selectedSlot.slotId,
         method: paymentMethod,
         notes
       });
-      setMessage('Booking created successfully. You can track it from My Bookings.');
+
+      if (paymentMethod !== 'CASH_IN_HAND') {
+        handOffToGateway(initiation);
+        return; // the browser is navigating away
+      }
+
+      setMessage('Booking created successfully. Pay at the venue. You can track it from My Bookings.');
       setSelectedSlot(null);
       setNotes('');
       const data = await slotApi.public({ futsalId, slotDate: selectedDate, page: 0, size: 80 });
@@ -97,12 +106,24 @@ export function VenueDetails() {
 
       <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
         <div className="min-w-0">
-          <div className="grid gap-3 overflow-hidden rounded-[2rem] md:grid-cols-4 md:grid-rows-2">
-            <img src={imageForVenue(images[0])} alt={futsal.name} className="h-72 w-full object-cover md:col-span-2 md:row-span-2 md:h-96" />
-            {(images.length > 1 ? images.slice(1, 4) : [images[0], images[0], images[0]]).map((url, index) => (
-              <img key={`${url}-${index}`} src={imageForVenue(url)} alt="" className="hidden h-full min-h-44 w-full object-cover md:block" />
-            ))}
-          </div>
+          {images.length > 1 ? (
+            <>
+              <div className="grid gap-3 overflow-hidden rounded-3xl md:grid-cols-4 md:grid-rows-2">
+                <img src={imageForVenue(images[0])} alt={futsal.name} className="h-64 w-full object-cover sm:h-80 md:col-span-2 md:row-span-2 md:h-96" />
+                {images.slice(1, 5).map((url, index) => (
+                  <img key={`${url}-${index}`} src={imageForVenue(url)} alt={`${futsal.name} photo ${index + 2}`} className="hidden h-full min-h-44 w-full object-cover md:block" />
+                ))}
+              </div>
+              {/* The extra photos were desktop-only before, so phones saw the cover image alone. */}
+              <div className="mt-3 flex gap-3 overflow-x-auto pb-1 md:hidden">
+                {images.slice(1).map((url, index) => (
+                  <img key={`m-${url}-${index}`} src={imageForVenue(url)} alt={`${futsal.name} photo ${index + 2}`} className="h-24 w-32 shrink-0 rounded-2xl object-cover" />
+                ))}
+              </div>
+            </>
+          ) : (
+            <img src={imageForVenue(images[0])} alt={futsal.name} className="h-64 w-full rounded-3xl object-cover sm:h-80 md:h-96" />
+          )}
 
           <div className="mt-7">
             <div className="flex flex-wrap items-center gap-2">
@@ -125,13 +146,15 @@ export function VenueDetails() {
               {dates.map((date) => (
                 <button
                   key={date.value}
-                  className={`flex min-h-28 min-w-24 shrink-0 flex-col items-center justify-center rounded-2xl border px-5 py-4 text-center font-black transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] ${selectedDate === date.value ? 'border-slate-950 bg-slate-950 text-white' : 'border-slate-200 bg-slate-100 text-slate-600 hover:border-green-300'}`}
+                  type="button"
+                  aria-pressed={selectedDate === date.value}
+                  className={`flex min-h-28 min-w-24 shrink-0 flex-col items-center justify-center rounded-2xl border px-5 py-4 text-center font-black transition-all duration-200 hover:-translate-y-0.5 focus:outline-none focus:ring-4 focus:ring-green-100 active:translate-y-0 active:scale-[0.98] ${selectedDate === date.value ? 'border-slate-950 bg-slate-950 text-white' : 'border-slate-200 bg-slate-100 text-slate-600 hover:border-green-300'}`}
                   onClick={() => setSelectedDate(date.value)}
                 >
                   <span className="text-sm uppercase">{date.weekday}</span>
                   <span className={`mt-2 text-2xl ${selectedDate === date.value ? 'text-white' : 'text-slate-950'}`}>{date.day}</span>
                   <span className="text-sm">{date.month}</span>
-                  {date.isToday && <span className={`mt-1 text-sm ${selectedDate === date.value ? 'text-green-300' : 'text-green-600'}`}>Today</span>}
+                  {date.isToday && <span className={`mt-1 text-sm ${selectedDate === date.value ? 'text-green-300' : 'text-green-700'}`}>Today</span>}
                 </button>
               ))}
             </div>
@@ -140,20 +163,21 @@ export function VenueDetails() {
           <section className="panel mt-5 p-6">
             <h2 className="flex items-center gap-3 text-2xl font-black text-slate-950"><Clock className="text-green-600" size={24} /> Available Time Slots</h2>
             <div className="mt-6 flex flex-wrap items-center gap-5 text-sm font-bold text-slate-500">
-              <span className="inline-flex items-center gap-2"><span className="h-4 w-4 rounded-md bg-green-600" /> Available</span>
+              <span className="inline-flex items-center gap-2"><span className="h-4 w-4 rounded-md bg-green-50 ring-1 ring-green-200" /> Available</span>
               <span className="inline-flex items-center gap-2"><span className="h-4 w-4 rounded-md bg-slate-200" /> Booked</span>
               <span className="inline-flex items-center gap-2"><span className="h-4 w-4 rounded-md bg-slate-950" /> Selected</span>
             </div>
             <div className="mt-6">
               {loadingSlots ? <LoadingState /> : slots.length === 0 ? <EmptyState title="No slots for this date" /> : (
-                <div className="motion-stagger grid gap-3 sm:grid-cols-3 xl:grid-cols-5">
+                <div className="motion-stagger grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
                   {slots.map((slot) => {
                     const active = selectedSlot?.slotId === slot.slotId;
                     return (
                       <button
                         key={slot.slotId}
                         disabled={!slot.available}
-                        className={`rounded-2xl px-4 py-4 text-center text-base font-black transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] disabled:hover:translate-y-0 disabled:active:scale-100 ${active ? 'bg-slate-950 text-white shadow-lg shadow-slate-950/15' : slot.available ? 'bg-green-50 text-green-700 hover:bg-green-100' : 'cursor-not-allowed bg-slate-200 text-slate-500'}`}
+                        aria-pressed={active}
+                        className={`min-h-14 rounded-2xl px-4 py-4 text-center text-base font-black transition-all duration-200 hover:-translate-y-0.5 focus:outline-none focus:ring-4 focus:ring-green-100 active:translate-y-0 active:scale-[0.98] disabled:hover:translate-y-0 disabled:active:scale-100 ${active ? 'bg-slate-950 text-white shadow-lg shadow-slate-950/15' : slot.available ? 'bg-green-50 text-green-700 ring-1 ring-green-200 hover:bg-green-100' : 'cursor-not-allowed bg-slate-200 text-slate-600'}`}
                         onClick={() => setSelectedSlot(active ? null : slot)}
                       >
                         {formatTimeCompact(slot.startTime)}
@@ -180,9 +204,7 @@ export function VenueDetails() {
 
             <p className="mt-6 text-xs font-black uppercase text-slate-500">Duration</p>
             <div className="mt-3 flex items-center justify-between">
-              <button className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-950 disabled:opacity-40 disabled:cursor-not-allowed" aria-label="Decrease duration" disabled><Minus size={18} /></button>
-              <span className="font-black text-slate-950">{selectedSlot ? slotDuration(selectedSlot.startTime, selectedSlot.endTime) || '1 hr' : '1 hour'}</span>
-              <button className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-950 disabled:opacity-40 disabled:cursor-not-allowed" aria-label="Increase duration" disabled><Plus size={18} /></button>
+              <span className="font-black text-slate-950">{selectedSlot ? slotDuration(selectedSlot.startTime, selectedSlot.endTime) || '1 hr' : 'Select a slot'}</span>
             </div>
 
             <div className="mt-6 rounded-3xl bg-slate-100 p-5 text-slate-600">
@@ -215,7 +237,13 @@ export function VenueDetails() {
             {message && <p className="mt-4 rounded-2xl bg-green-50 p-3 text-sm font-bold text-green-700">{message}</p>}
             {error && <p className="mt-4 rounded-2xl bg-red-50 p-3 text-sm font-bold text-red-700">{error}</p>}
             <button className="btn-primary mt-5 w-full py-4" disabled={!selectedSlot || booking} onClick={submitBooking}>
-              {booking ? 'Booking...' : user?.authToken ? 'Confirm booking' : <>Sign in to Book <ChevronRight size={18} /></>}
+              {booking
+                ? 'Processing...'
+                : !user?.authToken
+                  ? <>Sign in to Book <ChevronRight size={18} /></>
+                  : paymentMethod === 'CASH_IN_HAND'
+                    ? 'Confirm booking'
+                    : `Pay with ${paymentMethod === 'ESEWA' ? 'Esewa' : 'Khalti'}`}
             </button>
             <p className="mt-5 flex items-center justify-center gap-2 text-sm font-bold text-slate-500"><ShieldCheck size={16} className="text-green-600" /> Free cancellation up to 2 hours before</p>
           </div>

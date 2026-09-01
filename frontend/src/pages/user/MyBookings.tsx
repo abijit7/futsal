@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { CalendarDays, Clock3, CreditCard, Search, XCircle } from 'lucide-react';
+import { CalendarDays, Clock3, CreditCard, MapPin, Search, XCircle } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { bookingApi } from '../../api/modules';
 import { Pagination } from '../../components/Pagination';
 import { EmptyState, ErrorState, LoadingState } from '../../components/State';
 import { StatusBadge } from '../../components/StatusBadge';
-import { Button, Chip, Field, FilterBar, MetricCard, PageHero, SelectField } from '../../components/UI';
+import { Button, Chip, Field, FilterBar, MetricCard, ModalShell, PageHero, SelectField } from '../../components/UI';
 import { useAuth } from '../../context/AuthContext';
 import type { Booking, BookingStatus } from '../../types/api';
 import { formatDate, timeRangeWithDuration } from '../../utils/format';
@@ -18,6 +19,8 @@ export function MyBookings() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
+  const [cancelTarget, setCancelTarget] = useState<Booking | null>(null);
+  const [cancelling, setCancelling] = useState(false);
 
   const load = async () => {
     if (!user) return;
@@ -36,14 +39,19 @@ export function MyBookings() {
 
   useEffect(() => { load(); }, [user?.userId, page, status]);
 
-  const cancel = async (id: number) => {
-    if (!confirm('Cancel this booking?')) return;
+  const confirmCancel = async () => {
+    if (!cancelTarget) return;
+    setCancelling(true);
     setError('');
     try {
-      await bookingApi.updateStatus(id, 'CANCELLED');
+      await bookingApi.updateStatus(cancelTarget.bookingId, 'CANCELLED');
+      setCancelTarget(null);
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not cancel booking');
+      setCancelTarget(null);
+    } finally {
+      setCancelling(false);
     }
   };
 
@@ -58,9 +66,16 @@ export function MyBookings() {
     approved: items.filter((item) => item.status === 'APPROVED').length
   };
 
+  const hasFilters = Boolean(search || status !== 'ALL');
+
   return (
     <main className="container-page py-10">
-      <PageHero eyebrow="Customer dashboard" title="My bookings" description="Track upcoming reservations, payment references, and booking status from your account." icon={<CalendarDays size={34} />} />
+      <PageHero
+        eyebrow="Customer dashboard"
+        title="My bookings"
+        description="Track upcoming reservations, payment references, and booking status from your account."
+        icon={<CalendarDays size={34} />}
+      />
 
       <div className="mb-6 grid gap-4 md:grid-cols-3">
         <MetricCard label="Loaded bookings" value={counts.total} icon={<CalendarDays size={20} />} tone="slate" />
@@ -68,15 +83,17 @@ export function MyBookings() {
         <MetricCard label="Approved" value={counts.approved} icon={<CalendarDays size={20} />} tone="green" />
       </div>
 
-      <FilterBar className="mb-5 md:grid-cols-[1fr_220px_auto] md:items-end">
+      <FilterBar className="mb-5 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_220px_auto] lg:items-end">
         <Field label="Search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Venue or payment reference" prefix={<Search size={18} />} />
         <SelectField label="Status" value={status} onChange={(event) => { setStatus(event.target.value as BookingStatus | 'ALL'); setPage(0); }}>
-          {(['ALL', 'PENDING', 'APPROVED', 'REJECTED', 'CANCELLED'] as const).map((item) => <option key={item} value={item}>{item === 'ALL' ? 'All statuses' : item}</option>)}
+          {(['ALL', 'PENDING', 'APPROVED', 'REJECTED', 'CANCELLED'] as const).map((item) => (
+            <option key={item} value={item}>{item === 'ALL' ? 'All statuses' : item}</option>
+          ))}
         </SelectField>
-        <Button type="button" variant="outline" onClick={() => { setSearch(''); setStatus('ALL'); setPage(0); }}>Clear filters</Button>
+        <Button type="button" variant="outline" disabled={!hasFilters} onClick={() => { setSearch(''); setStatus('ALL'); setPage(0); }}>Clear filters</Button>
       </FilterBar>
 
-      {(search || status !== 'ALL') && (
+      {hasFilters && (
         <div className="mb-5 flex flex-wrap gap-2">
           {search && <Chip onRemove={() => setSearch('')}>Search: {search}</Chip>}
           {status !== 'ALL' && <Chip tone="green" onRemove={() => setStatus('ALL')}>Status: {status}</Chip>}
@@ -84,35 +101,79 @@ export function MyBookings() {
       )}
 
       {error && <div className="mb-5"><ErrorState message={error} retry={load} /></div>}
-      {loading ? <LoadingState /> : filteredItems.length === 0 ? <EmptyState title="No bookings found" description="No booking matches the selected filters." /> : (
+
+      {loading ? (
+        <LoadingState label="Loading your bookings" />
+      ) : filteredItems.length === 0 ? (
+        <EmptyState
+          title={hasFilters ? 'No bookings match those filters' : 'No bookings yet'}
+          description={hasFilters
+            ? 'Try clearing the filters to see your full booking history.'
+            : 'Once you book a court it will appear here with its status and payment reference.'}
+          action={hasFilters
+            ? <Button type="button" variant="outline" onClick={() => { setSearch(''); setStatus('ALL'); setPage(0); }}>Clear filters</Button>
+            : <Link to="/venues" className="btn-primary">Browse venues</Link>}
+        />
+      ) : (
         <div className="motion-stagger grid gap-4">
           {filteredItems.map((booking) => (
             <article key={booking.bookingId} className="panel overflow-hidden">
-              <div className="border-b border-slate-100 bg-slate-50 px-5 py-3">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Booking #{booking.bookingId}</span>
-                  <StatusBadge status={booking.status} />
-                </div>
+              <div className="flex items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-5 py-3">
+                <span className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Booking #{booking.bookingId}</span>
+                <StatusBadge status={booking.status} />
               </div>
-              <div className="p-5">
-              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div className="flex flex-col gap-4 p-5 md:flex-row md:items-center md:justify-between">
                 <div className="min-w-0">
-                  <h3 className="truncate text-xl font-black text-slate-950">{booking.timeSlot?.futsal?.name || 'Venue'}</h3>
-                  <p className="mt-2 flex items-center gap-2 text-sm font-bold text-slate-500"><Clock3 size={16} className="text-green-600" /> {formatDate(booking.timeSlot?.slotDate)} · {timeRangeWithDuration(booking.timeSlot?.startTime, booking.timeSlot?.endTime)}</p>
-                  <p className="mt-2 flex items-center gap-2 text-xs font-bold text-slate-400"><CreditCard size={15} /> {booking.paymentMethod || 'Payment'} {booking.paymentRef || ''}</p>
+                  <h2 className="truncate text-xl font-black text-slate-950">{booking.timeSlot?.futsal?.name || 'Venue'}</h2>
+                  {booking.timeSlot?.futsal?.city && (
+                    <p className="mt-1 flex items-center gap-2 text-sm font-semibold text-slate-500">
+                      <MapPin size={15} className="shrink-0 text-green-600" aria-hidden="true" />
+                      {booking.timeSlot.futsal.city}
+                    </p>
+                  )}
+                  <p className="mt-2 flex items-center gap-2 text-sm font-bold text-slate-600">
+                    <Clock3 size={16} className="shrink-0 text-green-600" aria-hidden="true" />
+                    {formatDate(booking.timeSlot?.slotDate)} · {timeRangeWithDuration(booking.timeSlot?.startTime, booking.timeSlot?.endTime)}
+                  </p>
+                  <p className="mt-2 flex items-center gap-2 text-xs font-bold text-slate-500">
+                    <CreditCard size={15} className="shrink-0" aria-hidden="true" />
+                    {booking.paymentMethod || 'Payment'} {booking.paymentRef || ''}
+                  </p>
                 </div>
                 {canCancel(booking.status) && (
-                  <Button type="button" variant="outline" size="sm" onClick={() => cancel(booking.bookingId)}>
+                  <Button type="button" variant="outline" size="sm" className="shrink-0" onClick={() => setCancelTarget(booking)}>
                     <XCircle size={16} /> Cancel booking
                   </Button>
                 )}
-              </div>
               </div>
             </article>
           ))}
         </div>
       )}
+
       <Pagination page={page} totalPages={totalPages} onPage={setPage} />
+
+      {cancelTarget && (
+        <ModalShell
+          title={`Cancel booking #${cancelTarget.bookingId}?`}
+          eyebrow="Confirm cancellation"
+          description={cancelTarget.timeSlot?.futsal?.name || 'This booking'}
+          onClose={() => setCancelTarget(null)}
+          footer={(
+            <>
+              <Button type="button" variant="outline" disabled={cancelling} onClick={() => setCancelTarget(null)}>Keep booking</Button>
+              <Button type="button" variant="destructive" loading={cancelling} onClick={confirmCancel}>Cancel booking</Button>
+            </>
+          )}
+        >
+          <p className="text-sm font-semibold leading-6 text-slate-600">
+            {formatDate(cancelTarget.timeSlot?.slotDate)} · {timeRangeWithDuration(cancelTarget.timeSlot?.startTime, cancelTarget.timeSlot?.endTime)}
+          </p>
+          <p className="mt-3 text-sm font-semibold leading-6 text-slate-500">
+            The slot is released back to other players. This cannot be undone.
+          </p>
+        </ModalShell>
+      )}
     </main>
   );
 }

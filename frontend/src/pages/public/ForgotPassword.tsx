@@ -2,6 +2,7 @@ import { CheckCircle2, KeyRound, Mail, ShieldCheck } from 'lucide-react';
 import { FormEvent, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { authApi } from '../../api/modules';
+import { Button, Field } from '../../components/UI';
 
 export function ForgotPassword() {
   const [step, setStep] = useState<'request' | 'reset'>('request');
@@ -51,8 +52,8 @@ export function ForgotPassword() {
   };
 
   return (
-    <main className="container-page grid min-h-[calc(100vh-5rem)] place-items-center py-10">
-      <section className="panel w-full max-w-lg overflow-hidden px-4 sm:px-0">
+    <main className="container-page grid place-items-center py-10 lg:py-16">
+      <section className="panel w-full max-w-lg overflow-hidden">
         <div className="bg-slate-950 p-8 text-white">
           <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-green-400/15 text-green-300"><KeyRound size={28} /></div>
           <p className="text-xs font-black uppercase tracking-[0.24em] text-green-300">Account recovery</p>
@@ -63,26 +64,66 @@ export function ForgotPassword() {
         <form className="p-8" onSubmit={step === 'request' ? requestCode : resetPassword}>
           {error && <div className="mb-5 rounded-2xl bg-red-50 p-4 text-sm font-bold text-red-700">{error}</div>}
           {message && <div className="mb-5 flex gap-3 rounded-2xl bg-green-50 p-4 text-sm font-bold text-green-700"><CheckCircle2 className="shrink-0" size={19} /> {message}</div>}
-          {devCode && <div className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800"><strong>Development code:</strong> {devCode}</div>}
+          {import.meta.env.DEV && devCode && <div className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800"><strong>Development code:</strong> {devCode}</div>}
 
-          <div>
-            <label className="label" htmlFor="forgot-email">Email address</label>
-            <div className="relative"><Mail className="absolute left-4 top-3.5 text-slate-400" size={18} /><input id="forgot-email" className="input pl-11" type="email" value={email} onChange={(e) => setEmail(e.target.value)} disabled={step === 'reset'} required /></div>
-          </div>
+          <Field
+            label="Email address"
+            type="email"
+            autoComplete="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            disabled={step === 'reset'}
+            prefix={<Mail size={18} />}
+          />
 
           {step === 'reset' && (
             <div className="mt-5 grid gap-4">
-              <div><label className="label" htmlFor="reset-code">Six-digit code</label><input id="reset-code" className="input tracking-[0.35em]" inputMode="numeric" maxLength={6} value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))} required /></div>
-              <div><label className="label" htmlFor="new-password">New password</label><input id="new-password" className="input" type="password" minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} required /></div>
-              <div><label className="label" htmlFor="confirm-password">Confirm new password</label><input id="confirm-password" className="input" type="password" minLength={8} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required /></div>
+              <Field
+                label="Six-digit code"
+                inputMode="numeric"
+                maxLength={6}
+                required
+                className="[&_input]:tracking-[0.35em]"
+                value={code}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
+              />
+              <Field
+                label="New password"
+                type="password"
+                autoComplete="new-password"
+                minLength={8}
+                required
+                helper="At least 8 characters."
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+              <Field
+                label="Confirm new password"
+                type="password"
+                autoComplete="new-password"
+                minLength={8}
+                required
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+              />
             </div>
           )}
 
-          <button className="btn-primary mt-6 w-full" disabled={loading}>
-            {loading ? 'Please wait...' : step === 'request' ? 'Send reset code' : 'Reset password'} <ShieldCheck size={18} />
-          </button>
-          {step === 'reset' && <button type="button" className="btn-soft mt-3 w-full" onClick={() => { setStep('request'); setMessage(''); setDevCode(''); setCode(''); }}>Use another email</button>}
-          <p className="mt-6 text-center text-sm text-slate-500">Remembered your password? <Link className="font-black text-green-700" to="/login">Back to login</Link></p>
+          <Button type="submit" className="mt-6 w-full" loading={loading}>
+            {step === 'request' ? 'Send reset code' : 'Reset password'} <ShieldCheck size={18} />
+          </Button>
+          {step === 'reset' && (
+            <Button
+              type="button"
+              variant="outline"
+              className="mt-3 w-full"
+              onClick={() => { setStep('request'); setMessage(''); setDevCode(''); setCode(''); }}
+            >
+              Use another email
+            </Button>
+          )}
+          <p className="mt-6 text-center text-sm text-slate-500">Remembered your password? <Link className="font-bold text-green-700 hover:text-green-800" to="/login">Back to login</Link></p>
         </form>
       </section>
     </main>

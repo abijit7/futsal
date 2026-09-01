@@ -2,6 +2,7 @@ import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-
 import { useEffect } from 'react';
 import { AdminLayout, Layout } from './components/Layout';
 import { AdminRoute, ProtectedRoute } from './components/ProtectedRoute';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { Home } from './pages/public/Home';
 import { Login } from './pages/public/Login';
 import { Register } from './pages/public/Register';
@@ -9,7 +10,6 @@ import { ForgotPassword } from './pages/public/ForgotPassword';
 import { Venues } from './pages/public/Venues';
 import { VenueDetails } from './pages/public/VenueDetails';
 import { BookingPage } from './pages/user/BookingPage';
-import { ConfirmationPage } from './pages/user/ConfirmationPage';
 import { Dashboard } from './pages/user/Dashboard';
 import { MyBookings } from './pages/user/MyBookings';
 import { Profile } from './pages/user/Profile';
@@ -18,10 +18,13 @@ import { AdminFutsals } from './pages/admin/AdminFutsals';
 import { AdminSlots } from './pages/admin/AdminSlots';
 import { AdminBookings } from './pages/admin/AdminBookings';
 import { AdminUsers } from './pages/admin/AdminUsers';
+import { PaymentFailure } from './pages/public/PaymentFailure';
+import { PaymentSuccess } from './pages/public/PaymentSuccess';
+import { NotFound } from './pages/public/NotFound';
 
 export default function App() {
   return (
-    <>
+    <ErrorBoundary>
       <AuthRedirectListener />
       <Routes>
         <Route element={<Layout />}>
@@ -31,11 +34,12 @@ export default function App() {
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/venues" element={<Venues />} />
           <Route path="/venues/:id" element={<VenueDetails />} />
+          <Route path="/payment/success" element={<PaymentSuccess />} />
+          <Route path="/payment/failure" element={<PaymentFailure />} />
           <Route element={<ProtectedRoute />}>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/booking" element={<BookingPage />} />
             <Route path="/booking/:futsalId" element={<BookingPage />} />
-            <Route path="/confirmation" element={<ConfirmationPage />} />
             <Route path="/my-bookings" element={<MyBookings />} />
             <Route path="/profile" element={<Profile />} />
           </Route>
@@ -49,9 +53,9 @@ export default function App() {
             <Route path="/admin/users" element={<AdminUsers />} />
           </Route>
         </Route>
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
-    </>
+    </ErrorBoundary>
   );
 }
 

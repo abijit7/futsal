@@ -13,6 +13,10 @@ const styles: Record<StatusValue, string> = {
   INACTIVE: 'bg-slate-100 text-slate-600 ring-slate-200'
 };
 
+const fallbackStyle = 'bg-slate-100 text-slate-600 ring-slate-200';
+
 export function StatusBadge({ status, label }: { status: StatusValue; label?: string }) {
-  return <span className={`inline-flex rounded-full px-3 py-1 text-xs font-black uppercase tracking-wide ring-1 ${styles[status]}`}>{label || status}</span>;
+  // A status the backend adds later must still render as a badge, not as `undefined`.
+  const tone = styles[status] || fallbackStyle;
+  return <span className={`inline-flex rounded-full px-3 py-1 text-xs font-black uppercase tracking-wide ring-1 ${tone}`}>{label || status}</span>;
 }

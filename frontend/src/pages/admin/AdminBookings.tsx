@@ -27,7 +27,7 @@ export function AdminBookings() {
     setLoading(true);
     setError('');
     try {
-      const data = await bookingApi.all({ page, size: 10, status });
+      const data = await bookingApi.all({ page, size: 10, status, q: search.trim() || undefined, slotDate: dateFilter || undefined });
       setItems(data.items || []);
       setTotalPages(data.totalPages || 0);
     } catch {
@@ -38,7 +38,13 @@ export function AdminBookings() {
       setLoading(false);
     }
   };
-  useEffect(() => { load(); }, [page, status]);
+  // The search box and date picker feed the backend query, so they have to be dependencies -
+  // previously only [page, status] were, and typing in the search box did nothing at all.
+  // The text input is debounced so each keystroke does not issue a request.
+  useEffect(() => {
+    const timer = window.setTimeout(load, search ? 300 : 0);
+    return () => window.clearTimeout(timer);
+  }, [page, status, search, dateFilter]);
 
   const update = async (id: number, next: BookingStatus) => {
     setError('');
@@ -66,19 +72,7 @@ export function AdminBookings() {
     }
   };
 
-  const filteredItems = items.filter((booking) => {
-    const haystack = [
-      booking.user?.name,
-      booking.user?.email,
-      booking.user?.phone,
-      booking.timeSlot?.futsal?.name,
-      booking.paymentMethod,
-      booking.paymentRef
-    ].filter(Boolean).join(' ').toLowerCase();
-    const matchesSearch = !search.trim() || haystack.includes(search.trim().toLowerCase());
-    const matchesDate = !dateFilter || booking.timeSlot?.slotDate === dateFilter;
-    return matchesSearch && matchesDate;
-  });
+  const filteredItems = items;
 
   const counts = {
     total: items.length,
@@ -104,8 +98,8 @@ export function AdminBookings() {
       </div>
 
       <FilterBar className="lg:grid-cols-[1fr_180px_220px_auto] lg:items-end">
-        <Field label="Search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Customer, venue, phone, payment" prefix={<Search size={18} />} />
-        <Field label="Date" type="date" value={dateFilter} onChange={(event) => setDateFilter(event.target.value)} />
+        <Field label="Search" value={search} onChange={(event) => { setSearch(event.target.value); setPage(0); }} placeholder="Customer, venue, phone, payment" prefix={<Search size={18} />} />
+        <Field label="Date" type="date" value={dateFilter} onChange={(event) => { setDateFilter(event.target.value); setPage(0); }} />
         <SelectField label="Status" value={status} onChange={(event) => { setStatus(event.target.value as BookingStatus | 'ALL'); setPage(0); }}>
           {(['ALL', 'PENDING', 'APPROVED', 'REJECTED', 'CANCELLED'] as const).map((item) => <option key={item} value={item}>{labelForFilter(item)}</option>)}
         </SelectField>
@@ -114,22 +108,22 @@ export function AdminBookings() {
 
       {(search || dateFilter || status !== 'ALL') && (
         <div className="flex flex-wrap gap-2">
-          {search && <Chip onRemove={() => setSearch('')}>Search: {search}</Chip>}
-          {dateFilter && <Chip onRemove={() => setDateFilter('')}>Date: {formatDate(dateFilter)}</Chip>}
-          {status !== 'ALL' && <Chip tone="green" onRemove={() => setStatus('ALL')}>Status: {labelFor(status)}</Chip>}
+          {search && <Chip onRemove={() => { setSearch(''); setPage(0); }}>Search: {search}</Chip>}
+          {dateFilter && <Chip onRemove={() => { setDateFilter(''); setPage(0); }}>Date: {formatDate(dateFilter)}</Chip>}
+          {status !== 'ALL' && <Chip tone="green" onRemove={() => { setStatus('ALL'); setPage(0); }}>Status: {labelFor(status)}</Chip>}
         </div>
       )}
 
       {error && !loading && <ErrorState message={error} retry={load} />}
       {loading ? <LoadingState /> : !error && filteredItems.length === 0 ? <EmptyState title="No bookings found" description="No booking matches the current filters." /> : (
-        <div className="motion-stagger grid gap-4">
+        <div className="motion-stagger grid gap-4" aria-live="polite">
           {filteredItems.map((booking) => (
             <article key={booking.bookingId} className="panel overflow-hidden border-slate-200">
               <div className="grid gap-5 p-5 xl:grid-cols-[minmax(0,1fr)_260px]">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0">
-                      <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Booking #{booking.bookingId}</p>
+                      <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Booking #{booking.bookingId}</p>
                       <h3 className="mt-1 truncate text-xl font-black text-slate-950">{booking.timeSlot?.futsal?.name || 'Venue unavailable'}</h3>
                     </div>
                     <StatusBadge status={booking.status} />
@@ -157,7 +151,7 @@ export function AdminBookings() {
                 <div className="rounded-3xl border border-slate-200 bg-slate-50 p-3">
                   <div className="mb-3 flex items-center justify-between gap-3 px-1">
                     <div>
-                      <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Admin action</p>
+                      <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Admin action</p>
                       <p className="text-sm font-black text-slate-900">{actionSummary(booking.status)}</p>
                     </div>
                     <Clock3 size={18} className="text-green-600" />
@@ -270,7 +264,7 @@ export function AdminBookings() {
 function InfoItem({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
   return (
     <div className="rounded-2xl bg-slate-50 p-3">
-      <div className="flex items-center gap-2 text-green-600">{icon}<span className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">{label}</span></div>
+      <div className="flex items-center gap-2 text-green-600">{icon}<span className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">{label}</span></div>
       <p className="mt-1 truncate text-slate-800">{value}</p>
     </div>
   );
@@ -306,14 +300,14 @@ function DecisionPreview({ booking, next, destructive = false }: { booking: Book
 
       {destructive ? (
         <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-red-100 bg-white p-3">
-          <span className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Record action</span>
+          <span className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Record action</span>
           <span className="inline-flex rounded-full bg-red-50 px-3 py-1 text-xs font-black uppercase tracking-wide text-red-700 ring-1 ring-red-200">Delete booking</span>
         </div>
       ) : (
         <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-white p-3">
-          <span className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Status change</span>
+          <span className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Status change</span>
           <StatusBadge status={booking.status} />
-          <span className="text-sm font-black text-slate-400">to</span>
+          <span className="text-sm font-black text-slate-500">to</span>
           <StatusBadge status={next} />
         </div>
       )}

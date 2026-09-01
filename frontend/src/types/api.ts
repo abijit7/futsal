@@ -98,6 +98,30 @@ export type SlotGenerationResponse = {
   skippedBlocked: number;
 };
 
+export type PaymentStatus = 'PENDING' | 'COMPLETED' | 'FAILED' | 'REFUNDED' | 'CANCELLED';
+
+/**
+ * How the browser continues a payment. eSewa needs an auto-submitted form POST
+ * (formUrl + formFields), Khalti a redirect (redirectUrl), cash neither.
+ */
+export type PaymentInitiation = {
+  transactionId: string;
+  method: PaymentMethod;
+  amount: number;
+  message?: string;
+  formUrl?: string;
+  formFields?: Record<string, string>;
+  redirectUrl?: string;
+  booking?: Booking;
+};
+
+export type PaymentVerification = {
+  status: PaymentStatus;
+  message?: string;
+  gatewayReference?: string;
+  booking?: Booking;
+};
+
 export type Booking = {
   bookingId: number;
   status: BookingStatus;

@@ -390,7 +390,7 @@ function ProfileSummary({ user }: { user: User }) {
           </div>
         </div>
         <div className="rounded-3xl bg-slate-50 p-4 sm:w-56">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Profile completion</p>
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Profile completion</p>
           <div className="mt-3 h-2 rounded-full bg-slate-200">
             <div className="h-2 rounded-full bg-green-600" style={{ width: `${Math.round((completion / 5) * 100)}%` }} />
           </div>
@@ -428,7 +428,7 @@ function ReadonlyField({ label, value, icon, badge, helper }: { label: string; v
         <span className="shrink-0 text-slate-400">{icon}</span>
         <span className="min-w-0 truncate">{value}</span>
       </div>
-      <p className="mt-2 text-xs font-semibold text-slate-400">{helper}</p>
+      <p className="mt-2 text-xs font-semibold text-slate-500">{helper}</p>
     </div>
   );
 }
@@ -494,7 +494,7 @@ function Requirement({ met, children }: { met: boolean; children: ReactNode }) {
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-2xl bg-slate-50 p-4">
-      <dt className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">{label}</dt>
+      <dt className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">{label}</dt>
       <dd className="mt-2 break-words text-sm font-black text-slate-800">{value}</dd>
     </div>
   );
@@ -534,7 +534,7 @@ function VerificationCard({
       {!verified && (
         <div className="mt-5">
           {state.message && <p className="mb-3 text-sm font-bold text-green-700" aria-live="polite">{state.message}</p>}
-          {state.devCode && <p className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800"><strong>Development code:</strong> {state.devCode}</p>}
+          {import.meta.env.DEV && state.devCode && <p className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800"><strong>Development code:</strong> {state.devCode}</p>}
           {state.message ? (
             <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
               <input className="input tracking-[0.3em]" aria-label={`${title} verification code`} inputMode="numeric" maxLength={6} placeholder="000000" value={state.code} onChange={(event) => onCode(event.target.value.replace(/\D/g, ''))} />

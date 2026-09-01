@@ -140,6 +140,11 @@ class TimeSlotServiceTest {
                 case "existsByFutsalAndSlotDateAndStartTimeLessThanAndEndTimeGreaterThan" ->
                         existingStarts.contains((LocalTime) args[3]);
                 case "existsByFutsalAndSlotDateAndStartTimeLessThanAndEndTimeGreaterThanAndSlotIdNot" -> false;
+                // (futsal, slotDate, startTime, endTime) - startTime is args[2] here, unlike the
+                // overlap queries above where the end/start arguments are reversed.
+                case "existsByFutsalAndSlotDateAndStartTimeAndEndTime" ->
+                        existingStarts.contains((LocalTime) args[2]);
+                case "existsByFutsalAndSlotDateAndStartTimeAndEndTimeAndSlotIdNot" -> false;
                 default -> unsupported(method.getName());
             };
         });

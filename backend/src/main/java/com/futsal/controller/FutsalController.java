@@ -8,6 +8,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.futsal.security.SecurityAuth;
 import com.futsal.dto.DtoMapper;
 import com.futsal.dto.FutsalRequest;
 import com.futsal.dto.FutsalResponse;
@@ -22,6 +23,9 @@ public class FutsalController {
 
     @Autowired
     private FutsalService futsalService;
+
+    @Autowired
+    private SecurityAuth securityAuth;
 
     @GetMapping
     public ResponseEntity<PagedResponse<FutsalResponse>> getAll(
@@ -42,18 +46,21 @@ public class FutsalController {
 
     @PostMapping
     public ResponseEntity<FutsalResponse> add(@Valid @RequestBody FutsalRequest futsal) {
+        securityAuth.requireAdmin();
         Futsal entity = DtoMapper.toFutsal(futsal);
         return ResponseEntity.ok(DtoMapper.toFutsalResponse(futsalService.add(entity)));
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<FutsalResponse> update(@PathVariable Long id, @Valid @RequestBody FutsalRequest futsal) {
+        securityAuth.requireAdmin();
         Futsal entity = DtoMapper.toFutsal(futsal);
         return ResponseEntity.ok(DtoMapper.toFutsalResponse(futsalService.update(id, entity)));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Map<String, String>> delete(@PathVariable Long id) {
+        securityAuth.requireAdmin();
         futsalService.delete(id);
         Map<String, String> res = new HashMap<>();
         res.put("message", "Futsal deleted successfully");

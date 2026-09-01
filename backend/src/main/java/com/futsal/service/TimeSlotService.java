@@ -2,6 +2,8 @@ package com.futsal.service;
 
 import com.futsal.dto.SlotGenerationRequest;
 import com.futsal.dto.SlotGenerationResponse;
+import com.futsal.error.ConflictException;
+import com.futsal.error.NotFoundException;
 import com.futsal.model.Futsal;
 import com.futsal.model.TimeSlot;
 import com.futsal.model.TimeSlotStatusHistory;
@@ -134,7 +136,7 @@ public class TimeSlotService {
     // ── Get slot by ID ────────────────────────────────────────────────────────
     public TimeSlot getSlotById(Long id) {
         return timeSlotRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Slot not found with ID: " + id));
+                .orElseThrow(() -> new NotFoundException("Slot not found with ID: " + id));
     }
 
     // ── Add new slot (admin) ──────────────────────────────────────────────────
@@ -144,16 +146,26 @@ public class TimeSlotService {
 
         LocalDate today = currentDate();
         if (slot.getSlotDate().isBefore(today)) {
-            throw new RuntimeException("Cannot add slots for past dates.");
+            throw new IllegalArgumentException("Cannot add slots for past dates.");
         }
         if (slot.getSlotDate().isEqual(today)) {
             LocalTime now = currentTime();
             if (slot.getStartTime().isBefore(now)) {
-                throw new RuntimeException("Cannot add slots for times that have already passed today.");
+                throw new IllegalArgumentException("Cannot add slots for times that have already passed today.");
             }
         }
         validateSlotWindow(slot.getStartTime(), slot.getEndTime(), futsal);
-        boolean exists = timeSlotRepository
+        boolean exactExists = timeSlotRepository
+                .existsByFutsalAndSlotDateAndStartTimeAndEndTime(
+                        futsal,
+                        slot.getSlotDate(),
+                        slot.getStartTime(),
+                        slot.getEndTime()
+                );
+        if (exactExists) {
+            throw new ConflictException("Slot with this exact time already exists for this futsal.");
+        }
+        boolean overlaps = timeSlotRepository
                 .existsByFutsalAndSlotDateAndStartTimeLessThanAndEndTimeGreaterThan(
                         futsal,
                         slot.getSlotDate(),
@@ -161,8 +173,8 @@ public class TimeSlotService {
                         slot.getStartTime()
                 );
 
-        if (exists) {
-            throw new RuntimeException("Slot overlaps with an existing slot for this futsal.");
+        if (overlaps) {
+            throw new ConflictException("Slot overlaps with an existing slot for this futsal.");
         }
         slot.setAvailable(true);
         slot.addStatusHistory(new TimeSlotStatusHistory(slot, true, "admin", "Slot created"));
@@ -173,27 +185,27 @@ public class TimeSlotService {
     @Transactional
     public TimeSlot updateSlot(Long id, TimeSlot updatedSlot, Long futsalId, Boolean requestedAvailable) {
         TimeSlot existing = timeSlotRepository.findByIdForUpdate(id)
-                .orElseThrow(() -> new RuntimeException("Slot not found with ID: " + id));
+                .orElseThrow(() -> new NotFoundException("Slot not found with ID: " + id));
         Futsal futsal = getFutsal(futsalId);
 
         LocalDate today = currentDate();
         if (updatedSlot.getSlotDate().isBefore(today)) {
-            throw new RuntimeException("Cannot set slots for past dates.");
+            throw new IllegalArgumentException("Cannot set slots for past dates.");
         }
         if (updatedSlot.getSlotDate().isEqual(today)) {
             LocalTime now = currentTime();
             if (updatedSlot.getStartTime().isBefore(now)) {
-                throw new RuntimeException("Cannot set slots for times that have already passed today.");
+                throw new IllegalArgumentException("Cannot set slots for times that have already passed today.");
             }
         }
         validateSlotWindow(updatedSlot.getStartTime(), updatedSlot.getEndTime(), futsal);
 
         boolean hasActiveBooking = bookingRepository.existsByTimeSlotAndStatusNotIn(existing, BookingService.CLOSED_STATUSES);
         if (hasActiveBooking && slotDetailsChanged(existing, updatedSlot, futsal)) {
-            throw new RuntimeException("Cannot edit date, time, or futsal for a slot with an active booking.");
+            throw new ConflictException("Cannot edit date, time, or futsal for a slot with an active booking.");
         }
         if (hasActiveBooking && Boolean.TRUE.equals(requestedAvailable)) {
-            throw new RuntimeException("Cannot mark a slot with an active booking as available.");
+            throw new ConflictException("Cannot mark a slot with an active booking as available.");
         }
 
         boolean previousAvailable = existing.isAvailable();
@@ -209,7 +221,7 @@ public class TimeSlotService {
             existing.setAvailable(false);
         }
 
-        boolean exists = timeSlotRepository
+        boolean overlaps = timeSlotRepository
                 .existsByFutsalAndSlotDateAndStartTimeLessThanAndEndTimeGreaterThanAndSlotIdNot(
                         futsal,
                         existing.getSlotDate(),
@@ -217,8 +229,20 @@ public class TimeSlotService {
                         existing.getStartTime(),
                         existing.getSlotId()
                 );
-        if (exists) {
-            throw new RuntimeException("Slot overlaps with an existing slot for this futsal.");
+        if (overlaps) {
+            throw new ConflictException("Slot overlaps with an existing slot for this futsal.");
+        }
+
+        boolean exactExists = timeSlotRepository
+                .existsByFutsalAndSlotDateAndStartTimeAndEndTimeAndSlotIdNot(
+                        futsal,
+                        existing.getSlotDate(),
+                        existing.getStartTime(),
+                        existing.getEndTime(),
+                        existing.getSlotId()
+                );
+        if (exactExists) {
+            throw new ConflictException("Slot with this exact time already exists for this futsal.");
         }
 
         if (previousAvailable != existing.isAvailable()) {
@@ -233,12 +257,12 @@ public class TimeSlotService {
     @Transactional
     public void deleteSlot(Long id) {
         TimeSlot slot = timeSlotRepository.findByIdForUpdate(id)
-                .orElseThrow(() -> new RuntimeException("Slot not found"));
+                .orElseThrow(() -> new NotFoundException("Slot not found"));
         if (bookingRepository.existsByTimeSlotAndStatusNotIn(slot, BookingService.CLOSED_STATUSES)) {
-            throw new RuntimeException("Cannot delete a slot with active bookings.");
+            throw new ConflictException("Cannot delete a slot with active bookings.");
         }
         if (bookingRepository.existsByTimeSlot(slot)) {
-            throw new RuntimeException("Cannot delete a slot with booking history. Add an archive flow before deleting historical slots.");
+            throw new ConflictException("Cannot delete a slot with booking history. Add an archive flow before deleting historical slots.");
         }
         timeSlotRepository.delete(slot);
     }
@@ -276,14 +300,25 @@ public class TimeSlotService {
                     skippedBlocked++;
                     continue;
                 }
-                boolean exists = timeSlotRepository
+                boolean exactExists = timeSlotRepository
+                        .existsByFutsalAndSlotDateAndStartTimeAndEndTime(
+                                futsal,
+                                date,
+                                start,
+                                end
+                        );
+                if (exactExists) {
+                    skippedExisting++;
+                    continue;
+                }
+                boolean overlaps = timeSlotRepository
                         .existsByFutsalAndSlotDateAndStartTimeLessThanAndEndTimeGreaterThan(
                                 futsal,
                                 date,
                                 end,
                                 start
                         );
-                if (exists) {
+                if (overlaps) {
                     skippedExisting++;
                     continue;
                 }
@@ -312,7 +347,7 @@ public class TimeSlotService {
 
     private Futsal getFutsal(Long futsalId) {
         return futsalRepository.findById(futsalId)
-                .orElseThrow(() -> new RuntimeException("Futsal not found"));
+                .orElseThrow(() -> new NotFoundException("Futsal not found"));
     }
 
     private LocalDate currentDate() {
@@ -332,42 +367,42 @@ public class TimeSlotService {
 
     private void validateSlotWindow(LocalTime startTime, LocalTime endTime, Futsal futsal) {
         if (endTime.isBefore(startTime) || endTime.equals(startTime)) {
-            throw new RuntimeException("End time must be after start time.");
+            throw new IllegalArgumentException("End time must be after start time.");
         }
         if (futsal.getOpeningTime() != null && startTime.isBefore(futsal.getOpeningTime())) {
-            throw new RuntimeException("Slot starts before the futsal opening time.");
+            throw new IllegalArgumentException("Slot starts before the futsal opening time.");
         }
         if (endTime.isAfter(closingTime(futsal))) {
-            throw new RuntimeException("Slot ends after the futsal closing time.");
+            throw new IllegalArgumentException("Slot ends after the futsal closing time.");
         }
     }
 
     private void validateGenerationRequest(SlotGenerationRequest request, Futsal futsal) {
         if (futsal.getHourlyPrice() == null || futsal.getHourlyPrice().signum() <= 0) {
-            throw new RuntimeException("Set a positive hourly price for this futsal before generating slots.");
+            throw new IllegalArgumentException("Set a positive hourly price for this futsal before generating slots.");
         }
         if (futsal.getOpeningTime() == null) {
-            throw new RuntimeException("Set opening and closing times for this futsal before generating slots.");
+            throw new IllegalArgumentException("Set opening and closing times for this futsal before generating slots.");
         }
         if (request.getStartDate().isAfter(request.getEndDate())) {
-            throw new RuntimeException("Generation end date must be on or after start date.");
+            throw new IllegalArgumentException("Generation end date must be on or after start date.");
         }
         if (request.getStartDate().isBefore(currentDate())) {
-            throw new RuntimeException("Cannot generate slots for past dates.");
+            throw new IllegalArgumentException("Cannot generate slots for past dates.");
         }
         LocalTime start = request.getStartTime() == null ? futsal.getOpeningTime() : request.getStartTime();
         LocalTime end = request.getEndTime() == null ? closingTime(futsal) : request.getEndTime();
         validateSlotWindow(start, end, futsal);
         if (Duration.between(start, end).toMinutes() < request.getSlotMinutes()) {
-            throw new RuntimeException("Generation window is shorter than the slot duration.");
+            throw new IllegalArgumentException("Generation window is shorter than the slot duration.");
         }
         if (request.getMaintenanceBlocks() != null) {
             for (SlotGenerationRequest.MaintenanceBlockRequest block : request.getMaintenanceBlocks()) {
                 if (block.getEndTime().compareTo(block.getStartTime()) <= 0) {
-                    throw new RuntimeException("Maintenance end time must be after start time.");
+                    throw new IllegalArgumentException("Maintenance end time must be after start time.");
                 }
                 if (block.getDate().isBefore(request.getStartDate()) || block.getDate().isAfter(request.getEndDate())) {
-                    throw new RuntimeException("Maintenance blocks must be within the generation date range.");
+                    throw new IllegalArgumentException("Maintenance blocks must be within the generation date range.");
                 }
             }
         }

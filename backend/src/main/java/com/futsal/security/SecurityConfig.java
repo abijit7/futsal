@@ -7,6 +7,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.security.authorization.AuthorizationDecision;
@@ -17,6 +19,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.intercept.RequestAuthorizationContext;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.util.matcher.RegexRequestMatcher;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -72,7 +75,12 @@ public class SecurityConfig {
         return source;
     }
 
+    /**
+     * Registered as a top-level servlet filter ahead of RequestIdFilter, RateLimitFilter and
+     * Spring Security's chain, so preflight requests and error responses alike carry CORS headers.
+     */
     @Bean
+    @Order(Ordered.HIGHEST_PRECEDENCE)
     public CorsFilter corsFilter() {
         return new CorsFilter(corsConfigurationSource());
     }
@@ -89,11 +97,44 @@ public class SecurityConfig {
                                 writeError(response, HttpServletResponse.SC_FORBIDDEN, "Access denied"))
                 )
                 .authorizeHttpRequests(auth -> auth
+                        // CORS preflight and Spring Boot's internal error dispatch
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers("/error").permitAll()
+
+                        // Public assets and operational probes
                         .requestMatchers("/uploads/**").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/info").permitAll()
-                        .requestMatchers("/api/**").permitAll()
-                        .anyRequest().permitAll()
+
+                        // Public authentication and account recovery
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/users/login",
+                                "/api/users/register",
+                                "/api/users/forgot-password",
+                                "/api/users/reset-password").permitAll()
+
+                        // Public catalogue browsing
+                        .requestMatchers(HttpMethod.GET, "/api/futsals/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/slots", "/api/slots/public").permitAll()
+                        .requestMatchers(new RegexRequestMatcher("^/api/slots/\\d+$", "GET")).permitAll()
+
+                        // Admin-only administration
+                        .requestMatchers(HttpMethod.GET, "/api/users").access(SecurityConfig::isAdminRequest)
+                        .requestMatchers(HttpMethod.DELETE, "/api/users/**").access(SecurityConfig::isAdminRequest)
+                        .requestMatchers(HttpMethod.GET, "/api/bookings").access(SecurityConfig::isAdminRequest)
+                        .requestMatchers(HttpMethod.DELETE, "/api/bookings/**").access(SecurityConfig::isAdminRequest)
+                        .requestMatchers(HttpMethod.POST, "/api/futsals").access(SecurityConfig::isAdminRequest)
+                        .requestMatchers(HttpMethod.PUT, "/api/futsals/**").access(SecurityConfig::isAdminRequest)
+                        .requestMatchers(HttpMethod.DELETE, "/api/futsals/**").access(SecurityConfig::isAdminRequest)
+                        .requestMatchers(HttpMethod.GET, "/api/slots/all").access(SecurityConfig::isAdminRequest)
+                        .requestMatchers(HttpMethod.POST, "/api/slots/generate").access(SecurityConfig::isAdminRequest)
+                        .requestMatchers(HttpMethod.POST, "/api/slots").access(SecurityConfig::isAdminRequest)
+                        .requestMatchers(HttpMethod.PUT, "/api/slots/**").access(SecurityConfig::isAdminRequest)
+                        .requestMatchers(HttpMethod.DELETE, "/api/slots/**").access(SecurityConfig::isAdminRequest)
+                        .requestMatchers(HttpMethod.POST, "/api/uploads/**").access(SecurityConfig::isAdminRequest)
+
+                        // Everything else - including /actuator/metrics - needs a valid token.
+                        // Ownership checks live in SecurityAuth, called from the controllers.
+                        .anyRequest().authenticated()
                 )
                 .addFilterBefore(corsFilter(), UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

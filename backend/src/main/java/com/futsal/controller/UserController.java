@@ -3,6 +3,7 @@ package com.futsal.controller;
 import com.futsal.dto.DtoMapper;
 import com.futsal.dto.*;
 import com.futsal.model.User;
+import com.futsal.model.enums.Role;
 import com.futsal.model.enums.VerificationPurpose;
 import com.futsal.security.JwtService;
 import com.futsal.security.SecurityAuth;
@@ -71,10 +72,13 @@ public class UserController {
     public ResponseEntity<PagedResponse<UserResponse>> getAllUsers(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
-            @RequestParam(required = false) String q
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) String role
     ) {
+        securityAuth.requireAdmin();
         Pageable pageable = PageRequestFactory.create(page, size);
-        Page<UserResponse> result = userService.getAllUsers(q, pageable).map(DtoMapper::toUserResponse);
+        Page<UserResponse> result = userService.getAllUsers(q, parseRole(role), pageable)
+                .map(DtoMapper::toUserResponse);
         return ResponseEntity.ok(PagedResponse.fromPage(result));
     }
 
@@ -152,11 +156,23 @@ public class UserController {
     // DELETE /api/users/{id} (admin)
     @DeleteMapping("/{id}")
     public ResponseEntity<Map<String, String>> deleteUser(@PathVariable Long id) {
+        securityAuth.requireAdmin();
         userService.deleteUser(id);
         return ResponseEntity.ok(successMap("User deleted successfully"));
     }
 
     // ── Helper methods ────────────────────────────────────────────────────────
+    private Role parseRole(String role) {
+        if (role == null || role.isBlank() || "ALL".equalsIgnoreCase(role)) {
+            return null;
+        }
+        try {
+            return Role.valueOf(role.trim().toUpperCase());
+        } catch (RuntimeException ex) {
+            throw new IllegalArgumentException("Invalid role value");
+        }
+    }
+
     private Map<String, String> successMap(String message) {
         Map<String, String> map = new HashMap<>();
         map.put("message", message);

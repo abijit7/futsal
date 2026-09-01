@@ -42,7 +42,7 @@ export function AdminDashboard() {
           </div>
           <div className="motion-stagger grid gap-4 p-5 md:grid-cols-3">
             {cards.map(({ title, text, href, icon: Icon }) => (
-              <Link key={href} to={href} className="rounded-3xl border border-slate-200 bg-slate-50 p-5 transition hover:-translate-y-0.5 hover:border-green-200 hover:bg-white hover:shadow-lg">
+              <Link key={href} to={href} className="rounded-3xl border border-slate-200 bg-slate-50 p-5 transition hover:-translate-y-0.5 hover:border-green-200 hover:bg-white hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-green-100 focus:border-green-300">
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-green-50 text-green-700">
                   <Icon size={22} />
                 </div>

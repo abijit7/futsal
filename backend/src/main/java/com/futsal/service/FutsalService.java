@@ -1,5 +1,7 @@
 package com.futsal.service;
 
+import com.futsal.error.ConflictException;
+import com.futsal.error.NotFoundException;
 import com.futsal.model.Futsal;
 import com.futsal.model.FutsalImage;
 import com.futsal.repository.BookingRepository;
@@ -40,7 +42,7 @@ public class FutsalService {
 
     public Futsal getById(Long id) {
         return futsalRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Futsal not found with ID: " + id));
+                .orElseThrow(() -> new NotFoundException("Futsal not found with ID: " + id));
     }
 
     public Futsal add(Futsal futsal) {
@@ -70,13 +72,13 @@ public class FutsalService {
 
     private void validateSchedule(Futsal futsal) {
         if (futsal.getOpeningTime() == null || futsal.getClosingTime() == null) {
-            throw new RuntimeException("Opening and closing times are required.");
+            throw new IllegalArgumentException("Opening and closing times are required.");
         }
         if (futsal.getReviewCount() == null) {
             futsal.setReviewCount(0);
         }
         if (!futsal.getClosingTime().isAfter(futsal.getOpeningTime())) {
-            throw new RuntimeException("Closing time must be after opening time.");
+            throw new IllegalArgumentException("Closing time must be after opening time.");
         }
     }
 
@@ -144,13 +146,13 @@ public class FutsalService {
     @Transactional
     public void delete(Long id) {
         Futsal futsal = futsalRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Futsal not found"));
+                .orElseThrow(() -> new NotFoundException("Futsal not found"));
         timeSlotRepository.findByFutsalIdForUpdate(id);
         if (bookingRepository.existsByTimeSlot_Futsal_FutsalIdAndStatusNotIn(id, BookingService.CLOSED_STATUSES)) {
-            throw new RuntimeException("Cannot delete a futsal with active bookings.");
+            throw new ConflictException("Cannot delete a futsal with active bookings.");
         }
         if (bookingRepository.existsByTimeSlot_Futsal_FutsalId(id)) {
-            throw new RuntimeException("Cannot delete a futsal with booking history. Add an archive flow before deleting historical futsals.");
+            throw new ConflictException("Cannot delete a futsal with booking history. Add an archive flow before deleting historical futsals.");
         }
         futsalRepository.delete(futsal);
     }

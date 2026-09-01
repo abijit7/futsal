@@ -1,91 +1,110 @@
-import { CheckCircle2, Home, Clock } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { bookingApi } from '../../api/modules';
-import { EmptyState, LoadingState } from '../../components/State';
-import { Button, PageHero } from '../../components/UI';
+import { AlertTriangle, CheckCircle2, Clock, Home } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { paymentApi } from '../../api/modules';
+import { LoadingState } from '../../components/State';
+import { takePendingTransaction } from '../../utils/gatewayCheckout';
 
+type Outcome = 'verifying' | 'success' | 'pending' | 'failed';
+
+/**
+ * Landing page for the gateway redirect.
+ *
+ * <p>This page used to read a `status` query parameter and simply announce success, without ever
+ * contacting the backend - so anyone could visit /payment/success?status=Complete and be told
+ * their booking was confirmed. The redirect is now treated as untrusted: the identifiers are
+ * handed to the server, which verifies them against eSewa's status API or Khalti's lookup API
+ * before confirming anything.
+ */
 export function PaymentSuccess() {
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
-  const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
+  const [outcome, setOutcome] = useState<Outcome>('verifying');
   const [message, setMessage] = useState('');
-  const [bookingId, setBookingId] = useState<number | null>(null);
+  const verifyStarted = useRef(false);
 
   useEffect(() => {
-    const processPayment = async () => {
-      const transactionId = searchParams.get('transaction_id');
-      const status = searchParams.get('status');
-      const gatewayRef = searchParams.get('refId') || searchParams.get('idx');
+    // React 18 StrictMode double-invokes effects in development; verification is idempotent
+    // server-side, but there is no reason to fire it twice.
+    if (verifyStarted.current) return;
+    verifyStarted.current = true;
 
-      if (status === 'Complete' || status === 'Completed') {
-        // Payment was successful
-        setStatus('success');
-        setMessage('Payment completed successfully! Your booking has been confirmed.');
-        // In a real implementation, you might want to verify the payment with the backend
-        // and get the actual booking ID
-      } else {
-        setStatus('error');
-        setMessage('Payment was not completed successfully.');
-      }
-    };
+    // eSewa appends a base64 JSON blob as `data`; Khalti appends `pidx`.
+    const data = searchParams.get('data');
+    const pidx = searchParams.get('pidx');
 
-    processPayment();
+    if (!data && !pidx) {
+      setOutcome('failed');
+      setMessage('This page was opened without a payment reference, so there is nothing to confirm.');
+      return;
+    }
+
+    paymentApi
+      .verify({ data: data ?? undefined, pidx: pidx ?? undefined })
+      .then((result) => {
+        if (result.status === 'COMPLETED') {
+          takePendingTransaction(); // settled; nothing left to release
+          setOutcome('success');
+          setMessage(result.message || 'Payment confirmed. Your booking is awaiting venue approval.');
+          return;
+        }
+        if (result.status === 'PENDING') {
+          setOutcome('pending');
+          setMessage(result.message || 'The gateway is still processing this payment.');
+          return;
+        }
+        setOutcome('failed');
+        setMessage(result.message || 'The payment could not be confirmed.');
+      })
+      .catch((err: unknown) => {
+        setOutcome('failed');
+        setMessage(err instanceof Error ? err.message : 'The payment could not be confirmed.');
+      });
   }, [searchParams]);
 
-  if (status === 'loading') {
+  if (outcome === 'verifying') {
     return (
       <main className="container-page py-10">
-        <LoadingState label="Processing payment confirmation..." />
+        <LoadingState label="Confirming your payment with the gateway..." />
       </main>
     );
   }
 
-  if (status === 'error') {
-    return (
-      <main className="container-page py-10">
-        <div className="max-w-md mx-auto">
-          <div className="panel p-8 text-center">
-            <div className="flex justify-center mb-4">
-              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-50 text-red-600">
-                <Clock size={32} />
-              </div>
-            </div>
-            <h1 className="text-2xl font-black text-slate-950 mb-2">Payment Processing</h1>
-            <p className="text-slate-600 mb-6">{message}</p>
-            <div className="flex gap-3 justify-center">
-              <Link to="/venues" className="btn-primary">
-                <Home size={18} />
-                Back to Venues
-              </Link>
-              <Link to="/my-bookings" className="btn-secondary">
-                View My Bookings
-              </Link>
-            </div>
-          </div>
-        </div>
-      </main>
-    );
-  }
+  const view = {
+    success: {
+      icon: <CheckCircle2 size={32} />,
+      tone: 'bg-green-50 text-green-600',
+      title: 'Payment successful'
+    },
+    pending: {
+      icon: <Clock size={32} />,
+      tone: 'bg-amber-50 text-amber-600',
+      title: 'Payment pending'
+    },
+    failed: {
+      icon: <AlertTriangle size={32} />,
+      tone: 'bg-red-50 text-red-600',
+      title: 'Payment not confirmed'
+    }
+  }[outcome];
 
   return (
     <main className="container-page py-10">
-      <div className="max-w-md mx-auto">
+      <div className="mx-auto max-w-md">
         <div className="panel p-8 text-center">
-          <div className="flex justify-center mb-4">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-50 text-green-600">
-              <CheckCircle2 size={32} />
+          <div className="mb-4 flex justify-center">
+            <div className={`flex h-16 w-16 items-center justify-center rounded-full ${view.tone}`}>
+              {view.icon}
             </div>
           </div>
-          <h1 className="text-2xl font-black text-slate-950 mb-2">Payment Successful!</h1>
-          <p className="text-slate-600 mb-6">{message}</p>
+          <h1 className="mb-2 text-2xl font-black text-slate-950">{view.title}</h1>
+          <p className="mb-6 text-slate-600">{message}</p>
           <div className="space-y-3">
-            <Link to="/my-bookings" className="btn-primary w-full">
+            <Link to="/my-bookings" className="btn-primary block w-full">
               View My Bookings
             </Link>
-            <Link to="/venues" className="btn-secondary w-full">
-              <Home size={18} />
-              Back to Venues
+            <Link to="/venues" className="btn-soft block w-full">
+              <Home size={18} className="inline" />
+              {' '}Back to Venues
             </Link>
           </div>
         </div>

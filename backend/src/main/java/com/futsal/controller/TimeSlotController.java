@@ -12,6 +12,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.futsal.security.SecurityAuth;
 import com.futsal.dto.PagedResponse;
 import com.futsal.dto.TimeSlotResponse;
 
@@ -25,6 +26,9 @@ public class TimeSlotController {
 
     @Autowired
     private TimeSlotService timeSlotService;
+
+    @Autowired
+    private SecurityAuth securityAuth;
 
     // GET /api/slots — available slots for users
     @GetMapping
@@ -62,6 +66,7 @@ public class TimeSlotController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
+        securityAuth.requireAdmin();
         Pageable pageable = PageRequestFactory.create(page, size);
         Page<TimeSlotResponse> result = timeSlotService.getAllSlots(futsalId, slotDate, pageable)
                 .map(DtoMapper::toTimeSlotResponse);
@@ -71,6 +76,7 @@ public class TimeSlotController {
     // POST /api/slots/generate — bulk-generate slots (admin)
     @PostMapping("/generate")
     public ResponseEntity<SlotGenerationResponse> generateSlots(@Valid @RequestBody SlotGenerationRequest req) {
+        securityAuth.requireAdmin();
         SlotGenerationResponse result = timeSlotService.generateSlots(req);
         return ResponseEntity.ok(result);
     }
@@ -84,6 +90,7 @@ public class TimeSlotController {
     // POST /api/slots — add slot (admin)
     @PostMapping
     public ResponseEntity<TimeSlotResponse> addSlot(@Valid @RequestBody SlotRequest req) {
+        securityAuth.requireAdmin();
         TimeSlot slot = DtoMapper.toTimeSlot(req);
         return ResponseEntity.ok(DtoMapper.toTimeSlotResponse(timeSlotService.addSlot(slot, req.getFutsalId())));
     }
@@ -91,6 +98,7 @@ public class TimeSlotController {
     // PUT /api/slots/{id} — update slot (admin)
     @PutMapping("/{id}")
     public ResponseEntity<TimeSlotResponse> updateSlot(@PathVariable Long id, @Valid @RequestBody SlotRequest req) {
+        securityAuth.requireAdmin();
         TimeSlot slot = DtoMapper.toTimeSlot(req);
         return ResponseEntity.ok(DtoMapper.toTimeSlotResponse(
                 timeSlotService.updateSlot(id, slot, req.getFutsalId(), req.getAvailable())
@@ -100,6 +108,7 @@ public class TimeSlotController {
     // DELETE /api/slots/{id} — delete slot (admin)
     @DeleteMapping("/{id}")
     public ResponseEntity<Map<String, String>> deleteSlot(@PathVariable Long id) {
+        securityAuth.requireAdmin();
         timeSlotService.deleteSlot(id);
         Map<String, String> res = new HashMap<>();
         res.put("message", "Slot deleted successfully");

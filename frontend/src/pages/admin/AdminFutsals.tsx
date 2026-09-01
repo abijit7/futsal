@@ -3,6 +3,7 @@ import { Clock3, ImageIcon, MapPin, Pencil, Plus, Search, Trash2, X } from 'luci
 import { futsalApi, uploadApi } from '../../api/modules';
 import { Pagination } from '../../components/Pagination';
 import { EmptyState, LoadingState } from '../../components/State';
+import { Button, DialogFrame, ModalShell } from '../../components/UI';
 import type { Futsal, FutsalPayload } from '../../types/api';
 import { formatTime, imageForVenue, money } from '../../utils/format';
 
@@ -211,8 +212,8 @@ export function AdminFutsals() {
             </button>
           </div>
 
-          {message && <p className="mt-4 rounded-2xl bg-green-50 p-3 text-sm font-bold text-green-700">{message}</p>}
-          {error && !drawerOpen && !deleteTarget && <p className="mt-4 rounded-2xl bg-red-50 p-3 text-sm font-bold text-red-700">{error}</p>}
+          {message && <p className="mt-4 rounded-2xl bg-green-50 p-3 text-sm font-bold text-green-700" aria-live="polite">{message}</p>}
+          {error && !drawerOpen && !deleteTarget && <p className="mt-4 rounded-2xl bg-red-50 p-3 text-sm font-bold text-red-700" aria-live="assertive">{error}</p>}
 
           <div className="mt-5 grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px_auto] lg:items-end">
             <div>
@@ -246,7 +247,7 @@ export function AdminFutsals() {
           {loading ? <LoadingState /> : items.length === 0 ? (
             <EmptyState title="No venues found" description="Create a venue or adjust your filters." action={<button className="btn-primary" onClick={openCreate}>Add venue</button>} />
           ) : (
-            <div className="motion-stagger grid gap-4">
+            <div className="motion-stagger grid gap-4" aria-live="polite">
               {items.map((item) => (
                 <div key={item.futsalId} className="rounded-3xl border border-slate-200 bg-white p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-green-200 hover:shadow-sm">
                   <div className="grid gap-4 md:grid-cols-[176px_minmax(0,1fr)_auto] md:items-center">
@@ -254,8 +255,8 @@ export function AdminFutsals() {
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <h3 className="truncate text-lg font-black text-slate-950">{item.name}</h3>
-                        {item.verified && <span className="rounded-full bg-green-50 px-2 py-1 text-xs font-black text-green-700">Verified</span>}
-                        {item.courtType && <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-black text-slate-600">{item.courtType}</span>}
+                        {item.verified && <span className="inline-flex rounded-full px-2 py-1 text-xs font-black ring-1 bg-green-50 text-green-700 ring-green-200">Verified</span>}
+                        {item.courtType && <span className="inline-flex rounded-full px-2 py-1 text-xs font-black ring-1 bg-slate-100 text-slate-700 ring-slate-200">{item.courtType}</span>}
                       </div>
                       <p className="mt-2 flex items-center gap-2 text-sm font-bold text-slate-500"><MapPin size={15} className="text-green-600" /> {item.address}, {item.city}</p>
                       <div className="mt-3 flex flex-wrap gap-3 text-sm text-slate-500">
@@ -265,14 +266,14 @@ export function AdminFutsals() {
                       </div>
                     </div>
                     <div className="flex gap-2 md:flex-col">
-                      <button className="btn-soft flex-1 px-4 py-2 md:flex-none" onClick={() => openEdit(item)}>
+                      <Button type="button" variant="outline" size="sm" className="flex-1 md:flex-none" onClick={() => openEdit(item)}>
                         <Pencil size={16} />
                         Edit
-                      </button>
-                      <button className="btn-navy flex-1 px-4 py-2 md:flex-none" disabled={deletingId === item.futsalId} onClick={() => setDeleteTarget(item)}>
+                      </Button>
+                      <Button type="button" variant="destructive" size="sm" className="flex-1 md:flex-none" disabled={deletingId === item.futsalId} onClick={() => setDeleteTarget(item)}>
                         <Trash2 size={16} />
                         {deletingId === item.futsalId ? 'Deleting...' : 'Delete'}
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -284,9 +285,8 @@ export function AdminFutsals() {
       </div>
 
       {drawerOpen && (
-        <div className="admin-modal-backdrop fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4">
-          <button className="absolute inset-0 cursor-default" type="button" aria-label="Close venue form" onClick={closeDrawer} />
-          <form className="admin-modal-panel relative z-10 flex max-h-[88vh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl" onSubmit={submit}>
+        <DialogFrame onClose={closeDrawer} className="max-w-3xl">
+          <form className="flex max-h-[88vh] w-full flex-col overflow-hidden rounded-3xl bg-white shadow-2xl" onSubmit={submit}>
             <div className="border-b border-slate-200 px-6 py-5">
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
@@ -323,9 +323,9 @@ export function AdminFutsals() {
 
               {activeTab === 'details' && (
                 <div className="grid gap-4">
-                  <div><label className="label">Venue name</label><input className="input" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} required minLength={3} maxLength={80} placeholder="Rave futsal" /></div>
-                  <div><label className="label">Surface type</label><input className="input" value={form.courtType || ''} onChange={(event) => setForm({ ...form, courtType: event.target.value })} maxLength={60} placeholder="Indoor turf" /></div>
-                  <div><label className="label">Description</label><textarea className="input min-h-28" maxLength={250} value={form.description || ''} onChange={(event) => setForm({ ...form, description: event.target.value })} placeholder="Parking, lighting, facilities, or short venue note" /></div>
+                  <label className="block"><span className="label">Venue name</span><input className="input" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} required minLength={3} maxLength={80} placeholder="Rave futsal" /></label>
+                  <label className="block"><span className="label">Surface type</span><input className="input" value={form.courtType || ''} onChange={(event) => setForm({ ...form, courtType: event.target.value })} maxLength={60} placeholder="Indoor turf" /></label>
+                  <label className="block"><span className="label">Description</span><textarea className="input min-h-28" maxLength={250} value={form.description || ''} onChange={(event) => setForm({ ...form, description: event.target.value })} placeholder="Parking, lighting, facilities, or short venue note" /></label>
                   <label className="flex items-center justify-between rounded-2xl bg-slate-50 p-4 font-bold text-slate-700">
                     <span>Verified venue</span>
                     <input type="checkbox" checked={Boolean(form.verified)} onChange={(event) => setForm({ ...form, verified: event.target.checked })} />
@@ -335,18 +335,18 @@ export function AdminFutsals() {
 
               {activeTab === 'location' && (
                 <div className="grid gap-4">
-                  <div><label className="label">Address</label><input className="input" value={form.address} onChange={(event) => setForm({ ...form, address: event.target.value })} required minLength={5} maxLength={120} placeholder="Kapan, Kathmandu" /></div>
-                  <div><label className="label">City</label><input className="input" value={form.city} onChange={(event) => setForm({ ...form, city: event.target.value })} required minLength={2} maxLength={50} placeholder="Kathmandu" /></div>
-                  <div><label className="label">Phone</label><input className="input" value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} required pattern="^(98|97|96)\d{8}$" placeholder="98XXXXXXXX" /></div>
+                  <label className="block"><span className="label">Address</span><input className="input" value={form.address} onChange={(event) => setForm({ ...form, address: event.target.value })} required minLength={5} maxLength={120} placeholder="Kapan, Kathmandu" /></label>
+                  <label className="block"><span className="label">City</span><input className="input" value={form.city} onChange={(event) => setForm({ ...form, city: event.target.value })} required minLength={2} maxLength={50} placeholder="Kathmandu" /></label>
+                  <label className="block"><span className="label">Phone</span><input className="input" value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} required pattern="^(98|97|96)\d{8}$" placeholder="98XXXXXXXX" /></label>
                 </div>
               )}
 
               {activeTab === 'schedule' && (
                 <div className="grid gap-4">
-                  <div><label className="label">Price per hour</label><input className="input" type="number" min={1} step="1" value={form.hourlyPrice} onChange={(event) => setForm({ ...form, hourlyPrice: Number(event.target.value) })} required /></div>
+                  <label className="block"><span className="label">Price per hour</span><input className="input" type="number" min={1} step="1" value={form.hourlyPrice} onChange={(event) => setForm({ ...form, hourlyPrice: Number(event.target.value) })} required /></label>
                   <div className="grid gap-3 sm:grid-cols-2">
-                    <div><label className="label">Opening time</label><input className="input" type="time" value={toTimeInput(form.openingTime)} onChange={(event) => setForm({ ...form, openingTime: withSeconds(event.target.value) })} required /></div>
-                    <div><label className="label">Closing time</label><input className="input" type="time" value={toTimeInput(form.closingTime)} onChange={(event) => setForm({ ...form, closingTime: withSeconds(event.target.value) })} required /></div>
+                    <label className="block"><span className="label">Opening time</span><input className="input" type="time" value={toTimeInput(form.openingTime)} onChange={(event) => setForm({ ...form, openingTime: withSeconds(event.target.value) })} required /></label>
+                    <label className="block"><span className="label">Closing time</span><input className="input" type="time" value={toTimeInput(form.closingTime)} onChange={(event) => setForm({ ...form, closingTime: withSeconds(event.target.value) })} required /></label>
                   </div>
                 </div>
               )}
@@ -358,8 +358,8 @@ export function AdminFutsals() {
                     <h4 className="mt-3 font-black text-slate-950">Upload venue images</h4>
                     <p className="mt-1 text-sm text-slate-500">Use one clear cover photo and optional gallery images.</p>
                   </div>
-                  <div><label className="label">Cover image</label><input className="input" type="file" accept="image/png,image/jpeg" disabled={uploading} onChange={(event) => uploadSingle(event.target.files?.[0])} /></div>
-                  <div><label className="label">Gallery images</label><input className="input" type="file" accept="image/png,image/jpeg" multiple disabled={uploading} onChange={(event) => uploadMany(event.target.files)} /></div>
+                  <label className="block"><span className="label">Cover image</span><input className="input" type="file" accept="image/png,image/jpeg" disabled={uploading} onChange={(event) => uploadSingle(event.target.files?.[0])} /></label>
+                  <label className="block"><span className="label">Gallery images</span><input className="input" type="file" accept="image/png,image/jpeg" multiple disabled={uploading} onChange={(event) => uploadMany(event.target.files)} /></label>
                   {imageUrls.length > 0 && (
                     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                       {imageUrls.map((url) => (
@@ -388,26 +388,26 @@ export function AdminFutsals() {
               </div>
             </div>
           </form>
-        </div>
+        </DialogFrame>
       )}
 
       {deleteTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4">
-          <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
-            <p className="eyebrow">Delete venue</p>
-            <h3 className="mt-2 text-2xl font-black text-slate-950">Remove {deleteTarget.name}?</h3>
-            <p className="mt-3 text-sm leading-6 text-slate-500">
-              The backend will block this if the venue has active bookings or booking history. This keeps historical booking data protected.
-            </p>
-            {error && <p className="mt-4 rounded-2xl bg-red-50 p-3 text-sm font-bold text-red-700">{error}</p>}
-            <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row">
-              <button className="btn-soft flex-1" disabled={deletingId !== null} onClick={() => setDeleteTarget(null)}>Cancel</button>
-              <button className="btn-navy flex-1" disabled={deletingId !== null} onClick={confirmDelete}>
-                {deletingId === deleteTarget.futsalId ? 'Deleting...' : 'Delete venue'}
-              </button>
-            </div>
-          </div>
-        </div>
+        <ModalShell
+          title={`Remove ${deleteTarget.name}?`}
+          eyebrow="Delete venue"
+          onClose={() => setDeleteTarget(null)}
+          footer={(
+            <>
+              <Button type="button" variant="outline" disabled={deletingId !== null} onClick={() => setDeleteTarget(null)}>Cancel</Button>
+              <Button type="button" variant="destructive" loading={deletingId === deleteTarget.futsalId} onClick={confirmDelete}>Delete venue</Button>
+            </>
+          )}
+        >
+          <p className="text-sm leading-6 text-slate-500">
+            The backend will block this if the venue has active bookings or booking history. This keeps historical booking data protected.
+          </p>
+          {error && <p className="mt-4 rounded-2xl bg-red-50 p-3 text-sm font-bold text-red-700">{error}</p>}
+        </ModalShell>
       )}
     </section>
   );

@@ -1,8 +1,10 @@
 package com.futsal.controller;
 
+import com.futsal.error.ApiServerException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.futsal.security.SecurityAuth;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
@@ -27,6 +29,12 @@ import java.util.UUID;
 @RequestMapping("/api/uploads")
 public class UploadController {
 
+    private final SecurityAuth securityAuth;
+
+    public UploadController(SecurityAuth securityAuth) {
+        this.securityAuth = securityAuth;
+    }
+
     @Value("${app.upload.dir}")
     private String uploadDir;
 
@@ -41,6 +49,7 @@ public class UploadController {
 
     @PostMapping("/futsal-image")
     public ResponseEntity<?> uploadFutsalImage(@RequestParam("file") MultipartFile file) {
+        securityAuth.requireAdmin();
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("No file uploaded");
         }
@@ -54,6 +63,7 @@ public class UploadController {
 
     @PostMapping("/futsal-images")
     public ResponseEntity<?> uploadFutsalImages(@RequestParam("files") MultipartFile[] files) {
+        securityAuth.requireAdmin();
         if (files == null || files.length == 0) {
             throw new IllegalArgumentException("No files uploaded");
         }

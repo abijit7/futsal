@@ -24,7 +24,9 @@ npm install
 npm run dev
 ```
 
-The React app runs at `http://127.0.0.1:5174` and uses `VITE_API_BASE_URL` for backend calls.
+The React app runs at `http://localhost:5173` (see `frontend/vite.config.ts`) and uses
+`VITE_API_BASE_URL` for backend calls. The backend listens on `9090` by default, or on `PORT`
+when the platform sets one.
 
 ## Core Flow
 
@@ -42,7 +44,8 @@ The React app runs at `http://127.0.0.1:5174` and uses `VITE_API_BASE_URL` for b
 - Production must configure `VERIFICATION_SECRET` plus SMTP and/or `SMS_WEBHOOK_URL` delivery settings.
 - SMTP uses Spring Boot variables such as `SPRING_MAIL_HOST`, `SPRING_MAIL_PORT`, `SPRING_MAIL_USERNAME`, and `SPRING_MAIL_PASSWORD`.
 - The mail health probe is disabled by default. Set `MAIL_HEALTH_ENABLED=true` only when a reachable SMTP server is configured.
-- Apply `backend/src/main/resources/db/security-features.sql` before starting the production profile with `ddl-auto=validate`.
+- Apply the migrations in `backend/src/main/resources/db/` (via `deployment/apply-db-migrations.sh`)
+  before starting the production profile with `ddl-auto=validate`.
 
 ## Uploads
 
@@ -51,10 +54,29 @@ The React app runs at `http://127.0.0.1:5174` and uses `VITE_API_BASE_URL` for b
 
 ## API Highlights
 
-- `GET /api/futsals` list venues
-- `POST /api/futsals` create venue
-- `GET /api/slots?futsalId=ID` list available slots for a venue
-- `POST /api/slots` create slot with `futsalId`
+- `GET /api/futsals` list venues (public)
+- `POST /api/futsals` create venue (admin)
+- `GET /api/slots?futsalId=ID` list available slots for a venue (public)
+- `POST /api/slots` create slot with `futsalId` (admin)
+- `POST /api/payments/initiate` start a payment (eSewa form, Khalti redirect, or a cash booking)
+- `POST /api/payments/verify` confirm a gateway payment after the browser returns
+
+## Payments
+
+Cash bookings are created directly. eSewa and Khalti go through `/api/payments/initiate`, which
+holds the slot and hands the browser to the gateway; the booking is only confirmed once
+`/api/payments/verify` has checked the payment against eSewa's status API or Khalti's lookup API.
+The price is always computed server-side from the venue's hourly rate and the slot duration.
+
+An unfinished checkout releases its slot when the user lands on `/payment/failure`, and otherwise
+within `app.payment.hold-minutes` via a scheduled sweep.
+
+## Authorization
+
+Admin-only routes are enforced in two places: declaratively in
+`backend/src/main/java/com/futsal/security/SecurityConfig.java`, and imperatively via
+`SecurityAuth.requireAdmin()` in the controllers. `SecurityRulesTest` asserts the full matrix
+(401 anonymous / 403 customer / 200 admin) — keep it passing.
 
 ## Project Structure (Key Areas)
 

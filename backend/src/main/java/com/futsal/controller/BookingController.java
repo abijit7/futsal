@@ -16,6 +16,7 @@ import com.futsal.dto.DtoMapper;
 import com.futsal.security.SecurityAuth;
 
 import jakarta.validation.Valid;
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -42,16 +43,19 @@ public class BookingController {
     public ResponseEntity<PagedResponse<BookingResponse>> getAllBookings(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
-            @RequestParam(required = false) String status
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) LocalDate slotDate
     ) {
+        securityAuth.requireAdmin();
         Pageable pageable = PageRequestFactory.create(page, size);
-        Page<Booking> result;
+        BookingStatus parsedStatus = null;
         if (status != null && !status.isBlank() && !"ALL".equalsIgnoreCase(status)) {
-            result = bookingService.getBookingsByStatus(parseStatus(status), pageable);
-        } else {
-            result = bookingService.getAllBookings(pageable);
+            parsedStatus = parseStatus(status);
         }
-        Page<BookingResponse> mapped = result.map(DtoMapper::toBookingResponse);
+        Page<BookingResponse> mapped = bookingService
+                .searchBookings(parsedStatus, slotDate, q, pageable)
+                .map(DtoMapper::toBookingResponse);
         return ResponseEntity.ok(PagedResponse.fromPage(mapped));
     }
 
@@ -103,6 +107,7 @@ public class BookingController {
     // DELETE /api/bookings/{id} — delete booking (admin)
     @DeleteMapping("/{id}")
     public ResponseEntity<Map<String, String>> deleteBooking(@PathVariable Long id) {
+        securityAuth.requireAdmin();
         bookingService.deleteBooking(id);
         Map<String, String> res = new HashMap<>();
         res.put("message", "Booking deleted successfully");

@@ -4,6 +4,7 @@ import { futsalApi, slotApi } from '../../api/modules';
 import { Pagination } from '../../components/Pagination';
 import { EmptyState, LoadingState } from '../../components/State';
 import { StatusBadge } from '../../components/StatusBadge';
+import { Button, DialogFrame, ModalShell } from '../../components/UI';
 import type { Futsal, SlotGenerationPayload, TimeSlot, TimeSlotPayload } from '../../types/api';
 import { formatDate, formatTimeCompact, slotDuration, timeRange, todayInput } from '../../utils/format';
 
@@ -274,9 +275,9 @@ export function AdminSlots() {
           </div>
 
           {(message || error) && (
-            <div className="mt-4 grid gap-2">
+            <div className="mt-4 grid gap-2" aria-live="polite">
               {message && <p className="rounded-2xl bg-green-50 px-4 py-3 text-sm font-bold text-green-700">{message}</p>}
-              {error && <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{error}</p>}
+              {error && <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700" aria-live="assertive">{error}</p>}
             </div>
           )}
         </div>
@@ -303,7 +304,7 @@ export function AdminSlots() {
                 No slots on this date.
               </div>
             ) : (
-              <div className="motion-stagger mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
+              <div className="motion-stagger mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6" aria-live="polite">
                 {slots.map((slot) => (
                   <button
                     key={slot.slotId}
@@ -314,6 +315,7 @@ export function AdminSlots() {
                         : 'border-slate-200 bg-slate-100 text-slate-500'
                     }`}
                     onClick={() => edit(slot)}
+                    aria-label={`Edit slot at ${formatTimeCompact(slot.startTime)}, ${slot.available ? 'available' : 'booked'}`}
                   >
                     <span className="block text-sm font-black">{formatTimeCompact(slot.startTime)}</span>
                     <span className="mt-1 block text-xs font-bold">{slot.available ? 'Available' : 'Booked'}</span>
@@ -328,7 +330,7 @@ export function AdminSlots() {
           ) : slots.length === 0 ? (
             <EmptyState title="No slots found" />
           ) : (
-            <div className="motion-stagger grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            <div className="motion-stagger grid gap-3 md:grid-cols-2 xl:grid-cols-3" aria-live="polite">
               {slots.map((slot) => (
                 <article key={slot.slotId} className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
                   <div className="flex items-start justify-between gap-3">
@@ -345,17 +347,19 @@ export function AdminSlots() {
                   </div>
                   <p className="mt-4 truncate text-sm font-bold text-slate-600">{slot.futsal?.name || 'Futsal'}</p>
                   <div className="mt-4 flex gap-2">
-                    <button type="button" className="btn-soft flex-1 px-3 py-2 text-sm" onClick={() => edit(slot)}>
+                    <Button type="button" variant="outline" size="sm" className="flex-1" onClick={() => edit(slot)}>
                       <Pencil size={15} /> Edit
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       type="button"
-                      className="btn-navy flex-1 px-3 py-2 text-sm"
+                      variant="destructive"
+                      size="sm"
+                      className="flex-1"
                       disabled={deletingId === slot.slotId}
                       onClick={() => setDeleteTarget(slot)}
                     >
                       <Trash2 size={15} /> {deletingId === slot.slotId ? 'Deleting' : 'Delete'}
-                    </button>
+                    </Button>
                   </div>
                 </article>
               ))}
@@ -366,8 +370,8 @@ export function AdminSlots() {
       </div>
 
       {modal === 'slot' && (
-        <div className="admin-modal-backdrop fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-slate-950/45 p-4">
-          <form className="admin-modal-panel relative w-full max-w-lg overflow-hidden rounded-3xl bg-white shadow-2xl" onSubmit={submit}>
+        <DialogFrame onClose={() => setModal(null)} className="max-w-lg">
+          <form className="overflow-hidden rounded-3xl bg-white shadow-2xl" onSubmit={submit}>
             <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
               <div>
                 <p className="eyebrow">{editingId ? 'Edit slot' : 'New slot'}</p>
@@ -378,27 +382,15 @@ export function AdminSlots() {
               </button>
             </div>
             <div className="grid gap-4 px-5 py-5">
-              <div>
-                <label className="label">Venue</label>
-                <select className="input py-2.5" value={form.futsalId} onChange={(event) => setForm({ ...form, futsalId: Number(event.target.value) })} required>
+              <label className="block"><span className="label">Venue</span><select className="input py-2.5" value={form.futsalId} onChange={(event) => setForm({ ...form, futsalId: Number(event.target.value) })} required>
                   {futsals.map((item) => (
                     <option key={item.futsalId} value={item.futsalId}>{item.name}</option>
                   ))}
-                </select>
-              </div>
-              <div>
-                <label className="label">Date</label>
-                <input className="input py-2.5" type="date" min={todayInput()} value={form.slotDate} onChange={(event) => setForm({ ...form, slotDate: event.target.value })} required />
-              </div>
+                </select></label>
+              <label className="block"><span className="label">Date</span><input className="input py-2.5" type="date" min={todayInput()} value={form.slotDate} onChange={(event) => setForm({ ...form, slotDate: event.target.value })} required /></label>
               <div className="grid gap-3 sm:grid-cols-2">
-                <div>
-                  <label className="label">Start</label>
-                  <input className="input py-2.5" type="time" value={toTimeInput(form.startTime)} onChange={(event) => setForm({ ...form, startTime: withSeconds(event.target.value) })} required />
-                </div>
-                <div>
-                  <label className="label">End</label>
-                  <input className="input py-2.5" type="time" value={toTimeInput(form.endTime)} onChange={(event) => setForm({ ...form, endTime: withSeconds(event.target.value) })} required />
-                </div>
+                <label className="block"><span className="label">Start</span><input className="input py-2.5" type="time" value={toTimeInput(form.startTime)} onChange={(event) => setForm({ ...form, startTime: withSeconds(event.target.value) })} required /></label>
+                <label className="block"><span className="label">End</span><input className="input py-2.5" type="time" value={toTimeInput(form.endTime)} onChange={(event) => setForm({ ...form, endTime: withSeconds(event.target.value) })} required /></label>
               </div>
               <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-500">
                 Availability is controlled by booking state. Editing keeps the current slot status.
@@ -411,12 +403,12 @@ export function AdminSlots() {
               </button>
             </div>
           </form>
-        </div>
+        </DialogFrame>
       )}
 
       {modal === 'bulk' && (
-        <div className="admin-modal-backdrop fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-slate-950/45 p-4">
-          <form className="admin-modal-panel relative w-full max-w-xl overflow-hidden rounded-3xl bg-white shadow-2xl" onSubmit={generate}>
+        <DialogFrame onClose={() => setModal(null)} className="max-w-xl">
+          <form className="overflow-hidden rounded-3xl bg-white shadow-2xl" onSubmit={generate}>
             <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
               <div>
                 <p className="eyebrow">Bulk slots</p>
@@ -427,42 +419,27 @@ export function AdminSlots() {
               </button>
             </div>
             <div className="grid gap-4 px-5 py-5">
-              <div>
-                <label className="label">Venue</label>
-                <select className="input py-2.5" value={generation.futsalId} onChange={(event) => setGeneration({ ...generation, futsalId: Number(event.target.value) })} required>
+              <label className="block"><span className="label">Venue</span><select className="input py-2.5" value={generation.futsalId} onChange={(event) => setGeneration({ ...generation, futsalId: Number(event.target.value) })} required>
                   {futsals.map((item) => (
                     <option key={item.futsalId} value={item.futsalId}>{item.name}</option>
                   ))}
-                </select>
-              </div>
+                </select></label>
               <div className="grid gap-3 sm:grid-cols-2">
-                <div>
-                  <label className="label">Start date</label>
-                  <input className="input py-2.5" type="date" min={todayInput()} value={generation.startDate} onChange={(event) => setGeneration({ ...generation, startDate: event.target.value })} required />
-                </div>
-                <div>
-                  <label className="label">End date</label>
-                  <input className="input py-2.5" type="date" min={generation.startDate} value={generation.endDate} onChange={(event) => setGeneration({ ...generation, endDate: event.target.value })} required />
-                </div>
+                <label className="block"><span className="label">Start date</span><input className="input py-2.5" type="date" min={todayInput()} value={generation.startDate} onChange={(event) => setGeneration({ ...generation, startDate: event.target.value })} required /></label>
+                <label className="block"><span className="label">End date</span><input className="input py-2.5" type="date" min={generation.startDate} value={generation.endDate} onChange={(event) => setGeneration({ ...generation, endDate: event.target.value })} required /></label>
               </div>
               <div className="grid gap-3 sm:grid-cols-3">
                 <div>
-                  <label className="label">Start</label>
+                  <label className="label">Start <span className="text-sm font-normal text-slate-500">(optional)</span></label>
                   <input className="input py-2.5" type="time" value={toTimeInput(generation.startTime)} onChange={(event) => setGeneration({ ...generation, startTime: event.target.value ? withSeconds(event.target.value) : '' })} />
                 </div>
                 <div>
-                  <label className="label">End</label>
+                  <label className="label">End <span className="text-sm font-normal text-slate-500">(optional)</span></label>
                   <input className="input py-2.5" type="time" value={toTimeInput(generation.endTime)} onChange={(event) => setGeneration({ ...generation, endTime: event.target.value ? withSeconds(event.target.value) : '' })} />
                 </div>
-                <div>
-                  <label className="label">Minutes</label>
-                  <input className="input py-2.5" type="number" min={15} max={240} step={15} value={generation.slotMinutes} onChange={(event) => setGeneration({ ...generation, slotMinutes: Number(event.target.value) })} />
-                </div>
+                <label className="block"><span className="label">Minutes</span><input className="input py-2.5" type="number" min={15} max={240} step={15} value={generation.slotMinutes} onChange={(event) => setGeneration({ ...generation, slotMinutes: Number(event.target.value) })} /></label>
               </div>
-              <div>
-                <label className="label">Holiday dates</label>
-                <input className="input py-2.5" value={holidayInput} onChange={(event) => setHolidayInput(event.target.value)} placeholder="2026-07-01, 2026-07-04" />
-              </div>
+              <label className="block"><span className="label">Holiday dates</span><input className="input py-2.5" value={holidayInput} onChange={(event) => setHolidayInput(event.target.value)} placeholder="2026-07-01, 2026-07-04" /></label>
             </div>
             <div className="flex flex-col-reverse gap-3 border-t border-slate-200 bg-white px-5 py-4 sm:flex-row sm:justify-end">
               <button type="button" className="btn-soft px-4 py-2 text-sm" onClick={() => setModal(null)}>Cancel</button>
@@ -471,32 +448,26 @@ export function AdminSlots() {
               </button>
             </div>
           </form>
-        </div>
+        </DialogFrame>
       )}
 
       {deleteTarget && (
-        <div className="admin-modal-backdrop fixed inset-0 z-50 grid place-items-center bg-slate-950/45 p-4">
-          <div className="admin-modal-panel w-full max-w-md rounded-3xl bg-white p-5 shadow-2xl">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="eyebrow">Delete slot</p>
-                <h3 className="mt-1 text-2xl font-black text-slate-950">Remove this slot?</h3>
-              </div>
-              <button type="button" className="btn-soft h-10 w-10 rounded-2xl p-0" onClick={() => setDeleteTarget(null)} aria-label="Close delete confirmation">
-                <X size={20} />
-              </button>
-            </div>
-            <p className="mt-4 text-sm font-semibold text-slate-500">
-              {formatDate(deleteTarget.slotDate)} - {timeRange(deleteTarget.startTime, deleteTarget.endTime)}
-            </p>
-            <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-              <button type="button" className="btn-soft px-4 py-2 text-sm" onClick={() => setDeleteTarget(null)}>Cancel</button>
-              <button type="button" className="btn-navy px-4 py-2 text-sm" disabled={deletingId === deleteTarget.slotId} onClick={confirmDelete}>
-                {deletingId === deleteTarget.slotId ? 'Deleting' : 'Delete slot'}
-              </button>
-            </div>
-          </div>
-        </div>
+        <ModalShell
+          title="Remove this slot?"
+          eyebrow="Delete slot"
+          onClose={() => setDeleteTarget(null)}
+          maxWidth="max-w-md"
+          footer={(
+            <>
+              <Button type="button" variant="outline" disabled={deletingId !== null} onClick={() => setDeleteTarget(null)}>Cancel</Button>
+              <Button type="button" variant="destructive" loading={deletingId === deleteTarget.slotId} onClick={confirmDelete}>Delete slot</Button>
+            </>
+          )}
+        >
+          <p className="text-sm font-semibold text-slate-600">
+            {formatDate(deleteTarget.slotDate)} - {timeRange(deleteTarget.startTime, deleteTarget.endTime)}
+          </p>
+        </ModalShell>
       )}
     </section>
   );
@@ -505,7 +476,7 @@ export function AdminSlots() {
 function Stat({ label, value, tone }: { label: string; value: number; tone?: 'green' }) {
   return (
     <div className="rounded-3xl border border-slate-200 bg-white px-4 py-3">
-      <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">{label}</p>
+      <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">{label}</p>
       <p className={`mt-1 text-2xl font-black ${tone === 'green' ? 'text-green-600' : 'text-slate-950'}`}>{value}</p>
     </div>
   );

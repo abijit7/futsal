@@ -1,6 +1,8 @@
 package com.futsal.service;
 
 import com.futsal.dto.UserUpdateRequest;
+import com.futsal.error.ConflictException;
+import com.futsal.error.NotFoundException;
 import com.futsal.model.User;
 import com.futsal.model.enums.Role;
 import com.futsal.repository.UserRepository;
@@ -10,6 +12,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -40,7 +43,7 @@ public class UserService {
     public User register(User user) {
         user.setEmail(normalizeEmail(user.getEmail()));
         if (userRepository.existsByEmailIgnoreCase(user.getEmail())) {
-            throw new RuntimeException("Email is already registered. Please use a different email.");
+            throw new ConflictException("Email is already registered. Please use a different email.");
         }
         user.setPassword(hashPassword(user.getPassword()));
         user.setRole(Role.USER);
@@ -53,10 +56,10 @@ public class UserService {
     // ── Login ─────────────────────────────────────────────────────────────────
     public User login(String email, String password) {
         User user = userRepository.findByEmailIgnoreCase(normalizeEmail(email))
-                .orElseThrow(() -> new RuntimeException("No account found with this email."));
+                .orElseThrow(() -> new IllegalArgumentException("No account found with this email."));
 
         if (!passwordMatches(password, user.getPassword())) {
-            throw new RuntimeException("Incorrect password. Please try again.");
+            throw new IllegalArgumentException("Incorrect password. Please try again.");
         }
         if (!isBcryptHash(user.getPassword())) {
             user.setPassword(hashPassword(password));
@@ -67,20 +70,26 @@ public class UserService {
 
     // ── Get all users (admin) ─────────────────────────────────────────────────
     public Page<User> getAllUsers(String query, Pageable pageable) {
+        return getAllUsers(query, null, pageable);
+    }
+
+    public Page<User> getAllUsers(String query, Role role, Pageable pageable) {
         String term = query == null ? "" : query.trim();
-        return userRepository.search(term, pageable);
+        return role == null
+                ? userRepository.search(term, pageable)
+                : userRepository.searchByRole(term, role, pageable);
     }
 
     // ── Get user by ID ────────────────────────────────────────────────────────
     public User getUserById(Long id) {
         return userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new NotFoundException("User not found"));
     }
 
     // ── Update user profile ───────────────────────────────────────────────────
     public User updateUser(Long id, UserUpdateRequest updatedUser) {
         User existing = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new NotFoundException("User not found"));
         if (updatedUser.getName() != null && !updatedUser.getName().isBlank()) {
             existing.setName(updatedUser.getName());
         }
@@ -115,9 +124,12 @@ public class UserService {
     }
 
     // ── Delete user (admin) ───────────────────────────────────────────────────
+    // Transactional because deleteByUser is a derived delete query: Spring Data's default
+    // read-only transaction cannot execute it, and the two deletes must succeed or fail together.
+    @Transactional
     public void deleteUser(Long id) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new NotFoundException("User not found"));
         verificationCodeRepository.deleteByUser(user);
         userRepository.delete(user);
     }
@@ -142,7 +154,7 @@ public class UserService {
             byte[] hash = md.digest(password.getBytes(StandardCharsets.UTF_8));
             return Base64.getEncoder().encodeToString(hash);
         } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("Hashing error", e);
+            throw new IllegalStateException("Hashing error", e);
         }
     }
 

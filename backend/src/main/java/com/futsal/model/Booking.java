@@ -22,7 +22,12 @@ public class Booking {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @OneToOne(fetch = FetchType.EAGER)
+    // Deliberately @ManyToOne, not @OneToOne: a slot freed by a cancellation must be bookable
+    // again, and @OneToOne makes slot_id unique for all time. Only one *open* booking may exist
+    // per slot - enforced in BookingService under a SELECT ... FOR UPDATE on the slot row, and
+    // backed by the uk_booking_active_slot generated-column index (V4__booking_active_slot.sql).
+    // EAGER is required: DtoMapper.toBookingResponse reads through this outside any transaction.
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "slot_id", nullable = false)
     private TimeSlot timeSlot;
 
