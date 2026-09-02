@@ -1,7 +1,10 @@
 {
   "navigationFallback": {
     "rewrite": "/index.html",
-    "exclude": ["/assets/*", "/*.{css,js,json,png,jpg,jpeg,svg,gif,webp,ico,woff,woff2}"]
+    "exclude": [
+      "/assets/*",
+      "/*.{css,js,json,png,jpg,jpeg,svg,gif,webp,ico,woff,woff2}"
+    ]
   },
   "responseOverrides": {
     "404": {
@@ -12,7 +15,9 @@
   "globalHeaders": {
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "DENY",
-    "Referrer-Policy": "strict-origin-when-cross-origin"
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Content-Security-Policy": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://YOUR_BACKEND_DOMAIN; connect-src 'self' https://YOUR_BACKEND_DOMAIN; form-action 'self' https://epay.esewa.com.np https://rc-epay.esewa.com.np; frame-ancestors 'none'; base-uri 'self'; object-src 'none'",
+    "Strict-Transport-Security": "max-age=31536000; includeSubDomains"
   },
   "routes": [
     {

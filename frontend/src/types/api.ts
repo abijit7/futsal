@@ -1,5 +1,7 @@
 export type Role = 'USER' | 'ADMIN';
 export type BookingStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
+// KHALTI is retained only so historical bookings returned by the API still type-check;
+// it can no longer be selected for a new checkout.
 export type PaymentMethod = 'ESEWA' | 'KHALTI' | 'CASH_IN_HAND';
 
 export type PagedResponse<T> = {
@@ -57,6 +59,24 @@ export type Futsal = {
   createdAt?: string;
 };
 
+export type Review = {
+  reviewId: number;
+  futsalId: number;
+  bookingId: number;
+  rating: number;
+  comment?: string;
+  createdAt: string;
+  updatedAt?: string;
+  authorName?: string;
+  authorId?: number;
+};
+
+export type ReviewPayload = {
+  bookingId: number;
+  rating: number;
+  comment?: string;
+};
+
 export type FutsalPayload = Omit<Futsal, 'futsalId' | 'createdAt' | 'images'>;
 
 export type TimeSlot = {
@@ -102,7 +122,7 @@ export type PaymentStatus = 'PENDING' | 'COMPLETED' | 'FAILED' | 'REFUNDED' | 'C
 
 /**
  * How the browser continues a payment. eSewa needs an auto-submitted form POST
- * (formUrl + formFields), Khalti a redirect (redirectUrl), cash neither.
+ * (formUrl + formFields), cash neither.
  */
 export type PaymentInitiation = {
   transactionId: string;
@@ -111,7 +131,6 @@ export type PaymentInitiation = {
   message?: string;
   formUrl?: string;
   formFields?: Record<string, string>;
-  redirectUrl?: string;
   booking?: Booking;
 };
 

@@ -35,7 +35,12 @@ export function AdminUsers() {
       setLoading(false);
     }
   };
-  useEffect(() => { load(); }, [page, search, role]);
+  // Debounced so typing in the search box does not fire one request per keystroke, matching
+  // the behaviour already in AdminBookings. Filter changes still load immediately.
+  useEffect(() => {
+    const timer = window.setTimeout(load, search ? 300 : 0);
+    return () => window.clearTimeout(timer);
+  }, [page, search, role]);
 
   const remove = async (id: number) => {
     setError('');
@@ -65,7 +70,7 @@ export function AdminUsers() {
         meta={<Chip tone="green">{filteredItems.length} visible</Chip>}
       />
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         <MetricCard label="Loaded users" value={counts.total} icon={<UserRound size={20} />} tone="slate" />
         <MetricCard label="Admins" value={counts.admins} icon={<ShieldCheck size={20} />} tone="navy" />
         <MetricCard label="Email verified" value={counts.verifiedEmail} icon={<Mail size={20} />} tone="green" />
@@ -94,7 +99,7 @@ export function AdminUsers() {
         <>
           <div className="motion-stagger hidden gap-3 md:grid" aria-live="polite">
             {filteredItems.map((user) => (
-              <article key={user.userId} className="panel grid min-w-0 gap-4 p-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1.35fr)_minmax(0,1fr)] xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1.25fr)_auto_minmax(0,1fr)_minmax(8rem,0.75fr)_auto] xl:items-center">
+              <article key={user.userId} className="admin-card grid min-w-0 gap-4 p-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1.35fr)_minmax(0,1fr)] xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1.25fr)_auto_minmax(0,1fr)_minmax(8rem,0.75fr)_auto] xl:items-center">
                 <UserIdentity user={user} />
                 <ContactBlock user={user} />
                 <RoleBadge user={user} />
@@ -167,7 +172,7 @@ function UserActions({ user, onView, onDelete }: { user: User; onView: (user: Us
 function InfoMeta({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-w-0">
-      <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">{label}</p>
+      <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">{label}</p>
       <p className="mt-1 truncate text-sm font-bold text-slate-600">{value}</p>
     </div>
   );
@@ -176,11 +181,11 @@ function InfoMeta({ label, value }: { label: string; value: string }) {
 function UserIdentity({ user }: { user: User }) {
   return (
     <div className="flex min-w-0 items-center gap-3">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-green-50 text-sm font-black text-green-700">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-green-50 text-sm font-bold text-green-700">
         {initials(user.name)}
       </div>
       <div className="min-w-0">
-        <p className="truncate font-black text-slate-950">{user.name}</p>
+        <p className="truncate font-bold text-slate-900">{user.name}</p>
         <p className="text-xs font-bold text-slate-500">ID {user.userId}</p>
       </div>
     </div>
@@ -199,7 +204,7 @@ function ContactBlock({ user }: { user: User }) {
 function RoleBadge({ user }: { user: User }) {
   const admin = user.role === 'ADMIN';
   return (
-    <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-black ring-1 ${admin ? 'bg-slate-950 text-white ring-slate-900' : 'bg-slate-100 text-slate-700 ring-slate-200'}`}>
+    <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-bold ring-1 ${admin ? 'bg-slate-950 text-white ring-slate-900' : 'bg-slate-100 text-slate-700 ring-slate-200'}`}>
       <ShieldCheck size={14} />
       {user.role}
     </span>
@@ -217,7 +222,7 @@ function VerificationGroup({ user }: { user: User }) {
 
 function VerificationBadge({ verified, label }: { verified: boolean; label: string }) {
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-black ring-1 ${verified ? 'bg-green-50 text-green-700 ring-green-200' : 'bg-slate-100 text-slate-500 ring-slate-200'}`}>
+    <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ring-1 ${verified ? 'bg-green-50 text-green-700 ring-green-200' : 'bg-slate-100 text-slate-500 ring-slate-200'}`}>
       {verified ? <CheckCircle2 size={14} /> : <XCircle size={14} />}
       {label}
     </span>

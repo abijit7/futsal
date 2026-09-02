@@ -24,9 +24,16 @@ if [ ! -d "$MIGRATION_DIR" ]; then
 fi
 
 found=0
-# The V<n>__ prefix sorts correctly for single-digit versions. Renumber with zero padding
-# (V01, V02, ...) before adding a tenth migration.
-for script in "$MIGRATION_DIR"/V*.sql; do
+# Order by the numeric version rather than by filename, so V10 follows V9 instead of V1. The
+# version is pulled out, sorted numerically, then stripped back off.
+MIGRATIONS=$(
+  ls "$MIGRATION_DIR"/V*.sql 2>/dev/null \
+    | sed -n 's|.*/V\([0-9][0-9]*\)__.*|\1 &|p' \
+    | sort -n -k1,1 \
+    | cut -d' ' -f2-
+)
+
+for script in $MIGRATIONS; do
   [ -e "$script" ] || continue
   found=1
   echo "==> applying $(basename "$script")"

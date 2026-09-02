@@ -1,5 +1,5 @@
 import { api, query } from './client';
-import type { Booking, BookingStatus, Futsal, FutsalPayload, PagedResponse, PaymentInitiation, PaymentMethod, PaymentVerification, SlotGenerationPayload, SlotGenerationResponse, TimeSlot, TimeSlotPayload, User, VerificationIssueResponse } from '../types/api';
+import type { Booking, BookingStatus, Futsal, FutsalPayload, PagedResponse, PaymentInitiation, PaymentMethod, PaymentVerification, Review, ReviewPayload, SlotGenerationPayload, SlotGenerationResponse, TimeSlot, TimeSlotPayload, User, VerificationIssueResponse } from '../types/api';
 
 export const authApi = {
   login: (payload: Pick<User, 'email'> & { password: string }) =>
@@ -77,6 +77,28 @@ export const bookingApi = {
   delete: (id: number) => api.delete(`/bookings/${id}`).then((res) => res.data)
 };
 
+export const reviewApi = {
+  /** Public: anyone can read a venue's reviews. */
+  forFutsal: (futsalId: number, page = 0, size = 10) =>
+    api.get<PagedResponse<Review>>(`/futsals/${futsalId}/reviews?${query({ page, size })}`).then((res) => res.data),
+
+  /**
+   * The server checks that the booking belongs to the caller, was approved, is for this venue,
+   * and has already finished - so a rating cannot be left by someone who never played.
+   */
+  create: (futsalId: number, payload: ReviewPayload) =>
+    api.post<Review>(`/futsals/${futsalId}/reviews`, payload).then((res) => res.data),
+
+  update: (reviewId: number, payload: ReviewPayload) =>
+    api.put<Review>(`/reviews/${reviewId}`, payload).then((res) => res.data),
+
+  delete: (reviewId: number) => api.delete(`/reviews/${reviewId}`).then((res) => res.data),
+
+  /** Booking ids this user has already reviewed, so the prompt can be hidden for them. */
+  reviewedBookings: (userId: number) =>
+    api.get<number[]>(`/users/${userId}/reviewed-bookings`).then((res) => res.data)
+};
+
 export const paymentApi = {
   /**
    * Starts a payment. The amount is NOT sent: the server prices the slot from the venue's hourly
@@ -86,7 +108,7 @@ export const paymentApi = {
     api.post<PaymentInitiation>('/payments/initiate', payload).then((res) => res.data),
 
   /** Confirms a gateway payment after the redirect back. */
-  verify: (payload: { data?: string; pidx?: string }) =>
+  verify: (payload: { data?: string }) =>
     api.post<PaymentVerification>('/payments/verify', payload).then((res) => res.data),
 
   /** Releases the slot hold when the user abandons checkout. */

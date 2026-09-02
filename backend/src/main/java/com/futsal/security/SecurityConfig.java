@@ -90,6 +90,23 @@ public class SecurityConfig {
         http
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                // This chain serves JSON and, at /uploads/**, venue images. Nothing it returns
+                // should ever execute script or be framed, so the policy is deny-by-default with
+                // images re-allowed for direct navigation to an upload URL.
+                .headers(headers -> headers
+                        .contentSecurityPolicy(csp -> csp.policyDirectives(
+                                "default-src 'none'; img-src 'self' data:; frame-ancestors 'none'; "
+                                        + "base-uri 'none'; form-action 'none'"))
+                        .frameOptions(frame -> frame.deny())
+                        .referrerPolicy(referrer -> referrer.policy(
+                                org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter
+                                        .ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
+                        // Only emitted on requests Spring sees as HTTPS, which is why
+                        // server.forward-headers-strategy=framework matters behind Azure's proxy.
+                        .httpStrictTransportSecurity(hsts -> hsts
+                                .includeSubDomains(true)
+                                .maxAgeInSeconds(31536000))
+                )
                 .exceptionHandling(exceptions -> exceptions
                         .authenticationEntryPoint((request, response, authException) ->
                                 writeError(response, HttpServletResponse.SC_UNAUTHORIZED, "Authentication required"))
@@ -116,6 +133,14 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/futsals/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/slots", "/api/slots/public").permitAll()
                         .requestMatchers(new RegexRequestMatcher("^/api/slots/\\d+$", "GET")).permitAll()
+
+                        // Reviews: anyone may read them, any signed-in customer may write one.
+                        // Declared explicitly so that broadening the /api/futsals admin matchers
+                        // below can never silently turn reviewing into an admin-only action.
+                        .requestMatchers(HttpMethod.GET, "/api/futsals/*/reviews").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/futsals/*/reviews").authenticated()
+                        .requestMatchers(HttpMethod.PUT, "/api/reviews/*").authenticated()
+                        .requestMatchers(HttpMethod.DELETE, "/api/reviews/*").authenticated()
 
                         // Admin-only administration
                         .requestMatchers(HttpMethod.GET, "/api/users").access(SecurityConfig::isAdminRequest)

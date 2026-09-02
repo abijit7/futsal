@@ -3,6 +3,7 @@ package com.futsal.security;
 import com.futsal.controller.BookingController;
 import com.futsal.controller.FutsalController;
 import com.futsal.controller.PaymentController;
+import com.futsal.controller.ReviewController;
 import com.futsal.controller.TimeSlotController;
 import com.futsal.controller.UploadController;
 import com.futsal.controller.UserController;
@@ -12,6 +13,7 @@ import com.futsal.repository.UserRepository;
 import com.futsal.service.BookingService;
 import com.futsal.service.FutsalService;
 import com.futsal.service.PaymentGatewayService;
+import com.futsal.service.ReviewService;
 import com.futsal.service.TimeSlotService;
 import com.futsal.service.UserService;
 import com.futsal.service.VerificationService;
@@ -52,7 +54,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         FutsalController.class,
         TimeSlotController.class,
         UploadController.class,
-        PaymentController.class
+        PaymentController.class,
+        ReviewController.class
 })
 @Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtService.class, SecurityAuth.class})
 @TestPropertySource(properties = {
@@ -78,6 +81,7 @@ class SecurityRulesTest {
     @MockBean private TimeSlotService timeSlotService;
     @MockBean private VerificationService verificationService;
     @MockBean private PaymentGatewayService paymentGatewayService;
+    @MockBean private ReviewService reviewService;
 
     private String adminToken;
     private String userToken;
@@ -142,12 +146,15 @@ class SecurityRulesTest {
             "POST, /api/users/2/verification/email/request",
             "GET,  /api/bookings/9",
             "GET,  /api/bookings/user/2",
-            "POST, /api/bookings",
             "PUT,  /api/bookings/9/status",
             "POST, /api/payments/confirm",
             "POST, /api/payments/initiate",
             "POST, /api/payments/verify",
-            "POST, /api/payments/cancel/9"
+            "POST, /api/payments/cancel/9",
+            "POST, /api/futsals/9/reviews",
+            "PUT,  /api/reviews/9",
+            "DELETE, /api/reviews/9",
+            "GET,  /api/users/2/reviewed-bookings"
     })
     void protectedRoutesRejectAnonymousCallers(String method, String path) throws Exception {
         mockMvc.perform(json(method, path, null))
@@ -158,6 +165,7 @@ class SecurityRulesTest {
     @CsvSource({
             "GET,  /api/futsals",
             "GET,  /api/futsals/9",
+            "GET,  /api/futsals/9/reviews",
             "GET,  /api/slots",
             "GET,  /api/slots/public",
             "POST, /api/users/login",

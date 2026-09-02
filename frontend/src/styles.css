@@ -129,6 +129,12 @@ textarea:disabled,
   @apply w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition-all duration-200 placeholder:text-slate-400 focus:-translate-y-0.5 focus:border-green-400 focus:ring-4 focus:ring-green-100 disabled:bg-slate-100 disabled:text-slate-400;
 }
 
+/* Utilities like `min-h-28` lose to `.input`, which is emitted later with equal specificity.
+   Textareas therefore need their own height here rather than at the call site. */
+textarea.input {
+  min-height: 7rem;
+}
+
 .input.input-with-prefix {
   padding-left: 3rem;
 }
@@ -223,12 +229,17 @@ input[type="checkbox"] {
   @apply text-xs font-black uppercase tracking-[0.24em] text-green-700;
 }
 
+/* Admin surfaces are denser and flatter than the public .panel: tighter radius, no drop shadow. */
+.admin-card {
+  @apply rounded-2xl border border-slate-200 bg-white;
+}
+
 .mobile-data-card {
   @apply rounded-3xl border border-slate-200 bg-white p-4 shadow-sm;
 }
 
 .admin-grid {
-  @apply grid gap-5 lg:grid-cols-[280px_minmax(0,1fr)];
+  @apply grid gap-5 lg:grid-cols-[220px_minmax(0,1fr)];
 }
 
 .page-transition {

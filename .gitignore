@@ -1,11 +1,5 @@
 .DS_Store
 
-# IDE/editor local state
-.idea/workspace.xml
-.idea/httpRequests/
-.idea/dataSources/
-.idea/dataSources.local.xml
-
 # Backend build output
 backend/target/
 
@@ -23,3 +17,8 @@ uploads/
 .env.*
 frontend/.env
 frontend/.env.*
+
+# JetBrains IDE state. The whole directory is local machine config, not source; a
+# partial ignore list previously let .idea/copilotDiffState.xml through with a live
+# database password in it.
+.idea/

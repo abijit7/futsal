@@ -114,12 +114,11 @@ export function AdminPageHeader({
   meta?: ReactNode;
 }) {
   return (
-    <div className="panel overflow-hidden">
-      <div className="flex flex-col gap-4 border-b border-slate-200 bg-white p-5 lg:flex-row lg:items-end lg:justify-between">
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+      <div className="flex flex-col gap-3 p-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <p className="eyebrow">{eyebrow}</p>
-          <h2 className="mt-2 text-3xl font-black tracking-tight text-slate-950">{title}</h2>
-          <p className="mt-1 max-w-2xl text-sm font-semibold leading-6 text-slate-500">{description}</p>
+          <h2 className="text-xl font-bold tracking-tight text-slate-900">{title}</h2>
+          <p className="mt-0.5 max-w-2xl text-sm text-slate-500">{description}</p>
         </div>
         {(action || meta) && <div className="flex flex-col gap-2 sm:flex-row sm:items-center lg:justify-end">{meta}{action}</div>}
       </div>
@@ -129,21 +128,21 @@ export function AdminPageHeader({
 
 export function MetricCard({ label, value, icon, tone = 'green', hint }: { label: string; value: ReactNode; icon?: ReactNode; tone?: Tone; hint?: string }) {
   return (
-    <article className="panel p-5">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">{label}</p>
-          <p className="mt-2 text-3xl font-black text-slate-950">{value}</p>
-          {hint && <p className="mt-1 text-xs font-bold text-slate-500">{hint}</p>}
+    <article className="rounded-2xl border border-slate-200 bg-white p-3 sm:p-4">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{label}</p>
+          <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900 sm:mt-1.5 sm:text-3xl">{value}</p>
+          {hint && <p className="mt-1 text-xs font-semibold text-slate-500">{hint}</p>}
         </div>
-        {icon && <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ring-1 ${toneClasses[tone]}`}>{icon}</div>}
+        {icon && <div className={`hidden h-9 w-9 shrink-0 items-center justify-center rounded-xl sm:flex ${toneClasses[tone]}`}>{icon}</div>}
       </div>
     </article>
   );
 }
 
 export function FilterBar({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return <div className={`panel grid gap-3 p-4 ${className}`}>{children}</div>;
+  return <div className={`admin-card grid gap-3 p-4 ${className}`}>{children}</div>;
 }
 
 export function Chip({ children, tone = 'slate', onRemove }: { children: ReactNode; tone?: Tone; onRemove?: () => void }) {

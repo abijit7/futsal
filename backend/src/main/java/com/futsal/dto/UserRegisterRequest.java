@@ -16,10 +16,6 @@ public class UserRegisterRequest {
 
     @Email(message = "Invalid email format")
     @NotBlank(message = "Email is required")
-    @Pattern(
-        regexp = "^[A-Za-z0-9._%+-]+@gmail\\.com$",
-        message = "Email must be a gmail.com address"
-    )
     private String email;
 
     @NotBlank(message = "Phone is required")

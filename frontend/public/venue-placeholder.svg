@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Fallback artwork for venues with no uploaded photo. Self-hosted on purpose: the previous
+  fallback hot-linked Unsplash, which put a third party in the render path of every venue card
+  and forced a remote origin into the Content-Security-Policy.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 650" role="img" aria-label="Futsal court illustration">
+  <defs>
+    <linearGradient id="ground" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#123024"/>
+      <stop offset="100%" stop-color="#0D1B2A"/>
+    </linearGradient>
+    <pattern id="turf" width="90" height="90" patternUnits="userSpaceOnUse">
+      <rect width="90" height="90" fill="url(#ground)"/>
+      <rect width="45" height="90" fill="#ffffff" opacity="0.022"/>
+    </pattern>
+  </defs>
+
+  <rect width="900" height="650" fill="url(#turf)"/>
+
+  <g fill="none" stroke="#16a34a" stroke-opacity="0.55" stroke-width="3">
+    <rect x="70" y="60" width="760" height="530" rx="6"/>
+    <line x1="450" y1="60" x2="450" y2="590"/>
+    <circle cx="450" cy="325" r="92"/>
+    <path d="M70 205 h120 v240 H70"/>
+    <path d="M830 205 h-120 v240 h120"/>
+  </g>
+
+  <circle cx="450" cy="325" r="7" fill="#16a34a" fill-opacity="0.75"/>
+</svg>

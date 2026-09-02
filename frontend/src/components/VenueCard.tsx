@@ -27,7 +27,7 @@ export function VenueCard({ futsal }: { futsal: Futsal }) {
             <div className="text-xs font-black uppercase text-slate-500">From</div>
             <div className="text-xl font-black text-slate-950">{money(futsal.hourlyPrice)}<span className="text-sm text-slate-500">/hr</span></div>
           </div>
-          <Link to={`/venues/${futsal.futsalId}`} className="btn-navy h-14 w-14 rounded-2xl p-0 flex items-center justify-center" aria-label={`View ${futsal.name}`}>
+          <Link to={`/venues/${futsal.futsalId}`} className="inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-white transition hover:bg-slate-800 focus:outline-none focus:ring-4 focus:ring-slate-200" aria-label={`View ${futsal.name}`}>
             <ArrowRight />
           </Link>
         </div>

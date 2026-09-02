@@ -13,8 +13,8 @@ type Outcome = 'verifying' | 'success' | 'pending' | 'failed';
  * <p>This page used to read a `status` query parameter and simply announce success, without ever
  * contacting the backend - so anyone could visit /payment/success?status=Complete and be told
  * their booking was confirmed. The redirect is now treated as untrusted: the identifiers are
- * handed to the server, which verifies them against eSewa's status API or Khalti's lookup API
- * before confirming anything.
+ * handed to the server, which verifies them against eSewa's transaction status API before
+ * confirming anything.
  */
 export function PaymentSuccess() {
   const [searchParams] = useSearchParams();
@@ -28,18 +28,17 @@ export function PaymentSuccess() {
     if (verifyStarted.current) return;
     verifyStarted.current = true;
 
-    // eSewa appends a base64 JSON blob as `data`; Khalti appends `pidx`.
+    // eSewa appends a base64 JSON blob as `data`.
     const data = searchParams.get('data');
-    const pidx = searchParams.get('pidx');
 
-    if (!data && !pidx) {
+    if (!data) {
       setOutcome('failed');
       setMessage('This page was opened without a payment reference, so there is nothing to confirm.');
       return;
     }
 
     paymentApi
-      .verify({ data: data ?? undefined, pidx: pidx ?? undefined })
+      .verify({ data })
       .then((result) => {
         if (result.status === 'COMPLETED') {
           takePendingTransaction(); // settled; nothing left to release

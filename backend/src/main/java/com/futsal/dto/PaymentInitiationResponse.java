@@ -8,9 +8,8 @@ import java.util.Map;
 /**
  * How the browser should continue the payment.
  *
- * <p>The two gateways need different handoffs: eSewa requires an auto-submitted HTML form POST
- * ({@code formUrl} + {@code formFields}), Khalti a plain redirect ({@code redirectUrl}). Cash
- * needs neither and returns the finished {@code booking}.
+ * <p>eSewa requires an auto-submitted HTML form POST ({@code formUrl} + {@code formFields}).
+ * Cash needs neither and returns the finished {@code booking}.
  */
 public class PaymentInitiationResponse {
 
@@ -22,9 +21,6 @@ public class PaymentInitiationResponse {
     /** eSewa: POST formFields to formUrl. */
     private String formUrl;
     private Map<String, String> formFields;
-
-    /** Khalti: send the browser here. */
-    private String redirectUrl;
 
     /** Cash in hand: nothing to redirect to, the booking already exists. */
     private BookingResponse booking;
@@ -46,9 +42,6 @@ public class PaymentInitiationResponse {
 
     public Map<String, String> getFormFields() { return formFields; }
     public void setFormFields(Map<String, String> formFields) { this.formFields = formFields; }
-
-    public String getRedirectUrl() { return redirectUrl; }
-    public void setRedirectUrl(String redirectUrl) { this.redirectUrl = redirectUrl; }
 
     public BookingResponse getBooking() { return booking; }
     public void setBooking(BookingResponse booking) { this.booking = booking; }

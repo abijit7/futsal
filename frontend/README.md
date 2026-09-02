@@ -38,12 +38,19 @@ The frontend uses a central Axios client in `src/api/client.ts`.
 - Bookings: `/api/bookings`
 - Uploads: `/api/uploads/futsal-image`
 
-Booking always goes through the payment flow, never `POST /api/bookings` (which rejects every
-request by design). `/api/payments/confirm` handles cash only.
+Booking always goes through the payment flow. `POST /api/bookings` no longer exists - it used to
+be a stub that rejected every request - and `/api/payments/confirm` handles cash only.
 
 ## Verification
 
 ```bash
-npm test
+npm run typecheck   # tsc -b
+npm test            # vitest run
 npm run build
 ```
+
+Tests live beside the code they cover (`*.test.tsx`) and run under jsdom via `vitest.config.ts`.
+The suite deliberately concentrates on the two places a mistake is expensive: the route guards in
+`src/components/ProtectedRoute.tsx`, and the gateway return handling in
+`src/pages/public/PaymentSuccess.tsx`, which must never report success without a server-verified
+payment.

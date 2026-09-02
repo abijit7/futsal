@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+
+# Authenticated and transactional routes hold nothing a crawler should index, and payment
+# return URLs carry one-time gateway references.
+Disallow: /admin
+Disallow: /dashboard
+Disallow: /my-bookings
+Disallow: /profile
+Disallow: /payment/
+
+Sitemap: https://YOUR_FRONTEND_DOMAIN/sitemap.xml

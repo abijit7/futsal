@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { BrandMark } from './BrandMark';
 import { BRAND_DISPLAY, BRAND_TAGLINE, POPULAR_CITIES } from '../constants/brand';
+import { useAuth } from '../context/AuthContext';
 
 /**
  * Site-wide footer.
@@ -11,6 +12,20 @@ import { BRAND_DISPLAY, BRAND_TAGLINE, POPULAR_CITIES } from '../constants/brand
  */
 export function SiteFooter() {
   const year = new Date().getFullYear();
+  const { user, isAdmin } = useAuth();
+  const isLoggedIn = Boolean(user?.authToken);
+
+  // Offering "Sign in" and "Create account" to someone who is already signed in reads as a bug.
+  const accountLinks = isLoggedIn
+    ? [
+        { label: isAdmin ? 'Admin console' : 'My dashboard', to: isAdmin ? '/admin' : '/dashboard' },
+        { label: 'My bookings', to: '/my-bookings' },
+        { label: 'Profile settings', to: '/profile' }
+      ]
+    : [
+        { label: 'Sign in', to: '/login' },
+        { label: 'Create account', to: '/register' }
+      ];
 
   return (
     <footer className="border-t border-white/10" style={{ background: 'var(--futsal-navy)' }}>
@@ -44,14 +59,7 @@ export function SiteFooter() {
               { label: 'How it works', to: '/#how-it-works' }
             ]}
           />
-          <FooterColumn
-            title="Account"
-            links={[
-              { label: 'Sign in', to: '/login' },
-              { label: 'Create account', to: '/register' },
-              { label: 'My bookings', to: '/my-bookings' }
-            ]}
-          />
+          <FooterColumn title="Account" links={accountLinks} />
         </div>
 
         <div className="mt-10 border-t border-white/10 pt-6">

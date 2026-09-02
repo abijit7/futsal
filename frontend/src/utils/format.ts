@@ -60,8 +60,12 @@ export function todayInput() {
   return now.toISOString().slice(0, 10);
 }
 
+// Self-hosted so that a venue without a photo does not depend on a third-party CDN being
+// reachable, and so the CSP does not have to allow a remote image origin.
+export const VENUE_PLACEHOLDER_IMAGE = '/venue-placeholder.svg';
+
 export function imageForVenue(url?: string) {
-  return url || 'https://images.unsplash.com/photo-1520470082789-e347ad8b1944?w=900&h=650&fit=crop&auto=format';
+  return url || VENUE_PLACEHOLDER_IMAGE;
 }
 
 function minutesFromTime(value?: string) {

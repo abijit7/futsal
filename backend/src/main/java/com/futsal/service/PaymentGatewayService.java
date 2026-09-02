@@ -3,6 +3,7 @@ package com.futsal.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.futsal.dto.DtoMapper;
+import com.futsal.error.ApiServerException;
 import com.futsal.dto.PaymentInitiationRequest;
 import com.futsal.dto.PaymentInitiationResponse;
 import com.futsal.dto.PaymentVerifyRequest;
@@ -22,7 +23,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -40,21 +44,19 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.Supplier;
 
 /**
- * eSewa ePay v2 and Khalti ePayment v2 integration.
+ * eSewa ePay v2 integration.
  *
- * <p>Neither gateway uses a server-to-server webhook, so there is no webhook endpoint here:
+ * <p>eSewa takes an auto-submitted HTML form POST carrying an HMAC-SHA256 signature over
+ * {@code total_amount,transaction_uuid,product_code}, and returns a base64-encoded JSON blob on the
+ * success URL. That blob's signature is recomputed here and then confirmed against eSewa's
+ * transaction status API, because the return URL's query string is trivially forgeable and is
+ * never treated as proof of payment on its own.
  *
- * <ul>
- *   <li><b>eSewa</b> takes an auto-submitted HTML form POST carrying an HMAC-SHA256 signature over
- *       {@code total_amount,transaction_uuid,product_code}, and returns a base64-encoded JSON blob
- *       on the success URL. That blob's signature is recomputed here and then confirmed against
- *       eSewa's transaction status API.</li>
- *   <li><b>Khalti</b> is API-first: the server initiates and receives a {@code pidx}, and the
- *       browser is redirected. The return URL's query string is trivially forgeable, so the
- *       lookup API is the only thing treated as proof of payment.</li>
- * </ul>
+ * <p>eSewa exposes no server-to-server webhook, so there is no webhook endpoint here. Settlement
+ * that the browser never completes is recovered by {@link #reconcileExpiredHolds()}.
  *
  * <p>The price is always computed here from the venue's hourly rate and the slot duration; it is
  * never taken from the client.
@@ -73,7 +75,8 @@ public class PaymentGatewayService {
     private final ObjectMapper objectMapper;
     private final Clock clock;
     private final SecurityAuth securityAuth;
-    private final RestClient restClient = RestClient.create();
+    /** Carries the gateway timeouts; see {@code GatewayHttpConfig}. */
+    private final RestClient restClient;
 
     @Value("${payment.esewa.merchant.code}")
     private String esewaMerchantCode;
@@ -87,11 +90,8 @@ public class PaymentGatewayService {
     @Value("${payment.esewa.status-url}")
     private String esewaStatusUrl;
 
-    @Value("${payment.khalti.secret}")
-    private String khaltiSecret;
-
-    @Value("${payment.khalti.api.url}")
-    private String khaltiApiUrl;
+    private final BookingNotificationService bookingNotificationService;
+    private final PlatformTransactionManager transactionManager;
 
     @Value("${app.payment.return-base-url}")
     private String returnBaseUrl;
@@ -105,7 +105,10 @@ public class PaymentGatewayService {
             BookingService bookingService,
             ObjectMapper objectMapper,
             Clock clock,
-            SecurityAuth securityAuth
+            SecurityAuth securityAuth,
+            BookingNotificationService bookingNotificationService,
+            PlatformTransactionManager transactionManager,
+            RestClient gatewayRestClient
     ) {
         this.paymentTransactionRepository = paymentTransactionRepository;
         this.timeSlotRepository = timeSlotRepository;
@@ -113,6 +116,24 @@ public class PaymentGatewayService {
         this.objectMapper = objectMapper;
         this.clock = clock;
         this.securityAuth = securityAuth;
+        this.bookingNotificationService = bookingNotificationService;
+        this.transactionManager = transactionManager;
+        this.restClient = gatewayRestClient;
+    }
+
+    /**
+     * Sends a receipt once the settling transaction commits. Tolerates a missing collaborator so
+     * unit tests can construct the service with nulls.
+     */
+    private void notifyConfirmed(Booking booking, BigDecimal amount) {
+        if (bookingNotificationService == null) {
+            return;
+        }
+        BookingNotification snapshot = BookingNotification.from(booking, amount);
+        if (snapshot == null) {
+            return;
+        }
+        AfterCommit.run(() -> bookingNotificationService.sendBookingConfirmed(snapshot));
     }
 
     // ── Initiation ────────────────────────────────────────────────────────────
@@ -149,10 +170,6 @@ public class PaymentGatewayService {
                 response.setFormFields(esewaFormFields(transactionUuid, amount));
                 response.setMessage("Submit the returned form fields to eSewa to complete payment.");
             }
-            case KHALTI -> {
-                response.setRedirectUrl(startKhaltiPayment(transaction, booking, amount));
-                response.setMessage("Redirect to Khalti to complete payment.");
-            }
             case CASH_IN_HAND -> {
                 transaction.setStatus(PaymentStatus.COMPLETED);
                 transaction.setGatewayTransactionId(transactionUuid);
@@ -160,6 +177,7 @@ public class PaymentGatewayService {
                 paymentTransactionRepository.save(transaction);
                 response.setBooking(DtoMapper.toBookingResponse(booking));
                 response.setMessage("Booking created. Pay at the venue.");
+                notifyConfirmed(booking, amount);
             }
         }
 
@@ -170,7 +188,7 @@ public class PaymentGatewayService {
 
     private Map<String, String> esewaFormFields(String transactionUuid, BigDecimal amount) {
         // The signature must cover the exact strings submitted, so format once and reuse.
-        String totalAmount = amount.setScale(2, RoundingMode.HALF_UP).toPlainString();
+        String totalAmount = formatAmount(amount);
 
         Map<String, String> fields = new LinkedHashMap<>();
         fields.put("amount", totalAmount);
@@ -191,32 +209,6 @@ public class PaymentGatewayService {
         return fields;
     }
 
-    private String startKhaltiPayment(PaymentTransaction transaction, Booking booking, BigDecimal amount) {
-        Map<String, Object> payload = new LinkedHashMap<>();
-        payload.put("return_url", returnUrl("/payment/success"));
-        payload.put("website_url", returnBaseUrl);
-        payload.put("amount", toPaisa(amount));
-        payload.put("purchase_order_id", transaction.getIdempotencyKey());
-        payload.put("purchase_order_name", "Futsal booking " + booking.getBookingId());
-        payload.put("customer_info", Map.of(
-                "name", booking.getUser().getName(),
-                "email", booking.getUser().getEmail(),
-                "phone", booking.getUser().getPhone()
-        ));
-
-        JsonNode body = khaltiPost("/epayment/initiate/", payload);
-        String pidx = text(body, "pidx");
-        String paymentUrl = text(body, "payment_url");
-        if (pidx == null || paymentUrl == null) {
-            throw new IllegalStateException("Khalti did not return a payment link");
-        }
-
-        // pidx is how the payment is looked up later, so it must be persisted before redirecting.
-        transaction.setGatewayTransactionId(pidx);
-        paymentTransactionRepository.save(transaction);
-        return paymentUrl;
-    }
-
     // ── Verification ──────────────────────────────────────────────────────────
 
     @Transactional
@@ -224,10 +216,7 @@ public class PaymentGatewayService {
         if (request.getData() != null && !request.getData().isBlank()) {
             return verifyEsewa(request.getData());
         }
-        if (request.getPidx() != null && !request.getPidx().isBlank()) {
-            return verifyKhalti(request.getPidx());
-        }
-        throw new IllegalArgumentException("Nothing to verify: expected eSewa 'data' or Khalti 'pidx'.");
+        throw new IllegalArgumentException("Nothing to verify: expected an eSewa 'data' payload.");
     }
 
     private PaymentVerifyResponse verifyEsewa(String encodedData) {
@@ -266,7 +255,7 @@ public class PaymentGatewayService {
 
         // 2. A valid signature only proves the blob came from eSewa, not that it is current.
         //    The status API is authoritative.
-        String totalAmount = transaction.getAmount().setScale(2, RoundingMode.HALF_UP).toPlainString();
+        String totalAmount = formatAmount(transaction.getAmount());
         JsonNode status = esewaStatus(transactionUuid, totalAmount);
         if (!"COMPLETE".equalsIgnoreCase(text(status, "status"))) {
             return fail(transaction, "eSewa reports the payment as " + text(status, "status"));
@@ -281,38 +270,6 @@ public class PaymentGatewayService {
 
         String reference = firstNonBlank(text(status, "ref_id"), text(payload, "transaction_code"), transactionUuid);
         return succeed(transaction, reference, payload);
-    }
-
-    private PaymentVerifyResponse verifyKhalti(String pidx) {
-        PaymentTransaction transaction = paymentTransactionRepository.findByGatewayTransactionId(pidx)
-                .orElseThrow(() -> new IllegalArgumentException("Unknown payment transaction"));
-        requireOwner(transaction);
-
-        PaymentVerifyResponse settled = alreadySettled(transaction);
-        if (settled != null) {
-            return settled;
-        }
-
-        JsonNode lookup = khaltiPost("/epayment/lookup/", Map.of("pidx", pidx));
-        String status = text(lookup, "status");
-        if (!"Completed".equalsIgnoreCase(status)) {
-            // Pending and Initiated are not failures yet; leave the hold for the sweep to expire.
-            if ("Pending".equalsIgnoreCase(status) || "Initiated".equalsIgnoreCase(status)) {
-                return new PaymentVerifyResponse(PaymentStatus.PENDING,
-                        "Khalti is still processing this payment.", pidx, null);
-            }
-            return fail(transaction, "Khalti reports the payment as " + status);
-        }
-
-        long expectedPaisa = toPaisa(transaction.getAmount());
-        long paidPaisa = lookup.path("total_amount").asLong(-1);
-        if (paidPaisa != expectedPaisa) {
-            log.warn("Khalti amount mismatch for pidx={}: expected {} paisa, gateway reported {}",
-                    pidx, expectedPaisa, paidPaisa);
-            return fail(transaction, "Paid amount does not match the booking price");
-        }
-
-        return succeed(transaction, firstNonBlank(text(lookup, "transaction_id"), pidx), lookup);
     }
 
     /**
@@ -351,6 +308,7 @@ public class PaymentGatewayService {
                 transaction.getBooking().getBookingId(), reference);
 
         log.info("Payment confirmed: transactionId={}, reference={}", transaction.getTransactionId(), reference);
+        notifyConfirmed(booking, transaction.getAmount());
         return new PaymentVerifyResponse(PaymentStatus.COMPLETED, "Payment confirmed.", reference,
                 DtoMapper.toBookingResponse(booking));
     }
@@ -384,32 +342,141 @@ public class PaymentGatewayService {
     }
 
     /**
-     * Frees slots held by checkouts nobody finished.
+     * Settles or frees checkouts the browser never finished.
      *
-     * <p>Without this an abandoned checkout blocks its slot forever: the hold is taken at
-     * initiation and only released on an explicit success or failure that never arrives.
+     * <p>eSewa has no server-to-server webhook, so settlement otherwise depends entirely on the
+     * customer's browser coming back and calling {@code /verify}. A customer who pays and then
+     * closes the tab, loses signal, or whose token has expired would previously have had their
+     * booking cancelled by this sweep while their money was already gone.
+     *
+     * <p>So an expired hold is never cancelled on the assumption that it went unpaid: eSewa is
+     * asked first, and the hold is only released when eSewa gives a definitive "not paid" answer.
+     * Anything ambiguous keeps its hold and is logged for a human, because holding one slot is far
+     * cheaper than taking money without giving a booking.
+     *
+     * <p>Deliberately not {@code @Transactional}: each transaction is reconciled in its own unit of
+     * work, so one bad row cannot roll the whole batch back.
      */
     @Scheduled(fixedDelayString = "${app.payment.sweep-interval-ms:300000}")
-    @Transactional
-    public void releaseExpiredHolds() {
+    public void reconcileExpiredHolds() {
         LocalDateTime cutoff = LocalDateTime.now(clock).minusMinutes(holdMinutes);
-        List<PaymentTransaction> expired =
-                paymentTransactionRepository.findByStatusAndCreatedAtBefore(PaymentStatus.PENDING, cutoff);
-        if (expired.isEmpty()) {
+        List<Long> expiredIds = paymentTransactionRepository
+                .findByStatusAndCreatedAtBefore(PaymentStatus.PENDING, cutoff)
+                .stream()
+                .map(PaymentTransaction::getTransactionId)
+                .toList();
+        if (expiredIds.isEmpty()) {
             return;
         }
-        for (PaymentTransaction transaction : expired) {
+
+        int settled = 0;
+        int released = 0;
+        int unresolved = 0;
+        for (Long id : expiredIds) {
             try {
-                transaction.setStatus(PaymentStatus.CANCELLED);
-                transaction.setFailureReason("Checkout abandoned; hold expired after " + holdMinutes + " minutes");
-                paymentTransactionRepository.save(transaction);
-                releaseHold(transaction, "Payment hold expired");
+                switch (inNewTransaction(() -> reconcileExpiredHold(id))) {
+                    case COMPLETED, REFUNDED -> settled++;
+                    case CANCELLED, FAILED -> released++;
+                    default -> unresolved++;
+                }
             } catch (RuntimeException ex) {
-                log.error("Could not release expired hold for transactionId={}",
-                        transaction.getTransactionId(), ex);
+                // This item's transaction rolled back on its own; the rest of the batch continues.
+                unresolved++;
+                log.error("Could not reconcile expired hold for transactionId={}", id, ex);
             }
         }
-        log.info("Released {} expired payment hold(s)", expired.size());
+        log.info("Reconciled {} expired hold(s): {} settled, {} released, {} still unresolved",
+                expiredIds.size(), settled, released, unresolved);
+    }
+
+    /**
+     * Reconciles one expired hold against eSewa. Returns the status it ended in; {@code PENDING}
+     * means "still unresolved, hold kept".
+     *
+     * <p>Package-private so the decision table can be tested without a scheduler.
+     */
+    PaymentStatus reconcileExpiredHold(Long transactionId) {
+        PaymentTransaction transaction = paymentTransactionRepository.findByIdForUpdate(transactionId)
+                .orElse(null);
+        if (transaction == null || transaction.getStatus() != PaymentStatus.PENDING) {
+            // Verified by the browser between listing and locking; nothing to do.
+            return transaction == null ? PaymentStatus.CANCELLED : transaction.getStatus();
+        }
+
+        // Khalti is no longer offered and can no longer be looked up, so any stale hold left from
+        // it is simply released. No Khalti payment ever settled outside the sandbox.
+        if (transaction.getPaymentMethod() != PaymentMethod.ESEWA) {
+            return releaseUnpaid(transaction,
+                    "Checkout abandoned; hold expired after " + holdMinutes + " minutes");
+        }
+
+        JsonNode status;
+        try {
+            status = esewaStatus(transaction.getIdempotencyKey(), formatAmount(transaction.getAmount()));
+        } catch (RuntimeException ex) {
+            // Unreachable is not the same as unpaid. Keep the hold and try again next sweep.
+            log.warn("eSewa unreachable while reconciling transactionId={}; keeping the hold", transactionId);
+            return PaymentStatus.PENDING;
+        }
+
+        String state = text(status, "status");
+        if (state == null) {
+            log.error("eSewa returned no status for transactionId={}; keeping the hold", transactionId);
+            return PaymentStatus.PENDING;
+        }
+
+        switch (state.toUpperCase()) {
+            case "COMPLETE" -> {
+                // The customer paid and never made it back. Give them the booking they paid for.
+                if (!amountMatches(transaction.getAmount(), text(status, "total_amount"))) {
+                    log.error("PAYMENT NEEDS REVIEW: transactionId={} paid an amount that does not "
+                            + "match the booking price; keeping the hold", transactionId);
+                    return PaymentStatus.PENDING;
+                }
+                String reference = firstNonBlank(text(status, "ref_id"), transaction.getIdempotencyKey());
+                log.warn("Settling transactionId={} from reconciliation; the browser never returned",
+                        transactionId);
+                succeed(transaction, reference, status);
+                return PaymentStatus.COMPLETED;
+            }
+            case "NOT_FOUND", "CANCELED", "CANCELLED", "EXPIRED" -> {
+                // eSewa is certain no money was taken.
+                return releaseUnpaid(transaction,
+                        "eSewa reports the payment as " + state + " after " + holdMinutes + " minutes");
+            }
+            case "FULL_REFUND", "PARTIAL_REFUND" -> {
+                // Money moved and came back. Free the slot, but record it as refunded rather than
+                // as an abandoned checkout, because the two mean very different things in a ledger.
+                transaction.setStatus(PaymentStatus.REFUNDED);
+                transaction.setFailureReason("eSewa reports the payment as " + state);
+                transaction.setGatewayResponse(status.toString());
+                paymentTransactionRepository.save(transaction);
+                releaseHold(transaction, "Payment refunded");
+                return PaymentStatus.REFUNDED;
+            }
+            default -> {
+                // PENDING, AMBIGUOUS, or anything eSewa adds later. Never guess with money.
+                log.error("PAYMENT NEEDS REVIEW: transactionId={} is still '{}' at eSewa after {} "
+                        + "minutes; the slot stays held until this is resolved manually",
+                        transactionId, state, holdMinutes);
+                return PaymentStatus.PENDING;
+            }
+        }
+    }
+
+    private PaymentStatus releaseUnpaid(PaymentTransaction transaction, String reason) {
+        transaction.setStatus(PaymentStatus.CANCELLED);
+        transaction.setFailureReason(reason);
+        paymentTransactionRepository.save(transaction);
+        releaseHold(transaction, "Payment hold expired");
+        return PaymentStatus.CANCELLED;
+    }
+
+    /** Runs one reconciliation in its own transaction so failures stay isolated. */
+    private <T> T inNewTransaction(Supplier<T> work) {
+        TransactionTemplate template = new TransactionTemplate(transactionManager);
+        template.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        return template.execute(statusIgnored -> work.get());
     }
 
     /**
@@ -432,32 +499,21 @@ public class PaymentGatewayService {
 
     // ── Gateway calls ─────────────────────────────────────────────────────────
 
-    private JsonNode khaltiPost(String path, Object payload) {
-        try {
-            return restClient.post()
-                    .uri(khaltiApiUrl + path)
-                    .header("Authorization", "Key " + khaltiSecret)
-                    .header("Content-Type", "application/json")
-                    .body(payload)
-                    .retrieve()
-                    .body(JsonNode.class);
-        } catch (RuntimeException ex) {
-            log.error("Khalti call to {} failed: {}", path, ex.getMessage());
-            throw new IllegalStateException("Could not reach Khalti. Please try again.");
-        }
-    }
-
     private JsonNode esewaStatus(String transactionUuid, String totalAmount) {
+        String uri = UriComponentsBuilder.fromUriString(esewaStatusUrl)
+                .queryParam("product_code", esewaMerchantCode)
+                .queryParam("total_amount", totalAmount)
+                .queryParam("transaction_uuid", transactionUuid)
+                .toUriString();
         try {
-            String uri = UriComponentsBuilder.fromUriString(esewaStatusUrl)
-                    .queryParam("product_code", esewaMerchantCode)
-                    .queryParam("total_amount", totalAmount)
-                    .queryParam("transaction_uuid", transactionUuid)
-                    .toUriString();
             return restClient.get().uri(uri).retrieve().body(JsonNode.class);
         } catch (RuntimeException ex) {
-            log.error("eSewa status check failed for {}: {}", transactionUuid, ex.getMessage());
-            throw new IllegalStateException("Could not reach eSewa. Please try again.");
+            // Log the full exception and the URL that was called. A misconfigured status host used
+            // to surface only as "Unexpected server error", which gave no way to tell a bad URL
+            // from a genuine eSewa outage. The URL carries no secrets.
+            log.error("eSewa status check failed for transaction_uuid={} against {}", transactionUuid, uri, ex);
+            throw new ApiServerException(
+                    "Could not reach eSewa to confirm this payment. Please try again shortly.", ex);
         }
     }
 
@@ -500,8 +556,9 @@ public class PaymentGatewayService {
                 .divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
     }
 
-    private long toPaisa(BigDecimal amount) {
-        return amount.multiply(BigDecimal.valueOf(100)).setScale(0, RoundingMode.HALF_UP).longValueExact();
+    /** The exact string eSewa is sent and signs; it must be identical everywhere it appears. */
+    private String formatAmount(BigDecimal amount) {
+        return amount.setScale(2, RoundingMode.HALF_UP).toPlainString();
     }
 
     /** eSewa may return amounts with grouping separators, e.g. "1,800.0". */
@@ -550,10 +607,17 @@ public class PaymentGatewayService {
     }
 
     private PaymentMethod parsePaymentMethod(String method) {
+        PaymentMethod parsed;
         try {
-            return PaymentMethod.valueOf(method.trim().toUpperCase());
+            parsed = PaymentMethod.valueOf(method.trim().toUpperCase());
         } catch (RuntimeException ex) {
             throw new IllegalArgumentException("Invalid payment method: " + method);
         }
+        // The constant still exists so historical bookings deserialize, but it can no longer be
+        // chosen for a new checkout.
+        if (parsed == PaymentMethod.KHALTI) {
+            throw new IllegalArgumentException("Khalti is no longer accepted. Please pay with eSewa or cash.");
+        }
+        return parsed;
     }
 }

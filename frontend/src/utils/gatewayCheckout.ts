@@ -2,8 +2,8 @@ import type { PaymentInitiation } from '../types/api';
 
 /**
  * Key under which the in-flight transaction id is parked while the browser is away at the
- * gateway. The failure page uses it to release the slot hold, since neither eSewa nor Khalti
- * tells our server that the user walked away.
+ * gateway. The failure page uses it to release the slot hold, because eSewa never tells our
+ * server that the user walked away.
  */
 const PENDING_TRANSACTION_KEY = 'futsal_pending_payment';
 
@@ -30,16 +30,11 @@ export function takePendingTransaction(): string | null {
  * Hands the browser off to the gateway.
  *
  * eSewa only accepts a form POST carrying the server-computed signature, so the fields are
- * submitted through a real form element rather than a query string. Khalti is a plain redirect.
+ * submitted through a real form element rather than a query string.
  */
 export function handOffToGateway(initiation: PaymentInitiation) {
   if (initiation.transactionId) {
     rememberPendingTransaction(initiation.transactionId);
-  }
-
-  if (initiation.redirectUrl) {
-    window.location.assign(initiation.redirectUrl);
-    return;
   }
 
   if (initiation.formUrl && initiation.formFields) {

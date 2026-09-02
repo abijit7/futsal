@@ -36,7 +36,7 @@ public class PaymentController {
     }
 
     /**
-     * Starts a payment. Returns an eSewa form to submit, a Khalti URL to redirect to, or - for
+     * Starts a payment. Returns an eSewa form to submit, or - for
      * cash - the finished booking.
      */
     @PostMapping("/initiate")
@@ -45,7 +45,7 @@ public class PaymentController {
         return ResponseEntity.ok(paymentGatewayService.initiate(body));
     }
 
-    /** Confirms a gateway payment once the browser returns from eSewa or Khalti. */
+    /** Confirms a gateway payment once the browser returns from eSewa. */
     @PostMapping("/verify")
     public ResponseEntity<PaymentVerifyResponse> verify(@RequestBody PaymentVerifyRequest body) {
         return ResponseEntity.ok(paymentGatewayService.verify(body));
@@ -61,7 +61,7 @@ public class PaymentController {
      * Cash bookings only.
      *
      * <p>This endpoint used to accept any method and fabricate a payment reference from
-     * {@code System.currentTimeMillis()}, so choosing eSewa or Khalti in the UI booked the slot
+     * {@code System.currentTimeMillis()}, so choosing eSewa in the UI booked the slot
      * without any money changing hands. Online methods must go through {@code /initiate}.
      */
     @PostMapping("/confirm")

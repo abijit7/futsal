@@ -6,7 +6,24 @@
     <meta name="description" content="MeroFutsal - Nepal's futsal court booking platform. Find and book courts instantly with real-time availability." />
     <meta name="theme-color" content="#0D1B2A" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <title>MeroFutsal Booking</title>
+    <title>MeroFutsal — Book futsal courts in Nepal</title>
+
+    <!--
+      Open Graph / Twitter tags are read by crawlers from the served HTML, which for this SPA is
+      always this one file - the per-route titles set in usePageTitle happen after JS runs and
+      most scrapers never see them. These therefore describe the site, not the current route.
+      Replace YOUR_FRONTEND_DOMAIN at deploy time.
+    -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="MeroFutsal" />
+    <meta property="og:title" content="MeroFutsal — Book futsal courts in Nepal" />
+    <meta property="og:description" content="Find and book futsal courts across Nepal with real-time availability, instant confirmation, and eSewa or Khalti payment." />
+    <meta property="og:image" content="https://YOUR_FRONTEND_DOMAIN/venue-placeholder.svg" />
+    <meta property="og:url" content="https://YOUR_FRONTEND_DOMAIN/" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="MeroFutsal — Book futsal courts in Nepal" />
+    <meta name="twitter:description" content="Find and book futsal courts across Nepal with real-time availability and instant confirmation." />
+    <link rel="canonical" href="https://YOUR_FRONTEND_DOMAIN/" />
   </head>
   <body>
     <div id="root"></div>

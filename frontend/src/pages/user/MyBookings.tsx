@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { CalendarDays, Clock3, CreditCard, MapPin, Search, XCircle } from 'lucide-react';
+import { CalendarDays, Clock3, CreditCard, MapPin, Search, Star, XCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { bookingApi } from '../../api/modules';
+import { bookingApi, reviewApi } from '../../api/modules';
 import { Pagination } from '../../components/Pagination';
 import { EmptyState, ErrorState, LoadingState } from '../../components/State';
 import { StatusBadge } from '../../components/StatusBadge';
-import { Button, Chip, Field, FilterBar, MetricCard, ModalShell, PageHero, SelectField } from '../../components/UI';
+import { Button, Chip, Field, FilterBar, MetricCard, ModalShell, PageHero, SelectField, TextareaField } from '../../components/UI';
+import { StarRatingInput } from '../../components/StarRating';
 import { useAuth } from '../../context/AuthContext';
 import type { Booking, BookingStatus } from '../../types/api';
 import { formatDate, timeRangeWithDuration } from '../../utils/format';
@@ -21,6 +22,13 @@ export function MyBookings() {
   const [search, setSearch] = useState('');
   const [cancelTarget, setCancelTarget] = useState<Booking | null>(null);
   const [cancelling, setCancelling] = useState(false);
+  const [reviewTarget, setReviewTarget] = useState<Booking | null>(null);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState('');
+  const [savingReview, setSavingReview] = useState(false);
+  const [reviewError, setReviewError] = useState('');
+  const [message, setMessage] = useState('');
+  const [reviewedBookingIds, setReviewedBookingIds] = useState<number[]>([]);
 
   const load = async () => {
     if (!user) return;
@@ -39,6 +47,19 @@ export function MyBookings() {
 
   useEffect(() => { load(); }, [user?.userId, page, status]);
 
+  // Drives which rows offer a review prompt. A failure here is non-fatal: the worst case is that
+  // the button is shown for an already-reviewed booking and the server rejects the submission.
+  const loadReviewed = async () => {
+    if (!user) return;
+    try {
+      setReviewedBookingIds(await reviewApi.reviewedBookings(user.userId));
+    } catch {
+      setReviewedBookingIds([]);
+    }
+  };
+
+  useEffect(() => { loadReviewed(); }, [user?.userId]);
+
   const confirmCancel = async () => {
     if (!cancelTarget) return;
     setCancelling(true);
@@ -52,6 +73,35 @@ export function MyBookings() {
       setCancelTarget(null);
     } finally {
       setCancelling(false);
+    }
+  };
+
+  const openReview = (booking: Booking) => {
+    setReviewTarget(booking);
+    setReviewRating(5);
+    setReviewComment('');
+    setReviewError('');
+  };
+
+  const submitReview = async () => {
+    const futsalId = reviewTarget?.timeSlot?.futsal?.futsalId;
+    if (!reviewTarget || !futsalId) return;
+    setSavingReview(true);
+    setReviewError('');
+    try {
+      await reviewApi.create(futsalId, {
+        bookingId: reviewTarget.bookingId,
+        rating: reviewRating,
+        comment: reviewComment.trim() || undefined
+      });
+      setReviewTarget(null);
+      setMessage('Thanks — your review is now on the venue page.');
+      await loadReviewed();
+    } catch (err) {
+      // The server owns the eligibility rules, so show exactly what it said.
+      setReviewError(err instanceof Error ? err.message : 'Review could not be saved.');
+    } finally {
+      setSavingReview(false);
     }
   };
 
@@ -140,15 +190,28 @@ export function MyBookings() {
                     {booking.paymentMethod || 'Payment'} {booking.paymentRef || ''}
                   </p>
                 </div>
-                {canCancel(booking.status) && (
-                  <Button type="button" variant="outline" size="sm" className="shrink-0" onClick={() => setCancelTarget(booking)}>
-                    <XCircle size={16} /> Cancel booking
-                  </Button>
-                )}
+                <div className="flex shrink-0 flex-wrap gap-2">
+                  {canReview(booking, reviewedBookingIds) && (
+                    <Button type="button" variant="secondary" size="sm" onClick={() => openReview(booking)}>
+                      <Star size={16} /> Leave a review
+                    </Button>
+                  )}
+                  {canCancel(booking.status) && (
+                    <Button type="button" variant="outline" size="sm" onClick={() => setCancelTarget(booking)}>
+                      <XCircle size={16} /> Cancel booking
+                    </Button>
+                  )}
+                </div>
               </div>
             </article>
           ))}
         </div>
+      )}
+
+      {message && (
+        <p role="status" className="mt-4 rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-bold text-green-800">
+          {message}
+        </p>
       )}
 
       <Pagination page={page} totalPages={totalPages} onPage={setPage} />
@@ -174,10 +237,59 @@ export function MyBookings() {
           </p>
         </ModalShell>
       )}
+      {reviewTarget && (
+        <ModalShell
+          title={`Review ${reviewTarget.timeSlot?.futsal?.name || 'this venue'}`}
+          eyebrow="Share your experience"
+          description={`${formatDate(reviewTarget.timeSlot?.slotDate)} · ${timeRangeWithDuration(reviewTarget.timeSlot?.startTime, reviewTarget.timeSlot?.endTime)}`}
+          onClose={() => setReviewTarget(null)}
+          footer={(
+            <>
+              <Button type="button" variant="outline" disabled={savingReview} onClick={() => setReviewTarget(null)}>Cancel</Button>
+              <Button type="button" variant="primary" loading={savingReview} onClick={submitReview}>Post review</Button>
+            </>
+          )}
+        >
+          <div className="space-y-4">
+            <div>
+              <span className="label">Rating</span>
+              <div className="mt-1">
+                <StarRatingInput value={reviewRating} onChange={setReviewRating} disabled={savingReview} />
+              </div>
+            </div>
+            <TextareaField
+              label="Comment"
+              helper="Optional, up to 500 characters."
+              maxLength={500}
+              value={reviewComment}
+              disabled={savingReview}
+              onChange={(event) => setReviewComment(event.target.value)}
+              placeholder="How were the surface, lighting and facilities?"
+            />
+            {reviewError && (
+              <p role="alert" className="text-sm font-bold text-red-600">{reviewError}</p>
+            )}
+          </div>
+        </ModalShell>
+      )}
     </main>
   );
 }
 
 function canCancel(status: BookingStatus) {
   return status === 'PENDING' || status === 'APPROVED';
+}
+
+/**
+ * Mirrors the server's eligibility rule so the prompt only appears where a review would be
+ * accepted: an approved booking, at a known venue, that has already finished, and which the user
+ * has not reviewed yet. The server re-checks all of this - this only avoids offering a dead end.
+ */
+function canReview(booking: Booking, reviewedBookingIds: number[]) {
+  if (booking.status !== 'APPROVED') return false;
+  if (!booking.timeSlot?.futsal?.futsalId) return false;
+  if (reviewedBookingIds.includes(booking.bookingId)) return false;
+  const { slotDate, endTime } = booking.timeSlot;
+  if (!slotDate || !endTime) return false;
+  return new Date(`${slotDate}T${endTime}`).getTime() <= Date.now();
 }

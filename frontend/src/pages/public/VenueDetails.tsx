@@ -1,5 +1,5 @@
 import { Calendar, ChevronLeft, ChevronRight, Clock, MapPin, Phone, ShieldCheck, Star } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { futsalApi, paymentApi, slotApi } from '../../api/modules';
 import { EmptyState, LoadingState } from '../../components/State';
@@ -7,6 +7,8 @@ import { useAuth } from '../../context/AuthContext';
 import type { Futsal, PaymentMethod, TimeSlot } from '../../types/api';
 import { formatTime, formatTimeCompact, imageForVenue, money, slotDuration, timeRange, todayInput } from '../../utils/format';
 import { handOffToGateway } from '../../utils/gatewayCheckout';
+import { usePageTitle } from '../../hooks/usePageTitle';
+import { VenueReviews } from '../../components/VenueReviews';
 
 export function VenueDetails() {
   const { id } = useParams();
@@ -26,6 +28,9 @@ export function VenueDetails() {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
+  // Falls back to the site title while the venue is still loading.
+  usePageTitle(futsal?.name);
+
   const images = useMemo(() => imageUrls(futsal), [futsal]);
   const dates = useMemo(() => nextDates(7), []);
   const selectedHours = selectedSlot ? slotHours(selectedSlot) : 1;
@@ -33,7 +38,9 @@ export function VenueDetails() {
   const subtotal = Number(futsal?.hourlyPrice || 0) * selectedHours;
   const total = subtotal + serviceFee;
 
-  useEffect(() => {
+  // Extracted so the reviews section can re-fetch the venue after a review changes the
+  // aggregate rating shown in the header.
+  const loadVenue = useCallback(() => {
     if (!Number.isFinite(futsalId)) return;
     setLoadingVenue(true);
     setError('');
@@ -42,6 +49,8 @@ export function VenueDetails() {
       .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load venue'))
       .finally(() => setLoadingVenue(false));
   }, [futsalId]);
+
+  useEffect(() => { loadVenue(); }, [loadVenue]);
 
   useEffect(() => {
     if (!Number.isFinite(futsalId)) return;
@@ -64,7 +73,7 @@ export function VenueDetails() {
     setError('');
     setMessage('');
     try {
-      // Cash is settled here and now. eSewa and Khalti hold the slot, then hand the browser to
+      // Cash is settled here and now. eSewa holds the slot, then hands the browser to
       // the gateway; the booking is only confirmed once /payments/verify says the money moved.
       const initiation = await paymentApi.initiate({
         userId: user.userId,
@@ -227,7 +236,6 @@ export function VenueDetails() {
               <select id="payment-method" className="input" value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}>
                 <option value="CASH_IN_HAND">Cash in hand</option>
                 <option value="ESEWA">Esewa</option>
-                <option value="KHALTI">Khalti</option>
               </select>
             </div>
             <div className="mt-4">
@@ -243,11 +251,16 @@ export function VenueDetails() {
                   ? <>Sign in to Book <ChevronRight size={18} /></>
                   : paymentMethod === 'CASH_IN_HAND'
                     ? 'Confirm booking'
-                    : `Pay with ${paymentMethod === 'ESEWA' ? 'Esewa' : 'Khalti'}`}
+                    : 'Pay with eSewa'}
             </button>
             <p className="mt-5 flex items-center justify-center gap-2 text-sm font-bold text-slate-500"><ShieldCheck size={16} className="text-green-600" /> Free cancellation up to 2 hours before</p>
           </div>
         </aside>
+      </section>
+
+      {/* Reloads the venue after a review is removed so the header rating stays in step. */}
+      <section className="container-page pb-12">
+        <VenueReviews futsalId={futsal.futsalId} onChanged={loadVenue} />
       </section>
     </main>
   );

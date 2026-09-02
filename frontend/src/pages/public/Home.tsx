@@ -17,7 +17,7 @@ const HIGHLIGHTS = [
 const HOW_IT_WORKS = [
   { step: '01', title: 'Find a Venue', desc: 'Search by location, date, and time. Filter by court type, price, and amenities.', icon: Search },
   { step: '02', title: 'Pick a Slot', desc: 'Choose from real-time available time slots that suit your schedule.', icon: Clock },
-  { step: '03', title: 'Book & Pay', desc: 'Secure checkout with eSewa, Khalti, or cash at the venue.', icon: Shield },
+  { step: '03', title: 'Book & Pay', desc: 'Secure checkout with eSewa or cash at the venue.', icon: Shield },
   { step: '04', title: 'Play!', desc: 'Show up and play. Manage or cancel bookings anytime from your dashboard.', icon: Trophy }
 ];
 
@@ -66,7 +66,7 @@ export function Home() {
         <div
           className="absolute inset-0 opacity-20"
           style={{
-            backgroundImage: 'url(https://images.unsplash.com/photo-1520470082789-e347ad8b1944?w=1400&h=700&fit=crop&auto=format)',
+            backgroundImage: 'url(/venue-placeholder.svg)',
             backgroundSize: 'cover',
             backgroundPosition: 'center'
           }}

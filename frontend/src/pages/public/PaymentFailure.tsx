@@ -1,6 +1,6 @@
 import { AlertCircle, Home } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { paymentApi } from '../../api/modules';
 import { takePendingTransaction } from '../../utils/gatewayCheckout';
 
@@ -9,10 +9,17 @@ import { takePendingTransaction } from '../../utils/gatewayCheckout';
  *
  * <p>Releases the slot hold straight away rather than waiting for the server-side sweep, so the
  * slot goes back on sale for other users within seconds instead of up to an hour.
+ *
+ * <p>When eSewa includes its payload on the failure URL it is decoded and shown, because "this may
+ * be due to insufficient funds, network issues, or the payment was cancelled" tells the user
+ * nothing and makes the problem undiagnosable. It is display only: the slot is still released
+ * through the server, which remains the only authority on payment state.
  */
 export function PaymentFailure() {
+  const [searchParams] = useSearchParams();
   const [released, setReleased] = useState<boolean | null>(null);
   const cancelStarted = useRef(false);
+  const reportedStatus = esewaStatusFrom(searchParams.get('data'));
 
   useEffect(() => {
     if (cancelStarted.current) return;
@@ -43,7 +50,9 @@ export function PaymentFailure() {
           </div>
           <h1 className="mb-2 text-2xl font-black text-slate-950">Payment Failed</h1>
           <p className="mb-6 text-slate-600">
-            Your payment could not be processed. This may be due to insufficient funds, network issues, or the payment was cancelled.
+            {reportedStatus
+              ? `eSewa did not complete this payment (reported status: ${reportedStatus}). Your slot has not been charged.`
+              : 'Your payment could not be processed. This may be due to insufficient funds, network issues, or the payment was cancelled.'}
           </p>
           {released === true && (
             <p className="mb-6 rounded-2xl bg-slate-100 p-3 text-sm font-bold text-slate-600">
@@ -66,4 +75,20 @@ export function PaymentFailure() {
       </div>
     </main>
   );
+}
+
+/**
+ * Decodes the base64 JSON blob eSewa appends to the failure URL and returns its status.
+ *
+ * <p>Returns null for anything unexpected - eSewa does not always include a payload, and a
+ * malformed one must never break the page the user was sent to after a failed payment.
+ */
+function esewaStatusFrom(data: string | null): string | null {
+  if (!data) return null;
+  try {
+    const decoded = JSON.parse(atob(data)) as { status?: unknown };
+    return typeof decoded.status === 'string' && decoded.status.trim() ? decoded.status.trim() : null;
+  } catch {
+    return null;
+  }
 }

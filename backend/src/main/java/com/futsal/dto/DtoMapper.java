@@ -4,6 +4,7 @@ import com.futsal.model.Booking;
 import com.futsal.model.BookingStatusHistory;
 import com.futsal.model.Futsal;
 import com.futsal.model.FutsalImage;
+import com.futsal.model.Review;
 import com.futsal.model.TimeSlot;
 import com.futsal.model.TimeSlotStatusHistory;
 import com.futsal.model.User;
@@ -174,6 +175,25 @@ public class DtoMapper {
         dto.setTimeSlot(toTimeSlotSummary(booking.getTimeSlot()));
         if (booking.getStatusHistory() != null) {
             dto.setStatusHistory(booking.getStatusHistory().stream().map(DtoMapper::toBookingStatusHistoryResponse).toList());
+        }
+        return dto;
+    }
+
+    public static ReviewResponse toReviewResponse(Review review) {
+        if (review == null) {
+            return null;
+        }
+        ReviewResponse dto = new ReviewResponse();
+        dto.setReviewId(review.getReviewId());
+        dto.setFutsalId(review.getFutsal() == null ? null : review.getFutsal().getFutsalId());
+        dto.setBookingId(review.getBooking() == null ? null : review.getBooking().getBookingId());
+        dto.setRating(review.getRating());
+        dto.setComment(review.getComment());
+        dto.setCreatedAt(review.getCreatedAt());
+        dto.setUpdatedAt(review.getUpdatedAt());
+        if (review.getUser() != null) {
+            dto.setAuthorId(review.getUser().getUserId());
+            dto.setAuthorName(review.getUser().getName());
         }
         return dto;
     }

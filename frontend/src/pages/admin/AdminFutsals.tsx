@@ -3,7 +3,7 @@ import { Clock3, ImageIcon, MapPin, Pencil, Plus, Search, Trash2, X } from 'luci
 import { futsalApi, uploadApi } from '../../api/modules';
 import { Pagination } from '../../components/Pagination';
 import { EmptyState, LoadingState } from '../../components/State';
-import { Button, DialogFrame, ModalShell } from '../../components/UI';
+import { Button, DialogFrame, Field, ModalShell } from '../../components/UI';
 import type { Futsal, FutsalPayload } from '../../types/api';
 import { formatTime, imageForVenue, money } from '../../utils/format';
 
@@ -198,12 +198,12 @@ export function AdminFutsals() {
 
   return (
     <section className="space-y-5">
-      <div className="panel overflow-hidden">
+      <div className="admin-card overflow-hidden">
         <div className="border-b border-slate-100 p-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <p className="eyebrow">Venue Management</p>
-              <h2 className="mt-2 text-2xl font-black text-slate-950">Futsal venues</h2>
+              <h2 className="mt-2 text-xl font-bold text-slate-900">Futsal venues</h2>
               <p className="mt-1 text-sm text-slate-500">Manage customer-facing venue listings from one clean workspace.</p>
             </div>
             <button className="btn-primary" onClick={openCreate} type="button">
@@ -216,19 +216,14 @@ export function AdminFutsals() {
           {error && !drawerOpen && !deleteTarget && <p className="mt-4 rounded-2xl bg-red-50 p-3 text-sm font-bold text-red-700" aria-live="assertive">{error}</p>}
 
           <div className="mt-5 grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px_auto] lg:items-end">
-            <div>
-              <label className="label" htmlFor="venue-search">Search venues</label>
-              <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                <input
-                  id="venue-search"
-                  className="input pl-11"
-                  value={query}
-                  onChange={(event) => { setQuery(event.target.value); setPage(0); }}
-                  placeholder="Name, city, address, or surface"
-                />
-              </div>
-            </div>
+            <Field
+              label="Search venues"
+              id="venue-search"
+              value={query}
+              onChange={(event) => { setQuery(event.target.value); setPage(0); }}
+              placeholder="Name, city, address, or surface"
+              prefix={<Search size={18} />}
+            />
             <div>
               <label className="label" htmlFor="venue-sort">Sort</label>
               <select id="venue-sort" className="input" value={sort} onChange={(event) => { setSort(event.target.value as VenueSort); setPage(0); }}>
@@ -249,18 +244,18 @@ export function AdminFutsals() {
           ) : (
             <div className="motion-stagger grid gap-4" aria-live="polite">
               {items.map((item) => (
-                <div key={item.futsalId} className="rounded-3xl border border-slate-200 bg-white p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-green-200 hover:shadow-sm">
+                <div key={item.futsalId} className="rounded-2xl border border-slate-200 bg-white p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-green-200 hover:shadow-sm">
                   <div className="grid gap-4 md:grid-cols-[176px_minmax(0,1fr)_auto] md:items-center">
                     <img src={imageForVenue(item.imageUrl || item.imageUrls?.[0])} alt="" className="h-32 w-full rounded-2xl object-cover md:h-28" />
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="truncate text-lg font-black text-slate-950">{item.name}</h3>
-                        {item.verified && <span className="inline-flex rounded-full px-2 py-1 text-xs font-black ring-1 bg-green-50 text-green-700 ring-green-200">Verified</span>}
-                        {item.courtType && <span className="inline-flex rounded-full px-2 py-1 text-xs font-black ring-1 bg-slate-100 text-slate-700 ring-slate-200">{item.courtType}</span>}
+                        <h3 className="truncate text-lg font-bold text-slate-900">{item.name}</h3>
+                        {item.verified && <span className="inline-flex rounded-full px-2 py-1 text-xs font-bold ring-1 bg-green-50 text-green-700 ring-green-200">Verified</span>}
+                        {item.courtType && <span className="inline-flex rounded-full px-2 py-1 text-xs font-bold ring-1 bg-slate-100 text-slate-700 ring-slate-200">{item.courtType}</span>}
                       </div>
                       <p className="mt-2 flex items-center gap-2 text-sm font-bold text-slate-500"><MapPin size={15} className="text-green-600" /> {item.address}, {item.city}</p>
                       <div className="mt-3 flex flex-wrap gap-3 text-sm text-slate-500">
-                        <span className="font-black text-slate-950">{money(item.hourlyPrice)}/hr</span>
+                        <span className="font-bold text-slate-900">{money(item.hourlyPrice)}/hr</span>
                         <span className="flex items-center gap-1"><Clock3 size={15} /> {formatTime(item.openingTime)} - {formatTime(item.closingTime)}</span>
                         <span>{Number(item.rating || 0).toFixed(1)} rating</span>
                       </div>
@@ -286,12 +281,12 @@ export function AdminFutsals() {
 
       {drawerOpen && (
         <DialogFrame onClose={closeDrawer} className="max-w-3xl">
-          <form className="flex max-h-[88vh] w-full flex-col overflow-hidden rounded-3xl bg-white shadow-2xl" onSubmit={submit}>
+          <form className="flex max-h-[88vh] w-full flex-col overflow-hidden rounded-2xl bg-white shadow-2xl" onSubmit={submit}>
             <div className="border-b border-slate-200 px-6 py-5">
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
                   <p className="eyebrow">{editingId ? 'Edit venue' : 'New venue'}</p>
-                  <h3 className="mt-2 text-2xl font-black text-slate-950">{editingId ? form.name || 'Edit venue' : 'Add venue'}</h3>
+                  <h3 className="mt-2 text-xl font-bold text-slate-900">{editingId ? form.name || 'Edit venue' : 'Add venue'}</h3>
                   <p className="mt-1 text-sm text-slate-500">Only the selected section is shown to keep the form focused.</p>
                 </div>
                 <button
@@ -309,7 +304,7 @@ export function AdminFutsals() {
                   <button
                     type="button"
                     key={tab.id}
-                    className={`rounded-xl px-3 py-2 text-sm font-black transition ${activeTab === tab.id ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500 hover:text-slate-950'}`}
+                    className={`rounded-xl px-3 py-2 text-sm font-bold transition ${activeTab === tab.id ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}
                     onClick={() => setActiveTab(tab.id)}
                   >
                     {tab.label}
@@ -353,9 +348,9 @@ export function AdminFutsals() {
 
               {activeTab === 'media' && (
                 <div className="grid gap-4">
-                  <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-5 text-center">
+                  <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5 text-center">
                     <ImageIcon className="mx-auto text-green-600" size={26} />
-                    <h4 className="mt-3 font-black text-slate-950">Upload venue images</h4>
+                    <h4 className="mt-3 font-bold text-slate-900">Upload venue images</h4>
                     <p className="mt-1 text-sm text-slate-500">Use one clear cover photo and optional gallery images.</p>
                   </div>
                   <label className="block"><span className="label">Cover image</span><input className="input" type="file" accept="image/png,image/jpeg" disabled={uploading} onChange={(event) => uploadSingle(event.target.files?.[0])} /></label>

@@ -90,7 +90,7 @@ export function AdminBookings() {
         meta={<Chip tone="green">{filteredItems.length} visible</Chip>}
       />
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         <MetricCard label="Loaded bookings" value={counts.total} icon={<CalendarDays size={20} />} tone="slate" />
         <MetricCard label="Pending" value={counts.pending} icon={<CalendarDays size={20} />} tone="amber" />
         <MetricCard label="Approved" value={counts.approved} icon={<CalendarDays size={20} />} tone="green" />
@@ -118,13 +118,13 @@ export function AdminBookings() {
       {loading ? <LoadingState /> : !error && filteredItems.length === 0 ? <EmptyState title="No bookings found" description="No booking matches the current filters." /> : (
         <div className="motion-stagger grid gap-4" aria-live="polite">
           {filteredItems.map((booking) => (
-            <article key={booking.bookingId} className="panel overflow-hidden border-slate-200">
+            <article key={booking.bookingId} className="admin-card overflow-hidden">
               <div className="grid gap-5 p-5 xl:grid-cols-[minmax(0,1fr)_260px]">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0">
-                      <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Booking #{booking.bookingId}</p>
-                      <h3 className="mt-1 truncate text-xl font-black text-slate-950">{booking.timeSlot?.futsal?.name || 'Venue unavailable'}</h3>
+                      <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Booking #{booking.bookingId}</p>
+                      <h3 className="mt-1 truncate text-xl font-bold text-slate-900">{booking.timeSlot?.futsal?.name || 'Venue unavailable'}</h3>
                     </div>
                     <StatusBadge status={booking.status} />
                   </div>
@@ -143,16 +143,16 @@ export function AdminBookings() {
                   )}
                   {booking.notes && (
                     <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-3 text-sm font-semibold leading-6 text-slate-500">
-                      <span className="font-black text-slate-700">Note:</span> {booking.notes}
+                      <span className="font-bold text-slate-700">Note:</span> {booking.notes}
                     </div>
                   )}
                 </div>
 
-                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-3">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
                   <div className="mb-3 flex items-center justify-between gap-3 px-1">
                     <div>
-                      <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Admin action</p>
-                      <p className="text-sm font-black text-slate-900">{actionSummary(booking.status)}</p>
+                      <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Admin action</p>
+                      <p className="text-sm font-bold text-slate-900">{actionSummary(booking.status)}</p>
                     </div>
                     <Clock3 size={18} className="text-green-600" />
                   </div>
@@ -264,7 +264,7 @@ export function AdminBookings() {
 function InfoItem({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
   return (
     <div className="rounded-2xl bg-slate-50 p-3">
-      <div className="flex items-center gap-2 text-green-600">{icon}<span className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">{label}</span></div>
+      <div className="flex items-center gap-2 text-green-600">{icon}<span className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">{label}</span></div>
       <p className="mt-1 truncate text-slate-800">{value}</p>
     </div>
   );
@@ -279,13 +279,13 @@ function DecisionPreview({ booking, next, destructive = false }: { booking: Book
   const config = actionConfig(next);
   return (
     <div className="space-y-4">
-      <div className={`rounded-3xl border p-4 ${destructive ? 'border-red-100 bg-red-50' : config.noticeClass}`}>
+      <div className={`rounded-2xl border p-4 ${destructive ? 'border-red-100 bg-red-50' : config.noticeClass}`}>
         <div className="flex gap-3">
           <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${destructive ? 'bg-red-600 text-white' : config.iconClass}`}>
             {destructive ? <AlertTriangle size={21} /> : config.icon}
           </div>
           <div>
-            <p className={`text-sm font-black ${destructive ? 'text-red-900' : config.titleClass}`}>{destructive ? 'This cannot be undone from this screen.' : config.noticeTitle}</p>
+            <p className={`text-sm font-bold ${destructive ? 'text-red-900' : config.titleClass}`}>{destructive ? 'This cannot be undone from this screen.' : config.noticeTitle}</p>
             <p className={`mt-1 text-sm font-semibold leading-6 ${destructive ? 'text-red-700' : config.bodyClass}`}>{destructive ? 'Use delete only for invalid or duplicate records. Reject or cancel is safer when history should remain visible.' : config.noticeText}</p>
           </div>
         </div>
@@ -300,14 +300,14 @@ function DecisionPreview({ booking, next, destructive = false }: { booking: Book
 
       {destructive ? (
         <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-red-100 bg-white p-3">
-          <span className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Record action</span>
-          <span className="inline-flex rounded-full bg-red-50 px-3 py-1 text-xs font-black uppercase tracking-wide text-red-700 ring-1 ring-red-200">Delete booking</span>
+          <span className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Record action</span>
+          <span className="inline-flex rounded-full bg-red-50 px-3 py-1 text-xs font-bold uppercase tracking-wide text-red-700 ring-1 ring-red-200">Delete booking</span>
         </div>
       ) : (
         <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-white p-3">
-          <span className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Status change</span>
+          <span className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Status change</span>
           <StatusBadge status={booking.status} />
-          <span className="text-sm font-black text-slate-500">to</span>
+          <span className="text-sm font-bold text-slate-500">to</span>
           <StatusBadge status={next} />
         </div>
       )}

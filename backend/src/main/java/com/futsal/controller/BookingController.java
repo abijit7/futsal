@@ -9,7 +9,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.futsal.dto.PagedResponse;
-import com.futsal.dto.BookingCreateRequest;
 import com.futsal.dto.BookingResponse;
 import com.futsal.dto.BookingStatusRequest;
 import com.futsal.dto.DtoMapper;
@@ -29,14 +28,6 @@ public class BookingController {
 
     @Autowired
     private SecurityAuth securityAuth;
-
-    // POST /api/bookings — create booking
-    @PostMapping
-    public ResponseEntity<BookingResponse> createBooking(@Valid @RequestBody BookingCreateRequest body) {
-        securityAuth.requireUserOrAdmin(body.getUserId());
-        Booking booking = bookingService.createBooking(body.getUserId(), body.getSlotId(), body.getNotes());
-        return ResponseEntity.ok(DtoMapper.toBookingResponse(booking));
-    }
 
     // GET /api/bookings — all bookings (admin)
     @GetMapping

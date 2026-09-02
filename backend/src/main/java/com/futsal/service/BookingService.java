@@ -42,6 +42,9 @@ public class BookingService {
     @Autowired
     private TimeSlotRepository timeSlotRepository;
 
+    @Autowired(required = false)
+    private BookingNotificationService bookingNotificationService;
+
     // ── Create a new booking after payment confirmation ─────────────────────
     @Transactional
     public Booking createPaidBooking(Long userId, Long slotId, String notes, PaymentMethod paymentMethod, String paymentRef) {
@@ -78,12 +81,6 @@ public class BookingService {
         } catch (DataIntegrityViolationException ex) {
             throw new ConflictException("This slot was just booked by someone else. Please choose another slot.");
         }
-    }
-
-    // ── Create a new booking (payment required) ─────────────────────────────
-    @Transactional
-    public Booking createBooking(Long userId, Long slotId, String notes) {
-        throw new ConflictException("Payment required. Use the payment confirmation flow.");
     }
 
     /**
@@ -195,7 +192,24 @@ public class BookingService {
 
         booking.setStatus(newStatus);
         booking.addStatusHistory(new BookingStatusHistory(booking, newStatus, changedBy, "Status updated"));
-        return bookingRepository.save(booking);
+        Booking saved = bookingRepository.save(booking);
+        notifyStatusChanged(saved, newStatus);
+        return saved;
+    }
+
+    /**
+     * Tells the customer their booking was approved, rejected or cancelled. Deferred to commit so
+     * a rollback sends nothing, and skipped entirely when no notifier is wired in.
+     */
+    private void notifyStatusChanged(Booking booking, BookingStatus newStatus) {
+        if (bookingNotificationService == null) {
+            return;
+        }
+        BookingNotification snapshot = BookingNotification.from(booking, null);
+        if (snapshot == null) {
+            return;
+        }
+        AfterCommit.run(() -> bookingNotificationService.sendStatusChanged(snapshot, newStatus));
     }
 
     static boolean canTransition(BookingStatus current, BookingStatus next) {

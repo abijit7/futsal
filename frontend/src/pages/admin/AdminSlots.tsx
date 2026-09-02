@@ -1,10 +1,9 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { CalendarDays, Clock3, Pencil, Plus, Trash2, Wand2, X } from 'lucide-react';
+import { CalendarDays, Clock3, Plus, Trash2, Wand2, X } from 'lucide-react';
 import { futsalApi, slotApi } from '../../api/modules';
 import { Pagination } from '../../components/Pagination';
 import { EmptyState, LoadingState } from '../../components/State';
-import { StatusBadge } from '../../components/StatusBadge';
-import { Button, DialogFrame, ModalShell } from '../../components/UI';
+import { Button, DialogFrame, IconButton, ModalShell } from '../../components/UI';
 import type { Futsal, SlotGenerationPayload, TimeSlot, TimeSlotPayload } from '../../types/api';
 import { formatDate, formatTimeCompact, slotDuration, timeRange, todayInput } from '../../utils/format';
 
@@ -227,50 +226,55 @@ export function AdminSlots() {
 
   return (
     <section className="space-y-5">
-      <div className="panel overflow-hidden">
+      <div className="admin-card overflow-hidden">
         <div className="border-b border-slate-200 bg-white p-5">
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+          <div className="space-y-4">
             <div>
-              <p className="eyebrow">Slot operations</p>
-              <h2 className="mt-2 text-3xl font-black text-slate-950">Schedule manager</h2>
-              <p className="mt-1 text-sm font-semibold text-slate-500">
-                {selectedFutsal ? selectedFutsal.name : 'Select a venue'} - {formatDate(filterDate)}
+              <h2 className="text-xl font-bold text-slate-900">Schedule manager</h2>
+              <p className="mt-0.5 text-sm text-slate-500">
+                {selectedFutsal ? selectedFutsal.name : 'Select a venue'} · {formatDate(filterDate)}
               </p>
             </div>
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(210px,280px)_180px_auto_auto_auto] xl:items-end">
-              <div>
-                <label className="label" htmlFor="slot-venue">Venue</label>
-                <select
-                  id="slot-venue"
-                  className="input py-2.5"
-                  value={selectedFutsalId}
-                  onChange={(event) => setSelectedFutsal(Number(event.target.value))}
-                >
-                  {futsals.length === 0 && <option value={0}>No venues</option>}
-                  {futsals.map((item) => (
-                    <option key={item.futsalId} value={item.futsalId}>{item.name}</option>
-                  ))}
-                </select>
+            {/* Filters and actions are separate rows: five controls in one grid row collapsed
+                badly at every width between sm and xl. */}
+            <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+              <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_180px] xl:w-auto xl:grid-cols-[240px_180px]">
+                <div>
+                  <label className="label" htmlFor="slot-venue">Venue</label>
+                  <select
+                    id="slot-venue"
+                    className="input py-2.5"
+                    value={selectedFutsalId}
+                    onChange={(event) => setSelectedFutsal(Number(event.target.value))}
+                  >
+                    {futsals.length === 0 && <option value={0}>No venues</option>}
+                    {futsals.map((item) => (
+                      <option key={item.futsalId} value={item.futsalId}>{item.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="label" htmlFor="slot-date">Date</label>
+                  <input
+                    id="slot-date"
+                    className="input py-2.5"
+                    type="date"
+                    value={filterDate}
+                    onChange={(event) => setSelectedFilterDate(event.target.value)}
+                  />
+                </div>
               </div>
-              <div>
-                <label className="label" htmlFor="slot-date">Date</label>
-                <input
-                  id="slot-date"
-                  className="input py-2.5"
-                  type="date"
-                  value={filterDate}
-                  onChange={(event) => setSelectedFilterDate(event.target.value)}
-                />
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" variant="outline" size="sm" onClick={openBulkGenerator} disabled={!selectedFutsalId}>
+                  <Wand2 size={16} /> Bulk generate
+                </Button>
+                <Button type="button" variant="outline" size="sm" disabled={generatingHourly || !selectedFutsalId} onClick={generateHourlyForFilterDate}>
+                  <Clock3 size={16} /> {generatingHourly ? 'Generating…' : 'Hourly'}
+                </Button>
+                <Button type="button" size="sm" onClick={openCreateSlot} disabled={!selectedFutsalId}>
+                  <Plus size={16} /> Add slot
+                </Button>
               </div>
-              <button type="button" className="btn-soft px-3 py-2 text-sm" onClick={openBulkGenerator} disabled={!selectedFutsalId}>
-                <Wand2 size={16} /> Bulk
-              </button>
-              <button type="button" className="btn-soft px-3 py-2 text-sm" disabled={generatingHourly || !selectedFutsalId} onClick={generateHourlyForFilterDate}>
-                <Clock3 size={16} /> {generatingHourly ? 'Generating' : 'Hourly'}
-              </button>
-              <button type="button" className="btn-primary px-3 py-2 text-sm" onClick={openCreateSlot} disabled={!selectedFutsalId}>
-                <Plus size={16} /> Add slot
-              </button>
             </div>
           </div>
 
@@ -282,86 +286,74 @@ export function AdminSlots() {
           )}
         </div>
 
-        <div className="grid gap-4 border-b border-slate-200 bg-slate-50/70 p-5 sm:grid-cols-3">
+        <div className="grid grid-cols-3 gap-3 border-b border-slate-200 bg-slate-50/70 p-4">
           <Stat label="Total slots" value={slots.length} />
           <Stat label="Available" value={availableCount} tone="green" />
-          <Stat label="Booked / blocked" value={bookedCount} />
+          <Stat label="Booked" value={bookedCount} />
         </div>
 
         <div className="p-5">
-          <div className="mb-5 rounded-3xl border border-slate-200 bg-slate-50 p-4">
-            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-2 text-sm font-black text-slate-900">
-                <CalendarDays size={18} className="text-green-600" />
-                Calendar overview
-              </div>
-              <div className="text-xs font-bold text-slate-500">Green is available. Gray is booked or blocked.</div>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2 text-sm font-bold text-slate-900">
+              <CalendarDays size={17} className="text-green-600" aria-hidden="true" />
+              Schedule for {formatDate(filterDate)}
             </div>
-            {loading ? (
-              <div className="mt-4"><LoadingState /></div>
-            ) : slots.length === 0 ? (
-              <div className="mt-4 rounded-2xl border border-dashed border-slate-200 bg-white p-5 text-center text-sm font-bold text-slate-500">
-                No slots on this date.
-              </div>
-            ) : (
-              <div className="motion-stagger mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6" aria-live="polite">
-                {slots.map((slot) => (
-                  <button
-                    key={slot.slotId}
-                    type="button"
-                    className={`rounded-2xl border px-3 py-3 text-left transition hover:-translate-y-0.5 ${
-                      slot.available
-                        ? 'border-green-200 bg-green-50 text-green-700 hover:border-green-300'
-                        : 'border-slate-200 bg-slate-100 text-slate-500'
-                    }`}
-                    onClick={() => edit(slot)}
-                    aria-label={`Edit slot at ${formatTimeCompact(slot.startTime)}, ${slot.available ? 'available' : 'booked'}`}
-                  >
-                    <span className="block text-sm font-black">{formatTimeCompact(slot.startTime)}</span>
-                    <span className="mt-1 block text-xs font-bold">{slot.available ? 'Available' : 'Booked'}</span>
-                  </button>
-                ))}
-              </div>
-            )}
+            <div className="flex flex-wrap items-center gap-4 text-xs font-semibold text-slate-500">
+              <span className="inline-flex items-center gap-1.5">
+                <span className="h-3 w-3 rounded border border-green-200 bg-green-50" aria-hidden="true" /> Available
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="h-3 w-3 rounded border border-slate-300 bg-slate-100" aria-hidden="true" /> Booked or blocked
+              </span>
+            </div>
           </div>
 
+          {/* One grid, not two: this page used to render the same slots as a button grid AND
+              again as a card list below it. */}
           {loading ? (
-            <LoadingState />
+            <LoadingState label="Loading schedule" />
           ) : slots.length === 0 ? (
-            <EmptyState title="No slots found" />
+            <EmptyState
+              title="No slots on this date"
+              description="Add a single slot, or bulk-generate a schedule from the venue's opening hours."
+            />
           ) : (
-            <div className="motion-stagger grid gap-3 md:grid-cols-2 xl:grid-cols-3" aria-live="polite">
+            <div className="motion-stagger grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6" aria-live="polite">
               {slots.map((slot) => (
-                <article key={slot.slotId} className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <div className="flex items-center gap-2 text-lg font-black text-slate-950">
-                        <Clock3 size={18} className="text-green-600" />
-                        {timeRange(slot.startTime, slot.endTime)}
-                      </div>
-                      <p className="mt-1 text-sm font-bold text-slate-500">
-                        {slotDuration(slot.startTime, slot.endTime) || 'Custom duration'} - {formatDate(slot.slotDate)}
-                      </p>
-                    </div>
-                    <StatusBadge status={slot.available ? 'AVAILABLE' : 'UNAVAILABLE'} label={slot.available ? 'Available' : 'Booked'} />
-                  </div>
-                  <p className="mt-4 truncate text-sm font-bold text-slate-600">{slot.futsal?.name || 'Futsal'}</p>
-                  <div className="mt-4 flex gap-2">
-                    <Button type="button" variant="outline" size="sm" className="flex-1" onClick={() => edit(slot)}>
-                      <Pencil size={15} /> Edit
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="sm"
-                      className="flex-1"
-                      disabled={deletingId === slot.slotId}
-                      onClick={() => setDeleteTarget(slot)}
-                    >
-                      <Trash2 size={15} /> {deletingId === slot.slotId ? 'Deleting' : 'Delete'}
-                    </Button>
-                  </div>
-                </article>
+                <div
+                  key={slot.slotId}
+                  className={`group relative rounded-xl border transition hover:shadow-sm ${
+                    slot.available ? 'border-green-200 bg-green-50' : 'border-slate-200 bg-slate-100'
+                  }`}
+                >
+                  <button
+                    type="button"
+                    onClick={() => edit(slot)}
+                    className="w-full rounded-xl p-3 pr-8 text-left focus:outline-none focus:ring-4 focus:ring-green-100"
+                    aria-label={`Edit slot ${timeRange(slot.startTime, slot.endTime)}, ${slot.available ? 'available' : 'booked'}`}
+                  >
+                    <span className={`block text-sm font-bold tabular-nums ${slot.available ? 'text-green-800' : 'text-slate-700'}`}>
+                      {formatTimeCompact(slot.startTime)}
+                    </span>
+                    <span className="mt-0.5 block text-xs font-semibold text-slate-500">
+                      {slotDuration(slot.startTime, slot.endTime) || timeRange(slot.startTime, slot.endTime)}
+                    </span>
+                    <span className={`mt-2 inline-block rounded-full px-2 py-0.5 text-[11px] font-bold ${
+                      slot.available ? 'bg-green-600 text-white' : 'bg-slate-300 text-slate-700'
+                    }`}>
+                      {slot.available ? 'Available' : 'Booked'}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={`Delete slot ${timeRange(slot.startTime, slot.endTime)}`}
+                    disabled={deletingId === slot.slotId}
+                    onClick={() => setDeleteTarget(slot)}
+                    className="absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-xl text-slate-400 transition hover:bg-white hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-200 disabled:opacity-50"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
               ))}
             </div>
           )}
@@ -371,15 +363,15 @@ export function AdminSlots() {
 
       {modal === 'slot' && (
         <DialogFrame onClose={() => setModal(null)} className="max-w-lg">
-          <form className="overflow-hidden rounded-3xl bg-white shadow-2xl" onSubmit={submit}>
+          <form className="overflow-hidden rounded-2xl bg-white shadow-2xl" onSubmit={submit}>
             <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
               <div>
                 <p className="eyebrow">{editingId ? 'Edit slot' : 'New slot'}</p>
-                <h3 className="mt-1 text-2xl font-black text-slate-950">{editingId ? 'Update slot' : 'Add slot'}</h3>
+                <h3 className="mt-1 text-xl font-bold text-slate-900">{editingId ? 'Update slot' : 'Add slot'}</h3>
               </div>
-              <button type="button" className="btn-soft h-10 w-10 rounded-2xl p-0" onClick={() => setModal(null)} aria-label="Close slot form">
+              <IconButton label="Close slot form" onClick={() => setModal(null)}>
                 <X size={20} />
-              </button>
+              </IconButton>
             </div>
             <div className="grid gap-4 px-5 py-5">
               <label className="block"><span className="label">Venue</span><select className="input py-2.5" value={form.futsalId} onChange={(event) => setForm({ ...form, futsalId: Number(event.target.value) })} required>
@@ -408,15 +400,15 @@ export function AdminSlots() {
 
       {modal === 'bulk' && (
         <DialogFrame onClose={() => setModal(null)} className="max-w-xl">
-          <form className="overflow-hidden rounded-3xl bg-white shadow-2xl" onSubmit={generate}>
+          <form className="overflow-hidden rounded-2xl bg-white shadow-2xl" onSubmit={generate}>
             <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
               <div>
                 <p className="eyebrow">Bulk slots</p>
-                <h3 className="mt-1 text-2xl font-black text-slate-950">Generate schedule</h3>
+                <h3 className="mt-1 text-xl font-bold text-slate-900">Generate schedule</h3>
               </div>
-              <button type="button" className="btn-soft h-10 w-10 rounded-2xl p-0" onClick={() => setModal(null)} aria-label="Close generator">
+              <IconButton label="Close generator" onClick={() => setModal(null)}>
                 <X size={20} />
-              </button>
+              </IconButton>
             </div>
             <div className="grid gap-4 px-5 py-5">
               <label className="block"><span className="label">Venue</span><select className="input py-2.5" value={generation.futsalId} onChange={(event) => setGeneration({ ...generation, futsalId: Number(event.target.value) })} required>
@@ -475,9 +467,9 @@ export function AdminSlots() {
 
 function Stat({ label, value, tone }: { label: string; value: number; tone?: 'green' }) {
   return (
-    <div className="rounded-3xl border border-slate-200 bg-white px-4 py-3">
-      <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">{label}</p>
-      <p className={`mt-1 text-2xl font-black ${tone === 'green' ? 'text-green-600' : 'text-slate-950'}`}>{value}</p>
+    <div className="rounded-2xl border border-slate-200 bg-white px-3 py-2.5 sm:px-4 sm:py-3">
+      <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{label}</p>
+      <p className={`mt-1 text-xl font-bold tabular-nums sm:text-2xl ${tone === 'green' ? 'text-green-700' : 'text-slate-900'}`}>{value}</p>
     </div>
   );
 }

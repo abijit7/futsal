@@ -24,28 +24,36 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
  */
 class PaymentGatewayServiceTest {
 
-    /** eSewa's published UAT merchant secret. */
-    private static final String UAT_SECRET = "8gBm/:&EnhH.1/q(";
+    /**
+     * eSewa's published UAT merchant secret, verbatim.
+     *
+     * <p>This previously carried a trailing "(" that is not part of the real key. The digest
+     * asserted below was generated with that same wrong secret, so the test passed while every
+     * real UAT transaction would have been rejected for a bad signature. The expected value now
+     * comes from eSewa's own documented worked example, which pins the secret, the field order
+     * and the "name=value" message format to the vendor rather than to our own output.
+     */
+    private static final String UAT_SECRET = "8gBm/:&EnhH.1/q";
 
     private PaymentGatewayService service;
 
     @BeforeEach
     void setUp() {
-        service = new PaymentGatewayService(null, null, null, null, null, null);
+        service = new PaymentGatewayService(null, null, null, null, null, null, null, null, null);
         ReflectionTestUtils.setField(service, "esewaMerchantSecret", UAT_SECRET);
     }
 
     @Test
-    void signsTheDocumentedFieldOrder() {
+    void reproducesTheSignatureFromEsewasDocumentedExample() {
         String signature = service.esewaSignature(
                 Map.of(
-                        "total_amount", "100",
-                        "transaction_uuid", "11-201-13",
+                        "total_amount", "110",
+                        "transaction_uuid", "241028",
                         "product_code", "EPAYTEST"
                 ),
                 List.of("total_amount", "transaction_uuid", "product_code"));
 
-        assertEquals("+jWFkfo8GeBSZ0iFw2O2QQ/hwHAjSPo7Tlbf/HWw50A=", signature);
+        assertEquals("i94zsd3oXF6ZsSr/kGqT4sSzYQzjj1W/waxjWyRwaME=", signature);
     }
 
     /** signed_field_names is ordered; signing the same values in another order must not match. */

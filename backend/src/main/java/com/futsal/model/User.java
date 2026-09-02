@@ -29,10 +29,6 @@ public class User {
 
     @Email(message = "Invalid email format")
     @NotBlank(message = "Email is required")
-    @jakarta.validation.constraints.Pattern(
-        regexp = "^[A-Za-z0-9._%+-]+@gmail\\.com$",
-        message = "Email must be a gmail.com address"
-    )
     @Column(nullable = false, unique = true)
     private String email;
 

@@ -58,18 +58,68 @@ when the platform sets one.
 - `POST /api/futsals` create venue (admin)
 - `GET /api/slots?futsalId=ID` list available slots for a venue (public)
 - `POST /api/slots` create slot with `futsalId` (admin)
-- `POST /api/payments/initiate` start a payment (eSewa form, Khalti redirect, or a cash booking)
+- `POST /api/payments/initiate` start a payment (eSewa form, or a cash booking)
 - `POST /api/payments/verify` confirm a gateway payment after the browser returns
+- `GET /api/futsals/{id}/reviews` list a venue's reviews (public)
+- `POST /api/futsals/{id}/reviews` leave a review (authenticated; requires an eligible booking)
 
 ## Payments
 
-Cash bookings are created directly. eSewa and Khalti go through `/api/payments/initiate`, which
-holds the slot and hands the browser to the gateway; the booking is only confirmed once
-`/api/payments/verify` has checked the payment against eSewa's status API or Khalti's lookup API.
+Cash bookings are created directly. eSewa goes through `/api/payments/initiate`, which holds the
+slot and hands the browser to the gateway; the booking is only confirmed once
+`/api/payments/verify` has checked the payment against eSewa's transaction status API. Khalti was
+removed — the enum constant survives only so bookings taken while it was available still load.
 The price is always computed server-side from the venue's hourly rate and the slot duration.
 
 An unfinished checkout releases its slot when the user lands on `/payment/failure`, and otherwise
 within `app.payment.hold-minutes` via a scheduled sweep.
+
+### Reconciliation
+
+eSewa has no server-to-server webhook, so settlement would otherwise depend entirely on the
+customer's browser returning to call `/verify`. The sweep therefore **asks eSewa before it cancels
+anything** (`PaymentGatewayService.reconcileExpiredHold`):
+
+| eSewa says | Outcome |
+|---|---|
+| `COMPLETE`, amount matches | Booking is settled — the customer paid, so they get the booking |
+| `NOT_FOUND` / `CANCELED` / `EXPIRED` | Hold released; no money was taken |
+| `FULL_REFUND` / `PARTIAL_REFUND` | Hold released, recorded as `REFUNDED` rather than abandoned |
+| `AMBIGUOUS` / `PENDING` / unreachable / amount mismatch | **Hold kept** and logged as `PAYMENT NEEDS REVIEW` |
+
+The rule is that a hold is released only on a positive "no money was taken" answer. Holding one
+slot is far cheaper than taking money without giving a booking. Each transaction is reconciled in
+its own transaction, so one bad row cannot roll back the batch.
+
+## Reviews
+
+Venue ratings come from `reviews`, added in `V5__reviews.sql`. A review is only accepted when the
+booking it cites belongs to the caller, is `APPROVED`, is for the venue being reviewed, and has
+already finished - enforced in `ReviewService`, not in the UI. One review per booking, so a
+regular can rate each visit but nobody can rate a venue twice for the same game. `Futsal.rating`
+and `reviewCount` are recomputed in the same transaction as the write, so the venue card and the
+review list can never disagree.
+
+Customers leave reviews from **My bookings**, where the prompt appears only on bookings that are
+actually eligible.
+
+## Emails
+
+Two kinds, both gated on SMTP being configured:
+
+- Verification and password-reset codes (`VerificationDeliveryService`).
+- Booking receipts and approve/reject/cancel notices (`BookingNotificationService`), controlled by
+  `NOTIFICATION_EMAIL_ENABLED`, which defaults to `VERIFICATION_EMAIL_ENABLED`.
+
+Booking emails are sent asynchronously and only after the surrounding transaction commits, so a
+mail outage can never roll back a settled payment and a rolled-back booking never generates a
+receipt. Failures are logged, never propagated.
+
+## Build and CI
+
+`.github/workflows/ci.yml` runs `mvn -B verify` and the frontend's typecheck, unit tests and build
+on every push and pull request. `backend/Dockerfile` is a multi-stage build that produces a
+JRE-only runtime image running as a non-root user.
 
 ## Authorization
 
