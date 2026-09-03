@@ -28,6 +28,7 @@ const AdminFutsals = lazy(() => import('./pages/admin/AdminFutsals').then((m) =>
 const AdminSlots = lazy(() => import('./pages/admin/AdminSlots').then((m) => ({ default: m.AdminSlots })));
 const AdminBookings = lazy(() => import('./pages/admin/AdminBookings').then((m) => ({ default: m.AdminBookings })));
 const AdminUsers = lazy(() => import('./pages/admin/AdminUsers').then((m) => ({ default: m.AdminUsers })));
+const AdminRefunds = lazy(() => import('./pages/admin/AdminRefunds').then((m) => ({ default: m.AdminRefunds })));
 
 export default function App() {
   return (
@@ -60,6 +61,7 @@ export default function App() {
               <Route path="/admin/slots" element={<AdminSlots />} />
               <Route path="/admin/bookings" element={<AdminBookings />} />
               <Route path="/admin/users" element={<AdminUsers />} />
+              <Route path="/admin/refunds" element={<AdminRefunds />} />
             </Route>
           </Route>
           <Route path="*" element={<NotFound />} />
@@ -86,7 +88,8 @@ const ROUTE_TITLES: ReadonlyArray<readonly [string, string]> = [
   ['/admin/futsals', 'Venues · Admin'],
   ['/admin/slots', 'Schedule · Admin'],
   ['/admin/bookings', 'Bookings · Admin'],
-  ['/admin/users', 'Users · Admin']
+  ['/admin/users', 'Users · Admin'],
+  ['/admin/refunds', 'Refunds · Admin']
 ];
 
 function RouteTitle() {

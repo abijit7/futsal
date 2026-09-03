@@ -1,4 +1,4 @@
-import { ArrowLeft, CalendarDays, Clock3, LayoutDashboard, MapPin, Users } from 'lucide-react';
+import { ArrowLeft, CalendarDays, Clock3, LayoutDashboard, MapPin, Users, Banknote } from 'lucide-react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { Navbar } from './Navbar';
 import { SiteFooter } from './SiteFooter';
@@ -29,7 +29,8 @@ export function AdminLayout() {
     { label: 'Futsals', path: '/admin/futsals', icon: <MapPin size={17} /> },
     { label: 'Slots', path: '/admin/slots', icon: <CalendarDays size={17} /> },
     { label: 'Bookings', path: '/admin/bookings', icon: <Clock3 size={17} /> },
-    { label: 'Users', path: '/admin/users', icon: <Users size={17} /> }
+    { label: 'Users', path: '/admin/users', icon: <Users size={17} /> },
+    { label: 'Refunds', path: '/admin/refunds', icon: <Banknote size={17} /> }
   ];
 
   return (

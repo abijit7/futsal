@@ -145,6 +145,9 @@ public class SecurityConfig {
                         // Admin-only administration
                         .requestMatchers(HttpMethod.GET, "/api/users").access(SecurityConfig::isAdminRequest)
                         .requestMatchers(HttpMethod.DELETE, "/api/users/**").access(SecurityConfig::isAdminRequest)
+                        // Refunds are an operator worklist over other people's money.
+                        .requestMatchers(HttpMethod.GET, "/api/payments/refunds").access(SecurityConfig::isAdminRequest)
+                        .requestMatchers(HttpMethod.POST, "/api/payments/refunds/**").access(SecurityConfig::isAdminRequest)
                         .requestMatchers(HttpMethod.GET, "/api/bookings").access(SecurityConfig::isAdminRequest)
                         .requestMatchers(HttpMethod.DELETE, "/api/bookings/**").access(SecurityConfig::isAdminRequest)
                         .requestMatchers(HttpMethod.POST, "/api/futsals").access(SecurityConfig::isAdminRequest)

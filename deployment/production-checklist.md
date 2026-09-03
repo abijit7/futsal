@@ -51,7 +51,8 @@ sh deployment/apply-db-migrations.sh
 - `V1__baseline_schema.sql` is generated from the JPA entities, so its column types match what
   `validate` expects. Regenerate it rather than hand-editing when entities change.
 - Every migration is idempotent, so re-running is safe.
-- `V5__reviews.sql` adds the `reviews` table. Without it the app will not start under
+- `V5__reviews.sql` adds the `reviews` table and `V6__refund_tracking.sql` widens the payment
+  status enum and adds the refund columns. Without either, the app will not start under
   `ddl-auto=validate`.
 - Back up before applying to an existing database.
 - Keep `JPA_DDL_AUTO=validate` in production.
@@ -157,6 +158,14 @@ Application:
 - Watch the logs for `PAYMENT NEEDS REVIEW` — it marks a held slot that eSewa could not resolve and
   that needs a human.
 - Cancel a booking, then book the same slot again — this must succeed.
+- Cancel a **paid** booking and confirm the refund appears at `/admin/refunds` with the gateway
+  reference, and that the customer receives the "refund being processed" email.
+- Cancel an **unpaid** and a **cash** booking and confirm neither creates a refund.
+- As a customer, attempt to cancel a booking starting within `BOOKING_CANCELLATION_CUTOFF_HOURS`;
+  it must be refused. The same cancellation as an admin must succeed.
+- After issuing a real refund in the eSewa merchant dashboard, confirm the sweep marks it
+  `REFUNDED` on its own within `REFUND_SWEEP_INTERVAL_MS` and emails the customer. **This is the
+  one refund path that cannot be tested without a merchant account — check it first after go-live.**
 - Admin: create/update a venue, upload images, generate slots, approve/cancel/delete a booking.
 - Deep-link straight to `/venues/1` and hard-refresh.
 - Upload a venue image, restart the App Service, confirm the image still loads over `https://`.

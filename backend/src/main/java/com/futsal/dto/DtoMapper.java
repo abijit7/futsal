@@ -4,6 +4,7 @@ import com.futsal.model.Booking;
 import com.futsal.model.BookingStatusHistory;
 import com.futsal.model.Futsal;
 import com.futsal.model.FutsalImage;
+import com.futsal.model.PaymentTransaction;
 import com.futsal.model.Review;
 import com.futsal.model.TimeSlot;
 import com.futsal.model.TimeSlotStatusHistory;
@@ -175,6 +176,37 @@ public class DtoMapper {
         dto.setTimeSlot(toTimeSlotSummary(booking.getTimeSlot()));
         if (booking.getStatusHistory() != null) {
             dto.setStatusHistory(booking.getStatusHistory().stream().map(DtoMapper::toBookingStatusHistoryResponse).toList());
+        }
+        return dto;
+    }
+
+    public static RefundResponse toRefundResponse(PaymentTransaction transaction, java.time.LocalDateTime now) {
+        if (transaction == null) {
+            return null;
+        }
+        RefundResponse dto = new RefundResponse();
+        dto.setTransactionId(transaction.getTransactionId());
+        dto.setAmount(transaction.getAmount());
+        dto.setCurrency(transaction.getCurrency());
+        dto.setGatewayReference(transaction.getGatewayTransactionId());
+        dto.setReason(transaction.getRefundReason());
+        dto.setRequestedBy(transaction.getRefundRequestedBy());
+        dto.setRefundDueAt(transaction.getRefundDueAt());
+        if (transaction.getRefundDueAt() != null && now != null) {
+            dto.setOutstandingHours(
+                    java.time.Duration.between(transaction.getRefundDueAt(), now).toHours());
+        }
+
+        Booking booking = transaction.getBooking();
+        if (booking != null) {
+            dto.setBookingId(booking.getBookingId());
+            if (booking.getUser() != null) {
+                dto.setCustomerName(booking.getUser().getName());
+                dto.setCustomerEmail(booking.getUser().getEmail());
+            }
+            if (booking.getTimeSlot() != null && booking.getTimeSlot().getFutsal() != null) {
+                dto.setVenueName(booking.getTimeSlot().getFutsal().getName());
+            }
         }
         return dto;
     }

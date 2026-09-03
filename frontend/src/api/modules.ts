@@ -1,5 +1,5 @@
 import { api, query } from './client';
-import type { Booking, BookingStatus, Futsal, FutsalPayload, PagedResponse, PaymentInitiation, PaymentMethod, PaymentVerification, Review, ReviewPayload, SlotGenerationPayload, SlotGenerationResponse, TimeSlot, TimeSlotPayload, User, VerificationIssueResponse } from '../types/api';
+import type { Booking, BookingStatus, Futsal, FutsalPayload, PagedResponse, PaymentInitiation, PaymentMethod, PaymentVerification, Refund, Review, ReviewPayload, SlotGenerationPayload, SlotGenerationResponse, TimeSlot, TimeSlotPayload, User, VerificationIssueResponse } from '../types/api';
 
 export const authApi = {
   login: (payload: Pick<User, 'email'> & { password: string }) =>
@@ -97,6 +97,20 @@ export const reviewApi = {
   /** Booking ids this user has already reviewed, so the prompt can be hidden for them. */
   reviewedBookings: (userId: number) =>
     api.get<number[]>(`/users/${userId}/reviewed-bookings`).then((res) => res.data)
+};
+
+export const refundApi = {
+  /** Refunds owed to customers, oldest first. Admin only. */
+  outstanding: (page = 0, size = 20) =>
+    api.get<PagedResponse<Refund>>(`/payments/refunds?${query({ page, size })}`).then((res) => res.data),
+
+  /**
+   * Marks a refund as issued. Only needed when eSewa cannot confirm it itself - cash handed back,
+   * a bank transfer, or a partial refund settled by agreement. The scheduled sweep closes out
+   * ordinary dashboard refunds without anyone clicking anything.
+   */
+  confirm: (transactionId: number, reference?: string) =>
+    api.post<Refund>(`/payments/refunds/${transactionId}/confirm?${query({ reference })}`).then((res) => res.data)
 };
 
 export const paymentApi = {

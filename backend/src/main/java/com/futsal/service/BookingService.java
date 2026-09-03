@@ -13,6 +13,7 @@ import com.futsal.repository.BookingRepository;
 import com.futsal.repository.TimeSlotRepository;
 import com.futsal.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.domain.PageRequest;
@@ -23,6 +24,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -44,6 +46,23 @@ public class BookingService {
 
     @Autowired(required = false)
     private BookingNotificationService bookingNotificationService;
+
+    @Autowired(required = false)
+    private RefundService refundService;
+
+    /**
+     * Optional so the existing unit tests can construct this service without a Spring context;
+     * {@link #now()} falls back to the system clock when it is absent.
+     */
+    @Autowired(required = false)
+    private Clock clock;
+
+    /**
+     * How close to the slot a customer may still cancel it themselves. Admins are not subject to
+     * this: an operator must always be able to cancel, for example when a court floods.
+     */
+    @Value("${app.booking.cancellation-cutoff-hours:24}")
+    private int cancellationCutoffHours;
 
     // ── Create a new booking after payment confirmation ─────────────────────
     @Transactional
@@ -194,7 +213,55 @@ public class BookingService {
         booking.addStatusHistory(new BookingStatusHistory(booking, newStatus, changedBy, "Status updated"));
         Booking saved = bookingRepository.save(booking);
         notifyStatusChanged(saved, newStatus);
+        if (newStatus == BookingStatus.REJECTED || newStatus == BookingStatus.CANCELLED) {
+            markRefundIfPaid(saved, newStatus, changedBy);
+        }
         return saved;
+    }
+
+    /**
+     * Records that a cancelled or rejected booking owes a refund.
+     *
+     * <p>Safe to call unconditionally: RefundService ignores anything that did not settle through a
+     * gateway. That matters because PaymentGatewayService.releaseHold cancels abandoned checkouts
+     * through this very method, and those must not produce a refund for money never taken.
+     */
+    private void markRefundIfPaid(Booking booking, BookingStatus newStatus, String changedBy) {
+        if (refundService == null) {
+            return;
+        }
+        String reason = newStatus == BookingStatus.CANCELLED
+                ? "Booking cancelled"
+                : "Booking rejected by the venue";
+        refundService.markRefundDue(booking, reason, changedBy);
+    }
+
+    /**
+     * Cancels a booking on behalf of its owner, subject to the cancellation window.
+     *
+     * <p>Separate from {@link #updateStatus} so the window applies only to customers. The
+     * controller decides which of the two to call based on who is authenticated.
+     */
+    @Transactional
+    public Booking cancelAsCustomer(Long bookingId, String changedBy) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new NotFoundException("Booking not found"));
+
+        TimeSlot slot = booking.getTimeSlot();
+        if (slot != null && slot.getSlotDate() != null && slot.getStartTime() != null) {
+            LocalDateTime startsAt = LocalDateTime.of(slot.getSlotDate(), slot.getStartTime());
+            LocalDateTime cutoff = now().plusHours(cancellationCutoffHours);
+            if (startsAt.isBefore(cutoff)) {
+                throw new ConflictException(
+                        "This booking starts within " + cancellationCutoffHours + " hours and can no "
+                                + "longer be cancelled online. Please contact the venue.");
+            }
+        }
+        return updateStatus(bookingId, BookingStatus.CANCELLED, changedBy);
+    }
+
+    private LocalDateTime now() {
+        return clock == null ? LocalDateTime.now() : LocalDateTime.now(clock);
     }
 
     /**

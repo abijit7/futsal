@@ -91,7 +91,12 @@ public class BookingController {
         }
 
         String actor = securityAuth.actorFor(booking.getUser().getUserId());
-        Booking updated = bookingService.updateStatus(id, status, actor);
+
+        // A customer cancelling their own booking is subject to the cancellation window; an admin
+        // is not, because an operator must always be able to cancel - a flooded court, say.
+        Booking updated = (status == BookingStatus.CANCELLED && !securityAuth.isAdmin())
+                ? bookingService.cancelAsCustomer(id, actor)
+                : bookingService.updateStatus(id, status, actor);
         return ResponseEntity.ok(DtoMapper.toBookingResponse(updated));
     }
 

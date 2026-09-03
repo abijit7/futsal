@@ -64,10 +64,13 @@ class PaymentReconciliationTest {
         RestClient.Builder builder = RestClient.builder();
         gateway = MockRestServiceServer.bindTo(builder).build();
 
+        // The status call now lives in EsewaStatusClient, shared with the refund sweep.
+        EsewaStatusClient statusClient = new EsewaStatusClient(builder.build());
+        ReflectionTestUtils.setField(statusClient, "esewaMerchantCode", "EPAYTEST");
+        ReflectionTestUtils.setField(statusClient, "esewaStatusUrl", STATUS_URL);
+
         service = new PaymentGatewayService(
-                transactionRepository, null, bookingService, null, clock, null, null, null, builder.build());
-        ReflectionTestUtils.setField(service, "esewaMerchantCode", "EPAYTEST");
-        ReflectionTestUtils.setField(service, "esewaStatusUrl", STATUS_URL);
+                transactionRepository, null, bookingService, null, clock, null, null, null, statusClient);
         ReflectionTestUtils.setField(service, "holdMinutes", 60);
 
         Booking booking = new Booking();

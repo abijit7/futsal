@@ -78,12 +78,14 @@ public class BookingNotificationService {
             case REJECTED -> {
                 subject = "Booking rejected — " + booking.venueName();
                 intro = "The venue could not accept this booking.";
-                footer = "Any payment taken will be settled with you by the venue directly.";
+                footer = "If you had already paid, a refund is being arranged and you will "
+                        + "receive a separate email confirming it.";
             }
             case CANCELLED -> {
                 subject = "Booking cancelled — " + booking.venueName();
                 intro = "This booking has been cancelled and the slot released.";
-                footer = "Any payment taken will be settled with you by the venue directly.";
+                footer = "If you had already paid, a refund is being arranged and you will "
+                        + "receive a separate email confirming it.";
             }
             // A booking only re-enters PENDING on creation, which sendBookingConfirmed covers.
             default -> {
@@ -91,6 +93,32 @@ public class BookingNotificationService {
             }
         }
         send(booking, subject, intro, footer);
+    }
+
+    /** Sent when a paid booking is cancelled, so the customer knows money is coming back. */
+    @Async
+    public void sendRefundDue(BookingNotification booking, java.math.BigDecimal amount) {
+        if (booking == null) {
+            return;
+        }
+        send(booking,
+                "Refund being processed — " + booking.venueName(),
+                "Your booking was cancelled and the payment you made is being refunded.",
+                "Refunds are returned to the eSewa account used for the original payment and "
+                        + "usually take a few working days. We will email you once it is complete.");
+    }
+
+    /** Sent once the refund has actually been issued. */
+    @Async
+    public void sendRefundCompleted(BookingNotification booking, java.math.BigDecimal amount) {
+        if (booking == null) {
+            return;
+        }
+        send(booking,
+                "Refund completed — " + booking.venueName(),
+                "Your refund has been issued and is on its way back to your eSewa account.",
+                "If it has not appeared within a few working days, reply to this email and we "
+                        + "will look into it.");
     }
 
     private void send(BookingNotification booking, String subject, String intro, String footer) {

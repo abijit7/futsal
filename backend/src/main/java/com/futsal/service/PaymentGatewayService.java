@@ -3,7 +3,6 @@ package com.futsal.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.futsal.dto.DtoMapper;
-import com.futsal.error.ApiServerException;
 import com.futsal.dto.PaymentInitiationRequest;
 import com.futsal.dto.PaymentInitiationResponse;
 import com.futsal.dto.PaymentVerifyRequest;
@@ -27,8 +26,6 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
-import org.springframework.web.client.RestClient;
-import org.springframework.web.util.UriComponentsBuilder;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -75,8 +72,8 @@ public class PaymentGatewayService {
     private final ObjectMapper objectMapper;
     private final Clock clock;
     private final SecurityAuth securityAuth;
-    /** Carries the gateway timeouts; see {@code GatewayHttpConfig}. */
-    private final RestClient restClient;
+    /** eSewa's status API, shared with the refund sweep; see {@code EsewaStatusClient}. */
+    private final EsewaStatusClient esewaStatusClient;
 
     @Value("${payment.esewa.merchant.code}")
     private String esewaMerchantCode;
@@ -87,8 +84,6 @@ public class PaymentGatewayService {
     @Value("${payment.esewa.form-url}")
     private String esewaFormUrl;
 
-    @Value("${payment.esewa.status-url}")
-    private String esewaStatusUrl;
 
     private final BookingNotificationService bookingNotificationService;
     private final PlatformTransactionManager transactionManager;
@@ -108,7 +103,7 @@ public class PaymentGatewayService {
             SecurityAuth securityAuth,
             BookingNotificationService bookingNotificationService,
             PlatformTransactionManager transactionManager,
-            RestClient gatewayRestClient
+            EsewaStatusClient esewaStatusClient
     ) {
         this.paymentTransactionRepository = paymentTransactionRepository;
         this.timeSlotRepository = timeSlotRepository;
@@ -118,7 +113,7 @@ public class PaymentGatewayService {
         this.securityAuth = securityAuth;
         this.bookingNotificationService = bookingNotificationService;
         this.transactionManager = transactionManager;
-        this.restClient = gatewayRestClient;
+        this.esewaStatusClient = esewaStatusClient;
     }
 
     /**
@@ -256,7 +251,7 @@ public class PaymentGatewayService {
         // 2. A valid signature only proves the blob came from eSewa, not that it is current.
         //    The status API is authoritative.
         String totalAmount = formatAmount(transaction.getAmount());
-        JsonNode status = esewaStatus(transactionUuid, totalAmount);
+        JsonNode status = esewaStatusClient.fetch(transactionUuid, totalAmount);
         if (!"COMPLETE".equalsIgnoreCase(text(status, "status"))) {
             return fail(transaction, "eSewa reports the payment as " + text(status, "status"));
         }
@@ -412,7 +407,7 @@ public class PaymentGatewayService {
 
         JsonNode status;
         try {
-            status = esewaStatus(transaction.getIdempotencyKey(), formatAmount(transaction.getAmount()));
+            status = esewaStatusClient.fetch(transaction.getIdempotencyKey(), formatAmount(transaction.getAmount()));
         } catch (RuntimeException ex) {
             // Unreachable is not the same as unpaid. Keep the hold and try again next sweep.
             log.warn("eSewa unreachable while reconciling transactionId={}; keeping the hold", transactionId);
@@ -498,24 +493,6 @@ public class PaymentGatewayService {
     }
 
     // ── Gateway calls ─────────────────────────────────────────────────────────
-
-    private JsonNode esewaStatus(String transactionUuid, String totalAmount) {
-        String uri = UriComponentsBuilder.fromUriString(esewaStatusUrl)
-                .queryParam("product_code", esewaMerchantCode)
-                .queryParam("total_amount", totalAmount)
-                .queryParam("transaction_uuid", transactionUuid)
-                .toUriString();
-        try {
-            return restClient.get().uri(uri).retrieve().body(JsonNode.class);
-        } catch (RuntimeException ex) {
-            // Log the full exception and the URL that was called. A misconfigured status host used
-            // to surface only as "Unexpected server error", which gave no way to tell a bad URL
-            // from a genuine eSewa outage. The URL carries no secrets.
-            log.error("eSewa status check failed for transaction_uuid={} against {}", transactionUuid, uri, ex);
-            throw new ApiServerException(
-                    "Could not reach eSewa to confirm this payment. Please try again shortly.", ex);
-        }
-    }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 

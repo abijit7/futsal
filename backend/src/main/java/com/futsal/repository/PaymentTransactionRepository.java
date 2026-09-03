@@ -3,6 +3,8 @@ package com.futsal.repository;
 import com.futsal.model.Booking;
 import com.futsal.model.PaymentTransaction;
 import com.futsal.model.enums.PaymentStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
@@ -31,4 +33,10 @@ public interface PaymentTransactionRepository extends JpaRepository<PaymentTrans
 
     /** Abandoned checkouts: still PENDING after the gateway's payment link has expired. */
     List<PaymentTransaction> findByStatusAndCreatedAtBefore(PaymentStatus status, LocalDateTime cutoff);
+
+    /** Drives the refund reconciliation sweep. */
+    List<PaymentTransaction> findByStatus(PaymentStatus status);
+
+    /** Drives the admin refund queue: longest-outstanding first. */
+    Page<PaymentTransaction> findByStatusOrderByRefundDueAtAsc(PaymentStatus status, Pageable pageable);
 }

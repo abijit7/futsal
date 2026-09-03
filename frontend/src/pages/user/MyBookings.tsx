@@ -196,7 +196,7 @@ export function MyBookings() {
                       <Star size={16} /> Leave a review
                     </Button>
                   )}
-                  {canCancel(booking.status) && (
+                  {canCancel(booking) && (
                     <Button type="button" variant="outline" size="sm" onClick={() => setCancelTarget(booking)}>
                       <XCircle size={16} /> Cancel booking
                     </Button>
@@ -235,6 +235,12 @@ export function MyBookings() {
           <p className="mt-3 text-sm font-semibold leading-6 text-slate-500">
             The slot is released back to other players. This cannot be undone.
           </p>
+          {cancelTarget.paidAt && (
+            <p className="mt-3 rounded-2xl bg-slate-100 p-3 text-sm font-semibold leading-6 text-slate-600">
+              You paid for this booking, so a refund will be arranged and returned to your eSewa
+              account. We will email you once it is complete.
+            </p>
+          )}
         </ModalShell>
       )}
       {reviewTarget && (
@@ -276,8 +282,16 @@ export function MyBookings() {
   );
 }
 
-function canCancel(status: BookingStatus) {
-  return status === 'PENDING' || status === 'APPROVED';
+/** Hours before the slot after which a customer can no longer cancel online. Mirrors
+ *  app.booking.cancellation-cutoff-hours on the server, which is the authority. */
+const CANCELLATION_CUTOFF_HOURS = 24;
+
+function canCancel(booking: Booking) {
+  if (booking.status !== 'PENDING' && booking.status !== 'APPROVED') return false;
+  const { slotDate, startTime } = booking.timeSlot ?? {};
+  if (!slotDate || !startTime) return true;
+  const startsAt = new Date(`${slotDate}T${startTime}`).getTime();
+  return startsAt - Date.now() > CANCELLATION_CUTOFF_HOURS * 60 * 60 * 1000;
 }
 
 /**

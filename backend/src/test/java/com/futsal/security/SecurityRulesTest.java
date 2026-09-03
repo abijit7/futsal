@@ -13,6 +13,7 @@ import com.futsal.repository.UserRepository;
 import com.futsal.service.BookingService;
 import com.futsal.service.FutsalService;
 import com.futsal.service.PaymentGatewayService;
+import com.futsal.service.RefundService;
 import com.futsal.service.ReviewService;
 import com.futsal.service.TimeSlotService;
 import com.futsal.service.UserService;
@@ -82,6 +83,8 @@ class SecurityRulesTest {
     @MockBean private VerificationService verificationService;
     @MockBean private PaymentGatewayService paymentGatewayService;
     @MockBean private ReviewService reviewService;
+    @MockBean private RefundService refundService;
+    @MockBean private java.time.Clock clock;
 
     private String adminToken;
     private String userToken;
@@ -117,6 +120,8 @@ class SecurityRulesTest {
             "DELETE, /api/users/9",
             "GET,    /api/bookings",
             "DELETE, /api/bookings/9",
+            "GET,    /api/payments/refunds",
+            "POST,   /api/payments/refunds/9/confirm",
             "POST,   /api/futsals",
             "PUT,    /api/futsals/9",
             "DELETE, /api/futsals/9",

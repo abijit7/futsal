@@ -48,6 +48,27 @@ public class PaymentTransaction {
     @Column(length = 100, unique = true)
     private String idempotencyKey;
 
+    // ── Refund tracking ──────────────────────────────────────────────────────
+    // Deliberately separate from completedAt / gatewayResponse / failureReason: those hold
+    // settlement evidence for the original payment and must survive a later refund.
+
+    /** When the refund became owed, i.e. when the paid booking was cancelled or rejected. */
+    private LocalDateTime refundDueAt;
+
+    @Column(length = 500)
+    private String refundReason;
+
+    /** Actor who caused the refund to be owed, in the same form as booking history: "admin" or "user:{id}". */
+    @Column(length = 60)
+    private String refundRequestedBy;
+
+    /** When the refund was confirmed, either by eSewa reporting FULL_REFUND or by an admin. */
+    private LocalDateTime refundedAt;
+
+    /** Gateway or manual reference for the refund itself, distinct from the original payment reference. */
+    @Column(length = 100)
+    private String refundReference;
+
     // ── Constructors ──────────────────────────────────────────
     public PaymentTransaction() {}
 
@@ -94,4 +115,19 @@ public class PaymentTransaction {
 
     public String getIdempotencyKey() { return idempotencyKey; }
     public void setIdempotencyKey(String idempotencyKey) { this.idempotencyKey = idempotencyKey; }
+
+    public LocalDateTime getRefundDueAt()                    { return refundDueAt; }
+    public void setRefundDueAt(LocalDateTime refundDueAt)    { this.refundDueAt = refundDueAt; }
+
+    public String getRefundReason()                          { return refundReason; }
+    public void setRefundReason(String refundReason)         { this.refundReason = refundReason; }
+
+    public String getRefundRequestedBy()                             { return refundRequestedBy; }
+    public void setRefundRequestedBy(String refundRequestedBy)       { this.refundRequestedBy = refundRequestedBy; }
+
+    public LocalDateTime getRefundedAt()                     { return refundedAt; }
+    public void setRefundedAt(LocalDateTime refundedAt)      { this.refundedAt = refundedAt; }
+
+    public String getRefundReference()                       { return refundReference; }
+    public void setRefundReference(String refundReference)   { this.refundReference = refundReference; }
 }

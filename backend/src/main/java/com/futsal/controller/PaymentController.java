@@ -5,18 +5,25 @@ import com.futsal.dto.PaymentConfirmRequest;
 import com.futsal.dto.PaymentInitiationRequest;
 import com.futsal.dto.PaymentInitiationResponse;
 import com.futsal.dto.PaymentVerifyRequest;
+import com.futsal.dto.PagedResponse;
 import com.futsal.dto.PaymentVerifyResponse;
+import com.futsal.dto.RefundResponse;
 import com.futsal.model.Booking;
 import com.futsal.model.enums.PaymentMethod;
 import com.futsal.security.SecurityAuth;
 import com.futsal.service.BookingService;
 import com.futsal.service.PaymentGatewayService;
+import com.futsal.service.RefundService;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -25,14 +32,58 @@ public class PaymentController {
 
     private final BookingService bookingService;
     private final PaymentGatewayService paymentGatewayService;
+    private final RefundService refundService;
     private final SecurityAuth securityAuth;
+    private final java.time.Clock clock;
 
     public PaymentController(BookingService bookingService,
                              PaymentGatewayService paymentGatewayService,
-                             SecurityAuth securityAuth) {
+                             RefundService refundService,
+                             SecurityAuth securityAuth,
+                             java.time.Clock clock) {
         this.bookingService = bookingService;
         this.paymentGatewayService = paymentGatewayService;
+        this.refundService = refundService;
         this.securityAuth = securityAuth;
+        this.clock = clock;
+    }
+
+    // ── Refunds (admin) ───────────────────────────────────────────────────────
+
+    /**
+     * Refunds owed to customers, oldest first.
+     *
+     * <p>eSewa has no merchant refund API, so this is a worklist rather than an action queue: the
+     * operator issues each refund in the eSewa merchant dashboard using the gateway reference shown
+     * here, and the scheduled sweep marks it refunded once eSewa reports it.
+     */
+    @GetMapping("/refunds")
+    public ResponseEntity<PagedResponse<RefundResponse>> outstandingRefunds(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        securityAuth.requireAdmin();
+        Pageable pageable = PageRequestFactory.create(page, size);
+        java.time.LocalDateTime now = java.time.LocalDateTime.now(clock);
+        Page<RefundResponse> result = refundService.outstandingRefunds(pageable)
+                .map(transaction -> DtoMapper.toRefundResponse(transaction, now));
+        return ResponseEntity.ok(PagedResponse.fromPage(result));
+    }
+
+    /**
+     * Marks a refund as issued when eSewa cannot confirm it - cash handed back, a bank transfer, or
+     * a partial refund settled by agreement.
+     */
+    @PostMapping("/refunds/{transactionId}/confirm")
+    public ResponseEntity<RefundResponse> confirmRefund(
+            @PathVariable Long transactionId,
+            @RequestParam(required = false) String reference
+    ) {
+        securityAuth.requireAdmin();
+        String actor = securityAuth.currentUser().email();
+        return ResponseEntity.ok(DtoMapper.toRefundResponse(
+                refundService.confirmManually(transactionId, reference, actor),
+                java.time.LocalDateTime.now(clock)));
     }
 
     /**

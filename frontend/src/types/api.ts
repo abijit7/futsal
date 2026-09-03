@@ -118,7 +118,31 @@ export type SlotGenerationResponse = {
   skippedBlocked: number;
 };
 
-export type PaymentStatus = 'PENDING' | 'COMPLETED' | 'FAILED' | 'REFUNDED' | 'CANCELLED';
+// REFUND_PENDING means money was taken and is owed back but nobody has issued the refund yet.
+// eSewa has no merchant refund API, so that gap is worked by hand in their dashboard.
+export type PaymentStatus =
+  | 'PENDING'
+  | 'COMPLETED'
+  | 'FAILED'
+  | 'REFUND_PENDING'
+  | 'REFUNDED'
+  | 'CANCELLED';
+
+export type Refund = {
+  transactionId: number;
+  bookingId: number;
+  amount: number;
+  currency?: string;
+  customerName?: string;
+  customerEmail?: string;
+  venueName?: string;
+  /** Paste this into the eSewa merchant dashboard to find the original payment. */
+  gatewayReference?: string;
+  reason?: string;
+  requestedBy?: string;
+  refundDueAt?: string;
+  outstandingHours: number;
+};
 
 /**
  * How the browser continues a payment. eSewa needs an auto-submitted form POST

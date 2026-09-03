@@ -91,6 +91,34 @@ The rule is that a hold is released only on a positive "no money was taken" answ
 slot is far cheaper than taking money without giving a booking. Each transaction is reconciled in
 its own transaction, so one bad row cannot roll back the batch.
 
+## Refunds
+
+eSewa exposes **no merchant refund API** — their documentation states that only eSewa initiates
+refunds and that merchants cannot trigger them programmatically. Money is therefore returned from
+the merchant dashboard at `merchant.esewa.com.np`, and this system cannot change that. What it does
+is remove every other manual step.
+
+Cancelling or rejecting a **paid** booking moves its transaction to `REFUND_PENDING` and records
+the reason and the actor (`RefundService.markRefundDue`). The refund then appears in the admin
+queue at `/admin/refunds` with the gateway reference to paste into the dashboard. A scheduled sweep
+polls eSewa and closes it out on its own:
+
+| eSewa reports | Outcome |
+|---|---|
+| `FULL_REFUND` | Marked `REFUNDED`, `refunded_at` stamped, customer emailed |
+| `PARTIAL_REFUND` | Kept open and logged `REFUND NEEDS REVIEW` — the policy is full refunds only |
+| `COMPLETE` | Still owed; logged `REFUND OVERDUE` past `app.refund.overdue-hours` |
+| unreachable / anything else | Kept open and retried next sweep |
+
+Two guards matter. A refund is recorded **only** when the transaction is `COMPLETED` and was not
+cash — an abandoned checkout is `PENDING`, so `PaymentGatewayService.releaseHold` cancelling it
+through the same path cannot create a phantom refund. And `RefundService` depends on neither
+`BookingService` nor `PaymentGatewayService`, because the latter already depends on the former and
+a refund service in the middle would close the cycle.
+
+Customers may self-cancel only up to `app.booking.cancellation-cutoff-hours` (default 24) before
+the slot; admins are never subject to that window.
+
 ## Reviews
 
 Venue ratings come from `reviews`, added in `V5__reviews.sql`. A review is only accepted when the
