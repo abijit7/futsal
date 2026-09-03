@@ -23,8 +23,10 @@ password from history.
 Verify with:
 
 ```sh
-git log --all -S 'Aabbiijjiitt112233' --oneline   # must print nothing
-git ls-files | grep -E '\.idea|\.DS_Store'        # must print nothing
+# Substitute the old password for PLACEHOLDER when running this. It is deliberately not written
+# out here: reproducing the literal in a tracked file is how it would get committed again.
+git log --all -S 'PLACEHOLDER' --oneline    # must print nothing
+git ls-files | grep -E '\.idea|\.DS_Store'  # must print nothing
 ```
 
 The eSewa UAT key in `application.properties` is a published sandbox credential and is fine to
