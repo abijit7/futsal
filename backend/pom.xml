@@ -85,6 +85,17 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+
+        <!--
+            In-memory database for the repository tests. Every other test mocks its repositories,
+            which means a malformed @Query cannot fail the build: JPQL is only parsed when the JPA
+            layer boots. That let a broken query reach a running application past a green suite.
+        -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>

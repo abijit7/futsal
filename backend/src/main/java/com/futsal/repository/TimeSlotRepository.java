@@ -85,7 +85,7 @@ public interface TimeSlotRepository extends JpaRepository<TimeSlot, Long> {
 
     Page<TimeSlot> findBySlotDateOrderBySlotDateAscStartTimeAsc(LocalDate date, Pageable pageable);
 
-    @Query("select s from TimeSlot s where s.available = true and s.slotDate >= :today and (s.slotDate > :today or s.startTime >= :minStartTime) and s.endTime <= :closingTime")
+    @Query("select s from TimeSlot s where s.available = true and s.slotDate >= :today and (s.slotDate > :today or s.startTime >= :minStartTime) and s.endTime <= coalesce(:closingTime, s.endTime)")
     Page<TimeSlot> findAvailableAfter(
             @Param("today") LocalDate today,
             @Param("minStartTime") LocalTime minStartTime,
@@ -93,7 +93,7 @@ public interface TimeSlotRepository extends JpaRepository<TimeSlot, Long> {
             Pageable pageable
     );
 
-    @Query("select s from TimeSlot s where s.futsal.futsalId = :futsalId and s.available = true and s.slotDate >= :today and (s.slotDate > :today or s.startTime >= :minStartTime) and s.endTime <= :closingTime")
+    @Query("select s from TimeSlot s where s.futsal.futsalId = :futsalId and s.available = true and s.slotDate >= :today and (s.slotDate > :today or s.startTime >= :minStartTime) and s.endTime <= coalesce(:closingTime, s.endTime)")
     Page<TimeSlot> findAvailableForFutsalAfter(
             @Param("futsalId") Long futsalId,
             @Param("today") LocalDate today,
@@ -102,7 +102,7 @@ public interface TimeSlotRepository extends JpaRepository<TimeSlot, Long> {
             Pageable pageable
     );
 
-    @Query("select s from TimeSlot s where s.available = true and s.slotDate = :slotDate and s.endTime <= :closingTime and (:isToday = false or s.startTime >= :minStartTime)")
+    @Query("select s from TimeSlot s where s.available = true and s.slotDate = :slotDate and s.endTime <= coalesce(:closingTime, s.endTime) and (:isToday = false or s.startTime >= :minStartTime)")
     Page<TimeSlot> findAvailableOnDate(
             @Param("slotDate") LocalDate slotDate,
             @Param("isToday") boolean isToday,
@@ -111,7 +111,7 @@ public interface TimeSlotRepository extends JpaRepository<TimeSlot, Long> {
             Pageable pageable
     );
 
-    @Query("select s from TimeSlot s where s.futsal.futsalId = :futsalId and s.available = true and s.slotDate = :slotDate and s.endTime <= :closingTime and (:isToday = false or s.startTime >= :minStartTime)")
+    @Query("select s from TimeSlot s where s.futsal.futsalId = :futsalId and s.available = true and s.slotDate = :slotDate and s.endTime <= coalesce(:closingTime, s.endTime) and (:isToday = false or s.startTime >= :minStartTime)")
     Page<TimeSlot> findAvailableForFutsalOnDate(
             @Param("futsalId") Long futsalId,
             @Param("slotDate") LocalDate slotDate,
@@ -121,7 +121,7 @@ public interface TimeSlotRepository extends JpaRepository<TimeSlot, Long> {
             Pageable pageable
     );
 
-    @Query("select s from TimeSlot s where s.slotDate >= :today and (s.slotDate > :today or s.startTime >= :minStartTime) and s.endTime <= :closingTime order by s.slotDate asc, s.startTime asc")
+    @Query("select s from TimeSlot s where s.slotDate >= :today and (s.slotDate > :today or s.startTime >= :minStartTime) and s.endTime <= coalesce(:closingTime, s.endTime) order by s.slotDate asc, s.startTime asc")
     Page<TimeSlot> findPublicAfter(
             @Param("today") LocalDate today,
             @Param("minStartTime") LocalTime minStartTime,
@@ -129,7 +129,7 @@ public interface TimeSlotRepository extends JpaRepository<TimeSlot, Long> {
             Pageable pageable
     );
 
-    @Query("select s from TimeSlot s where s.futsal.futsalId = :futsalId and s.slotDate >= :today and (s.slotDate > :today or s.startTime >= :minStartTime) and s.endTime <= :closingTime order by s.slotDate asc, s.startTime asc")
+    @Query("select s from TimeSlot s where s.futsal.futsalId = :futsalId and s.slotDate >= :today and (s.slotDate > :today or s.startTime >= :minStartTime) and s.endTime <= coalesce(:closingTime, s.endTime) order by s.slotDate asc, s.startTime asc")
     Page<TimeSlot> findPublicForFutsalAfter(
             @Param("futsalId") Long futsalId,
             @Param("today") LocalDate today,
@@ -138,7 +138,7 @@ public interface TimeSlotRepository extends JpaRepository<TimeSlot, Long> {
             Pageable pageable
     );
 
-    @Query("select s from TimeSlot s where s.slotDate = :slotDate and s.endTime <= :closingTime and (:isToday = false or s.startTime >= :minStartTime) order by s.startTime asc")
+    @Query("select s from TimeSlot s where s.slotDate = :slotDate and s.endTime <= coalesce(:closingTime, s.endTime) and (:isToday = false or s.startTime >= :minStartTime) order by s.startTime asc")
     Page<TimeSlot> findPublicOnDate(
             @Param("slotDate") LocalDate slotDate,
             @Param("isToday") boolean isToday,
@@ -147,7 +147,7 @@ public interface TimeSlotRepository extends JpaRepository<TimeSlot, Long> {
             Pageable pageable
     );
 
-    @Query("select s from TimeSlot s where s.futsal.futsalId = :futsalId and s.slotDate = :slotDate and s.endTime <= :closingTime and (:isToday = false or s.startTime >= :minStartTime) order by s.startTime asc")
+    @Query("select s from TimeSlot s where s.futsal.futsalId = :futsalId and s.slotDate = :slotDate and s.endTime <= coalesce(:closingTime, s.endTime) and (:isToday = false or s.startTime >= :minStartTime) order by s.startTime asc")
     Page<TimeSlot> findPublicForFutsalOnDate(
             @Param("futsalId") Long futsalId,
             @Param("slotDate") LocalDate slotDate,

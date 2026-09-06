@@ -28,7 +28,11 @@ import java.util.Set;
 @Service
 public class TimeSlotService {
 
-    private static final LocalTime NO_GLOBAL_CLOSING_FILTER = LocalTime.MAX;
+    // A null closing time means "no closing-time filter", which the queries test for explicitly.
+    // This used to be LocalTime.MAX as a sentinel, and every listing that omitted a futsalId came
+    // back empty because of it: 23:59:59.999999999 carries nanoseconds that a MySQL TIME column
+    // cannot hold, so the comparison never matched. A null has no value to round.
+    private static final LocalTime NO_CLOSING_TIME_FILTER = null;
 
     @Autowired
     private TimeSlotRepository timeSlotRepository;
@@ -70,12 +74,12 @@ public class TimeSlotService {
                     slotDate,
                     slotDate.equals(today),
                     minStartTime,
-                    NO_GLOBAL_CLOSING_FILTER,
+                    NO_CLOSING_TIME_FILTER,
                     pageable
             );
         }
 
-        return timeSlotRepository.findAvailableAfter(today, minStartTime, NO_GLOBAL_CLOSING_FILTER, pageable);
+        return timeSlotRepository.findAvailableAfter(today, minStartTime, NO_CLOSING_TIME_FILTER, pageable);
     }
 
     // ── Public slot grid: available + booked slots for users ──────────────────
@@ -106,12 +110,12 @@ public class TimeSlotService {
                     slotDate,
                     slotDate.equals(today),
                     minStartTime,
-                    NO_GLOBAL_CLOSING_FILTER,
+                    NO_CLOSING_TIME_FILTER,
                     pageable
             );
         }
 
-        return timeSlotRepository.findPublicAfter(today, minStartTime, NO_GLOBAL_CLOSING_FILTER, pageable);
+        return timeSlotRepository.findPublicAfter(today, minStartTime, NO_CLOSING_TIME_FILTER, pageable);
     }
 
     // ── Get all slots (admin view) ────────────────────────────────────────────
