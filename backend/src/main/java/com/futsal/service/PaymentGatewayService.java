@@ -301,11 +301,37 @@ public class PaymentGatewayService {
 
         Booking booking = bookingService.settleGatewayPayment(
                 transaction.getBooking().getBookingId(), reference);
+        booking = approveAfterPayment(booking);
 
         log.info("Payment confirmed: transactionId={}, reference={}", transaction.getTransactionId(), reference);
         notifyConfirmed(booking, transaction.getAmount());
         return new PaymentVerifyResponse(PaymentStatus.COMPLETED, "Payment confirmed.", reference,
                 DtoMapper.toBookingResponse(booking));
+    }
+
+    /**
+     * Confirms a booking whose payment has just settled.
+     *
+     * <p>Once the gateway has taken the money there is nothing left for a venue to decide, so making
+     * the customer wait on a manual approval only leaves them unsure whether they have a court.
+     *
+     * <p>Called through the injected {@code bookingService} proxy rather than from inside
+     * {@code settleGatewayPayment}, which would self-invoke {@code updateStatus} and bypass the
+     * proxy — the trap {@code DemoDataSeeder} documents.
+     *
+     * <p>Never throws. The money is already gone by this point, so a booking that cannot be approved
+     * must still produce a successful payment response; it stays PENDING for a human instead. That
+     * happens legitimately when the reconciliation sweep settles an abandoned checkout after the
+     * slot has already passed, which {@code updateStatus} refuses to approve.
+     */
+    private Booking approveAfterPayment(Booking booking) {
+        try {
+            return bookingService.updateStatus(booking.getBookingId(), BookingStatus.APPROVED, "payment");
+        } catch (RuntimeException ex) {
+            log.warn("Payment settled but bookingId={} could not be approved; leaving it for review",
+                    booking.getBookingId(), ex);
+            return booking;
+        }
     }
 
     private PaymentVerifyResponse fail(PaymentTransaction transaction, String reason) {

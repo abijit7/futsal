@@ -10,6 +10,8 @@ import com.futsal.model.User;
 import com.futsal.model.enums.BookingStatus;
 import com.futsal.model.enums.PaymentMethod;
 import com.futsal.repository.BookingRepository;
+import com.futsal.repository.PaymentTransactionRepository;
+import com.futsal.repository.ReviewRepository;
 import com.futsal.repository.TimeSlotRepository;
 import com.futsal.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,13 +29,22 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 
 @Service
 public class BookingService {
 
-    static final List<BookingStatus> CLOSED_STATUSES = List.of(BookingStatus.CANCELLED, BookingStatus.REJECTED);
+    /**
+     * Statuses that no longer hold their slot, so a new booking may take it.
+     *
+     * <p>EXPIRED belongs here for the same reason CANCELLED and REJECTED do: the expiry sweep
+     * releases the slot, and without this the slot would read as available while
+     * {@link #createPaidBooking} still refused it as already booked.
+     */
+    static final List<BookingStatus> CLOSED_STATUSES =
+            List.of(BookingStatus.CANCELLED, BookingStatus.REJECTED, BookingStatus.EXPIRED);
 
     @Autowired
     private BookingRepository bookingRepository;
@@ -51,6 +62,20 @@ public class BookingService {
     private RefundService refundService;
 
     /**
+     * Rows that point at a booking and must go with it. Optional for the same reason as the two
+     * above: the unit tests build this service with {@code new BookingService()}.
+     */
+    @Autowired(required = false)
+    private PaymentTransactionRepository paymentTransactionRepository;
+
+    @Autowired(required = false)
+    private ReviewRepository reviewRepository;
+
+    /** Only for rewriting a venue's rating after a review disappears with its booking. */
+    @Autowired(required = false)
+    private ReviewService reviewService;
+
+    /**
      * Optional so the existing unit tests can construct this service without a Spring context;
      * {@link #now()} falls back to the system clock when it is absent.
      */
@@ -63,6 +88,13 @@ public class BookingService {
      */
     @Value("${app.booking.cancellation-cutoff-hours:24}")
     private int cancellationCutoffHours;
+
+    /**
+     * How long before a slot starts an unanswered booking is approved anyway. Zero disables the
+     * deadline entirely, leaving every cash booking to a human.
+     */
+    @Value("${app.booking.auto-approve-lead-hours:2}")
+    private int autoApproveLeadHours;
 
     // ── Create a new booking after payment confirmation ─────────────────────
     @Transactional
@@ -196,11 +228,18 @@ public class BookingService {
                 .orElseThrow(() -> new NotFoundException("Time slot not found"));
         booking.setTimeSlot(slot);
 
-        if (newStatus == BookingStatus.REJECTED || newStatus == BookingStatus.CANCELLED) {
+        // Approving a slot that has already finished confirms a match that did not happen, and
+        // races the expiry sweep for the same row. Refused for everyone, admins included.
+        if (newStatus == BookingStatus.APPROVED && hasSlotEnded(slot)) {
+            throw new ConflictException(
+                    "This booking's slot has already passed, so it can no longer be approved. "
+                            + "It will be marked expired.");
+        }
+
+        if (releasesSlot(newStatus)) {
             if (!slot.isAvailable()) {
                 slot.setAvailable(true);
-                String note = newStatus == BookingStatus.CANCELLED ? "Booking cancelled" : "Booking rejected";
-                slot.addStatusHistory(new TimeSlotStatusHistory(slot, true, changedBy, note));
+                slot.addStatusHistory(new TimeSlotStatusHistory(slot, true, changedBy, slotReleaseNote(newStatus)));
                 timeSlotRepository.save(slot);
             }
         } else if (newStatus == BookingStatus.APPROVED && slot.isAvailable()) {
@@ -213,10 +252,25 @@ public class BookingService {
         booking.addStatusHistory(new BookingStatusHistory(booking, newStatus, changedBy, "Status updated"));
         Booking saved = bookingRepository.save(booking);
         notifyStatusChanged(saved, newStatus);
-        if (newStatus == BookingStatus.REJECTED || newStatus == BookingStatus.CANCELLED) {
+        if (releasesSlot(newStatus)) {
             markRefundIfPaid(saved, newStatus, changedBy);
         }
         return saved;
+    }
+
+    /** The three terminal states that hand the slot back and may owe the customer money. */
+    private static boolean releasesSlot(BookingStatus status) {
+        return status == BookingStatus.REJECTED
+                || status == BookingStatus.CANCELLED
+                || status == BookingStatus.EXPIRED;
+    }
+
+    private static String slotReleaseNote(BookingStatus status) {
+        return switch (status) {
+            case CANCELLED -> "Booking cancelled";
+            case EXPIRED -> "Booking expired unconfirmed";
+            default -> "Booking rejected";
+        };
     }
 
     /**
@@ -230,9 +284,11 @@ public class BookingService {
         if (refundService == null) {
             return;
         }
-        String reason = newStatus == BookingStatus.CANCELLED
-                ? "Booking cancelled"
-                : "Booking rejected by the venue";
+        String reason = switch (newStatus) {
+            case CANCELLED -> "Booking cancelled";
+            case EXPIRED -> "Booking expired without confirmation";
+            default -> "Booking rejected by the venue";
+        };
         refundService.markRefundDue(booking, reason, changedBy);
     }
 
@@ -251,7 +307,10 @@ public class BookingService {
         if (slot != null && slot.getSlotDate() != null && slot.getStartTime() != null) {
             LocalDateTime startsAt = LocalDateTime.of(slot.getSlotDate(), slot.getStartTime());
             LocalDateTime cutoff = now().plusHours(cancellationCutoffHours);
-            if (startsAt.isBefore(cutoff)) {
+            // The window protects the venue from last-minute cancellations of bookings that are
+            // still to come. Once the slot has started there is nothing left to protect, and
+            // applying it there would leave the customer unable to close their own booking at all.
+            if (startsAt.isAfter(now()) && startsAt.isBefore(cutoff)) {
                 throw new ConflictException(
                         "This booking starts within " + cancellationCutoffHours + " hours and can no "
                                 + "longer be cancelled online. Please contact the venue.");
@@ -262,6 +321,47 @@ public class BookingService {
 
     private LocalDateTime now() {
         return clock == null ? LocalDateTime.now() : LocalDateTime.now(clock);
+    }
+
+    /**
+     * Ids of bookings still awaiting a decision whose slot has already finished.
+     *
+     * <p>Read-only and outside any transaction: {@code BookingExpirySweeper} resolves each id in
+     * its own unit of work so one bad row cannot roll the whole batch back.
+     */
+    public List<Long> findLapsedPendingBookingIds() {
+        LocalDateTime now = now();
+        return bookingRepository.findIdsByStatusAndSlotEndedBy(
+                BookingStatus.PENDING, now.toLocalDate(), now.toLocalTime());
+    }
+
+    /**
+     * Ids of bookings the venue has run out of time to answer.
+     *
+     * <p>A booking still awaiting a decision this close to its slot leaves the customer with no idea
+     * whether they have a court, so silence is treated as acceptance. Returns nothing when the lead
+     * time is zero or negative, which switches the deadline off rather than approving everything on
+     * the spot.
+     */
+    public List<Long> findUnansweredBookingIds() {
+        if (autoApproveLeadHours <= 0) {
+            return List.of();
+        }
+        LocalDateTime now = now();
+        LocalDateTime deadline = now.plusHours(autoApproveLeadHours);
+        return bookingRepository.findIdsByStatusAndSlotStartingBy(
+                BookingStatus.PENDING,
+                deadline.toLocalDate(), deadline.toLocalTime(),
+                now.toLocalDate(), now.toLocalTime());
+    }
+
+    private boolean hasSlotEnded(TimeSlot slot) {
+        if (slot == null || slot.getSlotDate() == null || slot.getEndTime() == null) {
+            return false;
+        }
+        LocalDate date = slot.getSlotDate();
+        LocalTime end = slot.getEndTime();
+        return !LocalDateTime.of(date, end).isAfter(now());
     }
 
     /**
@@ -286,9 +386,12 @@ public class BookingService {
         return switch (current) {
             case PENDING -> next == BookingStatus.APPROVED
                     || next == BookingStatus.REJECTED
-                    || next == BookingStatus.CANCELLED;
+                    || next == BookingStatus.CANCELLED
+                    || next == BookingStatus.EXPIRED;
             case APPROVED -> next == BookingStatus.CANCELLED;
-            case REJECTED, CANCELLED -> false;
+            // EXPIRED is terminal like the other two: the slot has already passed, so there is
+            // nothing left to approve, reject or cancel.
+            case REJECTED, CANCELLED, EXPIRED -> false;
         };
     }
 
@@ -298,18 +401,53 @@ public class BookingService {
     }
 
     // ── Delete booking (admin only) ───────────────────────────────────────────
+
+    /**
+     * Removes a booking and everything that points at it.
+     *
+     * <p>The payment and review rows carry a foreign key to this booking. The migration schema
+     * declares both with {@code ON DELETE CASCADE}, but a database built by {@code ddl-auto=update}
+     * gets Hibernate-generated keys without it, so relying on the database to clean up works in
+     * production and fails in development. The dependants are therefore removed explicitly, which
+     * behaves the same either way.
+     */
     @Transactional
     public void deleteBooking(Long id) {
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Booking not found"));
 
-        // Free the slot if deleting
-        if (booking.getStatus() != BookingStatus.CANCELLED &&
-            booking.getStatus() != BookingStatus.REJECTED) {
+        // A booking in a closed state already handed its slot back.
+        if (!CLOSED_STATUSES.contains(booking.getStatus())) {
             booking.getTimeSlot().setAvailable(true);
             timeSlotRepository.save(booking.getTimeSlot());
         }
 
+        deleteReviewFor(id);
+        if (paymentTransactionRepository != null) {
+            paymentTransactionRepository.findByBooking(booking)
+                    .ifPresent(paymentTransactionRepository::delete);
+        }
+
         bookingRepository.deleteById(id);
+    }
+
+    /**
+     * Drops the review left on this booking, if any, and rewrites the venue's rating.
+     *
+     * <p>Deleting the row alone would leave {@code futsals.rating} and {@code review_count} counting
+     * a review that no longer exists, so the aggregate is recomputed in the same transaction.
+     */
+    private void deleteReviewFor(Long bookingId) {
+        if (reviewRepository == null) {
+            return;
+        }
+        reviewRepository.findByBooking_BookingId(bookingId).ifPresent(review -> {
+            Long futsalId = review.getFutsal().getFutsalId();
+            reviewRepository.delete(review);
+            reviewRepository.flush();
+            if (reviewService != null) {
+                reviewService.recalculateRating(futsalId);
+            }
+        });
     }
 }

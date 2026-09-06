@@ -136,7 +136,7 @@ export function MyBookings() {
       <FilterBar className="mb-5 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_220px_auto] lg:items-end">
         <Field label="Search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Venue or payment reference" prefix={<Search size={18} />} />
         <SelectField label="Status" value={status} onChange={(event) => { setStatus(event.target.value as BookingStatus | 'ALL'); setPage(0); }}>
-          {(['ALL', 'PENDING', 'APPROVED', 'REJECTED', 'CANCELLED'] as const).map((item) => (
+          {(['ALL', 'PENDING', 'APPROVED', 'REJECTED', 'CANCELLED', 'EXPIRED'] as const).map((item) => (
             <option key={item} value={item}>{item === 'ALL' ? 'All statuses' : item}</option>
           ))}
         </SelectField>

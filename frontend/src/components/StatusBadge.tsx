@@ -7,6 +7,8 @@ const styles: Record<StatusValue, string> = {
   APPROVED: 'bg-green-50 text-green-700 ring-green-200',
   REJECTED: 'bg-red-50 text-red-700 ring-red-200',
   CANCELLED: 'bg-slate-100 text-slate-600 ring-slate-200',
+  // Lapsed rather than acted upon: muted like CANCELLED, but warmer so the two are not confused.
+  EXPIRED: 'bg-stone-100 text-stone-500 ring-stone-300',
   AVAILABLE: 'bg-green-50 text-green-700 ring-green-200',
   UNAVAILABLE: 'bg-slate-100 text-slate-600 ring-slate-200',
   ACTIVE: 'bg-green-50 text-green-700 ring-green-200',

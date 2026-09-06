@@ -65,8 +65,10 @@ export function AdminBookings() {
     try {
       await bookingApi.delete(id);
       await load();
-    } catch {
-      setError('Booking could not be deleted.');
+    } catch (err) {
+      // Show what the server said. A bare "could not be deleted" hides the one thing that would
+      // tell you why, and the API already returns a readable message.
+      setError(err instanceof Error && err.message ? err.message : 'Booking could not be deleted.');
     } finally {
       setMutatingId(null);
     }
@@ -101,7 +103,7 @@ export function AdminBookings() {
         <Field label="Search" value={search} onChange={(event) => { setSearch(event.target.value); setPage(0); }} placeholder="Customer, venue, phone, payment" prefix={<Search size={18} />} />
         <Field label="Date" type="date" value={dateFilter} onChange={(event) => { setDateFilter(event.target.value); setPage(0); }} />
         <SelectField label="Status" value={status} onChange={(event) => { setStatus(event.target.value as BookingStatus | 'ALL'); setPage(0); }}>
-          {(['ALL', 'PENDING', 'APPROVED', 'REJECTED', 'CANCELLED'] as const).map((item) => <option key={item} value={item}>{labelForFilter(item)}</option>)}
+          {(['ALL', 'PENDING', 'APPROVED', 'REJECTED', 'CANCELLED', 'EXPIRED'] as const).map((item) => <option key={item} value={item}>{labelForFilter(item)}</option>)}
         </SelectField>
         <Button variant="outline" type="button" onClick={() => { setSearch(''); setDateFilter(''); setStatus('ALL'); setPage(0); }}>Clear filters</Button>
       </FilterBar>
@@ -317,6 +319,8 @@ function DecisionPreview({ booking, next, destructive = false }: { booking: Book
 
 function labelForFilter(status: BookingStatus | 'ALL') {
   if (status === 'ALL') return 'All';
+  // labelFor is verb-phrased for the action buttons; EXPIRED has no action to name.
+  if (status === 'EXPIRED') return 'Expired';
   return labelFor(status);
 }
 
@@ -331,6 +335,7 @@ function actionSummary(status: BookingStatus) {
   if (status === 'APPROVED') return 'Approved slot';
   if (status === 'REJECTED') return 'Rejected request';
   if (status === 'CANCELLED') return 'Cancelled booking';
+  if (status === 'EXPIRED') return 'Expired unconfirmed';
   return 'Review booking';
 }
 

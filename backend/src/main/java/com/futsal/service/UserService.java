@@ -6,6 +6,7 @@ import com.futsal.error.ConflictException;
 import com.futsal.error.NotFoundException;
 import com.futsal.model.User;
 import com.futsal.model.enums.Role;
+import com.futsal.repository.BookingRepository;
 import com.futsal.repository.UserRepository;
 import com.futsal.repository.VerificationCodeRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,6 +38,11 @@ public class UserService {
      */
     @Autowired(required = false)
     private DemoProperties demoProperties;
+
+    /** Only to guard deletion. Optional for the same reason as above: the unit tests build this
+     * service with {@code new UserService()}. */
+    @Autowired(required = false)
+    private BookingRepository bookingRepository;
 
     // ── Hash password using BCrypt ────────────────────────────────────────────
     public String hashPassword(String password) {
@@ -141,8 +147,35 @@ public class UserService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("User not found"));
         rejectIfDemoAccount(user);
+        rejectIfUserHasBookings(user);
         verificationCodeRepository.deleteByUser(user);
         userRepository.delete(user);
+    }
+
+    /**
+     * Refuses to delete a user who has booking history, the way FutsalService.delete refuses a
+     * venue that has one.
+     *
+     * <p>Two reasons. The booking foreign key has no {@code ON DELETE CASCADE}, so the delete would
+     * fail at the database anyway with nothing but a constraint name to explain it. And the rows it
+     * would take with it - bookings and their payment transactions - are financial records that
+     * should outlive the account.
+     *
+     * <p>It also closes a quieter problem: the review foreign key <em>does</em> cascade, so deleting
+     * a user would have silently removed their reviews and left the venue's rating and review count
+     * counting reviews that no longer existed. A review requires a booking, so this guard makes that
+     * unreachable.
+     */
+    private void rejectIfUserHasBookings(User user) {
+        if (bookingRepository == null) {
+            return;
+        }
+        long bookings = bookingRepository.countByUser(user);
+        if (bookings > 0) {
+            throw new ConflictException(
+                    "This user has " + bookings + " booking(s) and cannot be deleted. "
+                            + "Cancel or delete those bookings first.");
+        }
     }
 
     /**

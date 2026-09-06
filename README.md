@@ -34,6 +34,22 @@ when the platform sets one.
 2. Admin generates and manages slots for a selected venue/date range.
 3. Users choose a futsal and then book available slots.
 
+### How a booking gets decided
+
+A booking is created `PENDING`. It never stays there, because a customer standing at the court still
+waiting for an answer is the worst outcome the system can produce.
+
+- **Paid through eSewa** — approved the moment the gateway confirms. The money has moved; there is
+  nothing left for the venue to decide.
+- **Cash at the venue** — an admin approves or rejects it. If nobody does,
+  `BOOKING_AUTO_APPROVE_LEAD_HOURS` (default 2) before kickoff it is **approved automatically**.
+  Silence counts as acceptance, so the customer always knows before they travel. Set the value to
+  `0` to turn this off and require a human every time.
+- **Slot already passed** — anything still undecided is marked `EXPIRED`, which releases the slot and
+  records a refund as owed if money was taken. Approving a booking whose slot has ended is refused.
+
+`EXPIRED` is written only by the system, and is terminal.
+
 ## Account Security
 
 - Customers can edit their name and phone from `/profile`.
@@ -44,8 +60,18 @@ when the platform sets one.
 - Production must configure `VERIFICATION_SECRET` plus SMTP and/or `SMS_WEBHOOK_URL` delivery settings.
 - SMTP uses Spring Boot variables such as `SPRING_MAIL_HOST`, `SPRING_MAIL_PORT`, `SPRING_MAIL_USERNAME`, and `SPRING_MAIL_PASSWORD`.
 - The mail health probe is disabled by default. Set `MAIL_HEALTH_ENABLED=true` only when a reachable SMTP server is configured.
-- Apply the migrations in `backend/src/main/resources/db/` (via `deployment/apply-db-migrations.sh`)
-  before starting the production profile with `ddl-auto=validate`.
+- Apply the migrations in `backend/src/main/resources/db/` in numeric order before starting the
+  production profile with `ddl-auto=validate`. Each one is idempotent, so re-running is safe:
+
+  ```sh
+  for f in backend/src/main/resources/db/V*.sql; do
+    mysql -u root -p futsal_db < "$f"
+  done
+  ```
+
+  Note that `validate` does **not** verify that every migration has been applied — it checks that
+  columns exist, not that their contents are current. Check the output above rather than treating a
+  clean startup as proof.
 
 ## Uploads
 

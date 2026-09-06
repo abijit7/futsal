@@ -4,6 +4,7 @@ import com.futsal.config.DemoProperties;
 import com.futsal.error.ConflictException;
 import com.futsal.model.User;
 import com.futsal.model.enums.Role;
+import com.futsal.repository.BookingRepository;
 import com.futsal.repository.UserRepository;
 import com.futsal.repository.VerificationCodeRepository;
 import org.junit.jupiter.api.Test;
@@ -148,6 +149,80 @@ class UserServiceTest {
         assertDoesNotThrow(() -> userService.changePassword(4L, "DemoAdmin123", "brand-new-pass"));
 
         assertTrue(verifier.matches("brand-new-pass", demoAdmin.getPassword()));
+    }
+
+    // ── Deleting a user with history ─────────────────────────────────────────
+
+    /**
+     * The booking foreign key has no ON DELETE CASCADE, so without this the delete failed at the
+     * database with nothing but a constraint name to explain it. The rows it would have taken -
+     * bookings and their payments - are financial records that should outlive the account.
+     */
+    @Test
+    void refusesToDeleteAUserWhoHasBookings() {
+        UserRepository userRepository = mock(UserRepository.class);
+        UserService userService = serviceWithBookings(userRepository, 3L);
+
+        User customer = ordinaryUser();
+        when(userRepository.findById(9L)).thenReturn(Optional.of(customer));
+
+        ConflictException ex = assertThrows(ConflictException.class, () -> userService.deleteUser(9L));
+        assertTrue(ex.getMessage().contains("3 booking(s)"), "the count belongs in the message");
+        verify(userRepository, never()).delete(any(User.class));
+    }
+
+    @Test
+    void deletesAUserWhoHasNoBookings() {
+        UserRepository userRepository = mock(UserRepository.class);
+        UserService userService = serviceWithBookings(userRepository, 0L);
+
+        User customer = ordinaryUser();
+        when(userRepository.findById(9L)).thenReturn(Optional.of(customer));
+
+        assertDoesNotThrow(() -> userService.deleteUser(9L));
+        verify(userRepository).delete(customer);
+    }
+
+    /** A demo account is refused as a demo account, not for happening to have bookings. */
+    @Test
+    void theDemoGuardStillRunsBeforeTheBookingGuard() {
+        UserRepository userRepository = mock(UserRepository.class);
+        UserService userService = serviceWithBookings(userRepository, 3L);
+        ReflectionTestUtils.setField(userService, "demoProperties", enabledDemo());
+
+        when(userRepository.findById(4L)).thenReturn(Optional.of(demoAdmin()));
+
+        ConflictException ex = assertThrows(ConflictException.class, () -> userService.deleteUser(4L));
+        assertTrue(ex.getMessage().contains("shared demo account"));
+    }
+
+    private UserService serviceWithBookings(UserRepository userRepository, long bookingCount) {
+        BookingRepository bookings = mock(BookingRepository.class);
+        when(bookings.countByUser(any(User.class))).thenReturn(bookingCount);
+
+        UserService userService = new UserService();
+        ReflectionTestUtils.setField(userService, "userRepository", userRepository);
+        ReflectionTestUtils.setField(userService, "verificationCodeRepository",
+                mock(VerificationCodeRepository.class));
+        ReflectionTestUtils.setField(userService, "bookingRepository", bookings);
+        return userService;
+    }
+
+    private DemoProperties enabledDemo() {
+        DemoProperties demo = new DemoProperties();
+        demo.setEnabled(true);
+        demo.getAdmin().setEmail(DEMO_ADMIN_EMAIL);
+        demo.getUser().setEmail("player@merofutsal.local");
+        return demo;
+    }
+
+    private User ordinaryUser() {
+        User user = new User();
+        user.setUserId(9L);
+        user.setName("Ordinary Customer");
+        user.setEmail("customer@example.com");
+        user.setRole(Role.USER);
+        return user;
     }
 
     private UserService demoAwareService(UserRepository userRepository, boolean demoEnabled) {

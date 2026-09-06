@@ -1,7 +1,9 @@
 package com.futsal.service;
 
+import com.futsal.error.ConflictException;
 import com.futsal.model.Booking;
 import com.futsal.model.PaymentTransaction;
+import com.futsal.model.enums.BookingStatus;
 import com.futsal.model.enums.PaymentMethod;
 import com.futsal.model.enums.PaymentStatus;
 import com.futsal.repository.PaymentTransactionRepository;
@@ -105,6 +107,35 @@ class PaymentReconciliationTest {
         assertEquals("ESW-REF-9931", transaction.getGatewayTransactionId());
         verify(bookingService).settleGatewayPayment(77L, "ESW-REF-9931");
         gateway.verify();
+    }
+
+    /**
+     * The money has moved, so there is nothing left for a venue to decide. Leaving it PENDING sent
+     * the customer to the court not knowing whether they had one.
+     */
+    @Test
+    void approvesTheBookingOnceThePaymentHasSettled() {
+        gatewayReturns("""
+                {"status":"COMPLETE","total_amount":"1200.00","ref_id":"ESW-REF-9931"}""");
+
+        service.reconcileExpiredHold(TX_ID);
+
+        verify(bookingService).updateStatus(77L, BookingStatus.APPROVED, "payment");
+    }
+
+    /**
+     * A slot that has already passed cannot be approved, but the payment still settled - the
+     * customer must never see a failure for money that was taken.
+     */
+    @Test
+    void aPaymentStillSettlesWhenTheBookingCannotBeApproved() {
+        gatewayReturns("""
+                {"status":"COMPLETE","total_amount":"1200.00","ref_id":"ESW-REF-9931"}""");
+        when(bookingService.updateStatus(77L, BookingStatus.APPROVED, "payment"))
+                .thenThrow(new ConflictException("This booking's slot has already passed"));
+
+        assertEquals(PaymentStatus.COMPLETED, service.reconcileExpiredHold(TX_ID));
+        assertEquals(PaymentStatus.COMPLETED, transaction.getStatus());
     }
 
     @ParameterizedTest(name = "eSewa says {0} -> hold released")

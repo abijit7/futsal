@@ -87,6 +87,13 @@ public class BookingNotificationService {
                 footer = "If you had already paid, a refund is being arranged and you will "
                         + "receive a separate email confirming it.";
             }
+            case EXPIRED -> {
+                subject = "Booking expired — " + booking.venueName();
+                intro = "The venue did not confirm this booking before its slot passed, so it has "
+                        + "expired and the slot has been released.";
+                footer = "If you had already paid, a refund is being arranged and you will "
+                        + "receive a separate email confirming it.";
+            }
             // A booking only re-enters PENDING on creation, which sendBookingConfirmed covers.
             default -> {
                 return;

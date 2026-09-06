@@ -1,5 +1,7 @@
 export type Role = 'USER' | 'ADMIN';
-export type BookingStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
+// EXPIRED is written only by the backend's expiry sweep, for a booking nobody approved or rejected
+// before its slot passed. It is terminal and offers no actions.
+export type BookingStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED' | 'EXPIRED';
 // KHALTI is retained only so historical bookings returned by the API still type-check;
 // it can no longer be selected for a new checkout.
 export type PaymentMethod = 'ESEWA' | 'KHALTI' | 'CASH_IN_HAND';
