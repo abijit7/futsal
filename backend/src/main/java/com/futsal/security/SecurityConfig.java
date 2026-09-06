@@ -122,6 +122,10 @@ public class SecurityConfig {
                         .requestMatchers("/uploads/**").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/info").permitAll()
 
+                        // Demo credentials, so the sign-in screen can offer them. Returns nothing
+                        // but enabled=false unless the deployment turned demo mode on.
+                        .requestMatchers(HttpMethod.GET, "/api/demo").permitAll()
+
                         // Public authentication and account recovery
                         .requestMatchers(HttpMethod.POST,
                                 "/api/users/login",

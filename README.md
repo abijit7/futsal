@@ -63,6 +63,40 @@ when the platform sets one.
 - `GET /api/futsals/{id}/reviews` list a venue's reviews (public)
 - `POST /api/futsals/{id}/reviews` leave a review (authenticated; requires an eligible booking)
 
+## Demo Mode
+
+Turns the deployment into something a stranger can try without registering. Set
+`DEMO_MODE_ENABLED=true`. It is **on by default in the dev profile** and off everywhere else.
+
+What it does:
+
+- Seeds a shared admin and a shared customer account, three sample venues, and a rolling window of
+  hourly slots (`DEMO_SLOT_DAYS`, default 7 days ahead).
+- Re-runs every `DEMO_REFRESH_INTERVAL_MS` (default 6 hours) to roll that window forward and
+  restore anything a visitor deleted. The seed is idempotent, so nothing is duplicated.
+- Publishes the credentials from `GET /api/demo` (public), which is what puts the "Try the demo"
+  shortcuts on the sign-in page and eSewa's sandbox wallet on the checkout.
+
+| Account | Email | Password |
+|---|---|---|
+| Admin | `admin@merofutsal.local` | `DemoAdmin123` |
+| Customer | `player@merofutsal.local` | `DemoPlayer123` |
+
+All four values are overridable (`DEMO_ADMIN_EMAIL`, `DEMO_ADMIN_PASSWORD`, `DEMO_USER_EMAIL`,
+`DEMO_USER_PASSWORD`).
+
+Two safety rules, both deliberate:
+
+- **The app refuses to start** with demo mode enabled unless `PAYMENT_ESEWA_FORM_URL` points at
+  eSewa's UAT sandbox. Demo mode hands a working admin login to anyone who visits, so it must never
+  be able to move real money. See `PaymentCredentialsValidator`.
+- **The two demo accounts cannot have their password changed or be deleted**, so one visitor cannot
+  lock out the next. Everything else stays fully editable - creating venues, generating slots,
+  approving and cancelling bookings, and deleting other accounts all work normally.
+
+Turn demo mode off for a real merchant deployment; `GET /api/demo` then returns `enabled: false`
+and no credentials at all.
+
 ## Payments
 
 Cash bookings are created directly. eSewa goes through `/api/payments/initiate`, which holds the

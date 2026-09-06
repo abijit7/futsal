@@ -3,25 +3,31 @@ package com.futsal.config;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Profile;
-
-import java.util.List;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 
 /**
- * Refuses to start the production profile with eSewa's sandbox credentials.
+ * Keeps the eSewa configuration and the deployment's intent in step.
  *
- * <p>The prod profile deliberately provides no defaults for the merchant code or secret, but it
- * *does* default the gateway URLs to the live hosts. A partially configured deployment could
- * therefore sign real requests to eSewa's production endpoint with the published test key — which
- * fails at the gateway in a way that looks like a code bug rather than a config mistake. Failing
- * fast at startup makes the real cause obvious.
+ * <p>Two mistakes are worth refusing to start over:
+ *
+ * <ul>
+ *   <li><b>Production against the sandbox.</b> The prod profile deliberately provides no defaults
+ *       for the merchant code or secret, but it <em>does</em> default the gateway URLs to the live
+ *       hosts. A partially configured deployment would therefore sign real requests to eSewa's
+ *       production endpoint with the published test key - which fails at the gateway in a way that
+ *       looks like a code bug rather than a config mistake.</li>
+ *   <li><b>Demo mode against the live gateway.</b> Demo mode publishes a working login to anyone
+ *       who asks; pointing its checkout at real eSewa would let a stranger move real money.</li>
+ * </ul>
+ *
+ * <p>The demo check is not restricted to the prod profile, because demo mode is exactly the case
+ * where a non-prod-looking deployment is exposed to the public internet.
  */
 @Configuration
-@Profile("prod")
 public class PaymentCredentialsValidator {
 
-    /** eSewa's published UAT values. Safe to name here: they are public test credentials. */
-    private static final List<String> SANDBOX_VALUES = List.of("EPAYTEST", "8gBm/:&EnhH.1/q");
+    private final Environment environment;
 
     @Value("${payment.esewa.merchant.code:}")
     private String merchantCode;
@@ -32,17 +38,39 @@ public class PaymentCredentialsValidator {
     @Value("${payment.esewa.form-url:}")
     private String formUrl;
 
+    @Value("${app.demo.enabled:false}")
+    private boolean demoEnabled;
+
+    public PaymentCredentialsValidator(Environment environment) {
+        this.environment = environment;
+    }
+
     @PostConstruct
-    void rejectSandboxCredentials() {
-        if (SANDBOX_VALUES.contains(merchantCode.trim()) || SANDBOX_VALUES.contains(merchantSecret.trim())) {
+    void validateGatewayEnvironment() {
+        if (demoEnabled && !EsewaEnvironments.isSandboxUrl(formUrl)) {
+            throw new IllegalStateException(
+                    "Refusing to start: demo mode publishes shared login credentials, so "
+                            + "PAYMENT_ESEWA_FORM_URL must point at eSewa's UAT sandbox "
+                            + "(https://rc-epay.esewa.com.np/...). Turn off DEMO_MODE_ENABLED to take "
+                            + "real payments.");
+        }
+        if (!isProdProfile() || demoEnabled) {
+            return;
+        }
+        if (EsewaEnvironments.isSandboxCredential(merchantCode)
+                || EsewaEnvironments.isSandboxCredential(merchantSecret)) {
             throw new IllegalStateException(
                     "Refusing to start: PAYMENT_ESEWA_MERCHANT_CODE/SECRET still hold eSewa's public "
                             + "UAT credentials. Set the real merchant credentials for the prod profile.");
         }
-        if (formUrl.contains("rc-epay.") || formUrl.contains("uat.")) {
+        if (EsewaEnvironments.isSandboxUrl(formUrl)) {
             throw new IllegalStateException(
                     "Refusing to start: PAYMENT_ESEWA_FORM_URL points at eSewa's UAT environment "
                             + "while running the prod profile.");
         }
+    }
+
+    private boolean isProdProfile() {
+        return environment.acceptsProfiles(Profiles.of("prod"));
     }
 }

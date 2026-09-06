@@ -1,5 +1,5 @@
 import { api, query } from './client';
-import type { Booking, BookingStatus, Futsal, FutsalPayload, PagedResponse, PaymentInitiation, PaymentMethod, PaymentVerification, Refund, Review, ReviewPayload, SlotGenerationPayload, SlotGenerationResponse, TimeSlot, TimeSlotPayload, User, VerificationIssueResponse } from '../types/api';
+import type { Booking, BookingStatus, DemoInfo, Futsal, FutsalPayload, PagedResponse, PaymentInitiation, PaymentMethod, PaymentVerification, Refund, Review, ReviewPayload, SlotGenerationPayload, SlotGenerationResponse, TimeSlot, TimeSlotPayload, User, VerificationIssueResponse } from '../types/api';
 
 export const authApi = {
   login: (payload: Pick<User, 'email'> & { password: string }) =>
@@ -111,6 +111,14 @@ export const refundApi = {
    */
   confirm: (transactionId: number, reference?: string) =>
     api.post<Refund>(`/payments/refunds/${transactionId}/confirm?${query({ reference })}`).then((res) => res.data)
+};
+
+export const demoApi = {
+  /**
+   * The demo logins, for the sign-in shortcuts and the checkout hint. Public, and returns
+   * `enabled: false` with nothing else on a deployment that is not a demo.
+   */
+  info: () => api.get<DemoInfo>('/demo').then((res) => res.data)
 };
 
 export const paymentApi = {

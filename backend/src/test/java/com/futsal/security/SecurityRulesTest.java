@@ -1,6 +1,8 @@
 package com.futsal.security;
 
+import com.futsal.config.DemoProperties;
 import com.futsal.controller.BookingController;
+import com.futsal.controller.DemoController;
 import com.futsal.controller.FutsalController;
 import com.futsal.controller.PaymentController;
 import com.futsal.controller.ReviewController;
@@ -36,7 +38,6 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -51,6 +52,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 @WebMvcTest(controllers = {
         UserController.class,
+        DemoController.class,
         BookingController.class,
         FutsalController.class,
         TimeSlotController.class,
@@ -85,6 +87,7 @@ class SecurityRulesTest {
     @MockBean private ReviewService reviewService;
     @MockBean private RefundService refundService;
     @MockBean private java.time.Clock clock;
+    @MockBean private DemoProperties demoProperties;
 
     private String adminToken;
     private String userToken;
@@ -173,6 +176,7 @@ class SecurityRulesTest {
             "GET,  /api/futsals/9/reviews",
             "GET,  /api/slots",
             "GET,  /api/slots/public",
+            "GET,  /api/demo",
             "POST, /api/users/login",
             "POST, /api/users/register",
             "POST, /api/users/forgot-password",

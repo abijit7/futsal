@@ -125,6 +125,9 @@ because eSewa checkout is an auto-submitted form POST. Removing those breaks eSe
 - `PAYMENT_RETURN_BASE_URL` must be the public frontend origin. The server builds the gateway
   return URLs from it and never accepts them from the client.
 - Verify against UAT/sandbox first — see the smoke tests below.
+- **Portfolio deployments** set `DEMO_MODE_ENABLED=true` and must therefore stay on the eSewa
+  **sandbox**: the app refuses to start with demo mode against the live gateway, because demo mode
+  publishes a working admin login. A real merchant deployment leaves demo mode off.
 
 ## 5. Smoke tests
 

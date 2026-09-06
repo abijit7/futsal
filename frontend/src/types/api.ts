@@ -158,6 +158,32 @@ export type PaymentInitiation = {
   booking?: Booking;
 };
 
+/**
+ * What GET /api/demo publishes. Everything is empty unless the deployment turned demo mode on,
+ * and `payment` is null whenever checkout is not pointed at eSewa's sandbox.
+ */
+export type DemoInfo = {
+  enabled: boolean;
+  accounts: DemoAccount[];
+  payment: DemoPayment | null;
+};
+
+export type DemoAccount = {
+  role: Role;
+  label: string;
+  email: string;
+  /** Published on purpose: shared demo logins are the point. */
+  password: string;
+};
+
+/** eSewa's published UAT test wallet. Public sandbox values, not credentials. */
+export type DemoPayment = {
+  esewaId: string;
+  esewaPassword: string;
+  mpin: string;
+  otp: string;
+};
+
 export type PaymentVerification = {
   status: PaymentStatus;
   message?: string;

@@ -1,8 +1,11 @@
 package com.futsal.service;
 
+import com.futsal.config.DemoProperties;
+import com.futsal.error.ConflictException;
 import com.futsal.model.User;
 import com.futsal.model.enums.Role;
 import com.futsal.repository.UserRepository;
+import com.futsal.repository.VerificationCodeRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -14,8 +17,15 @@ import java.util.Base64;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class UserServiceTest {
 
@@ -77,6 +87,92 @@ class UserServiceTest {
                     throw new UnsupportedOperationException(method.getName());
                 }
         );
+    }
+
+    // ── Demo account protection ──────────────────────────────────────────────
+    //
+    // Demo mode publishes a working admin login to anyone who visits. Without these guards one
+    // visitor could change that password, or delete the account, and lock every later visitor out
+    // until the next seed.
+
+    private static final String DEMO_ADMIN_EMAIL = "admin@merofutsal.local";
+
+    @Test
+    void refusesToChangeTheDemoAccountPassword() {
+        UserRepository userRepository = mock(UserRepository.class);
+        UserService userService = demoAwareService(userRepository, true);
+        User demoAdmin = demoAdmin();
+        when(userRepository.findById(4L)).thenReturn(Optional.of(demoAdmin));
+
+        ConflictException thrown = assertThrows(ConflictException.class,
+                () -> userService.changePassword(4L, "DemoAdmin123", "hijacked123"));
+
+        assertTrue(thrown.getMessage().contains("shared demo account"));
+        assertTrue(verifier.matches("DemoAdmin123", demoAdmin.getPassword()));
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
+    void refusesToDeleteTheDemoAccount() {
+        UserRepository userRepository = mock(UserRepository.class);
+        UserService userService = demoAwareService(userRepository, true);
+        when(userRepository.findById(4L)).thenReturn(Optional.of(demoAdmin()));
+
+        assertThrows(ConflictException.class, () -> userService.deleteUser(4L));
+
+        verify(userRepository, never()).delete(any(User.class));
+    }
+
+    /** The guard is scoped to the two advertised logins; every other account behaves normally. */
+    @Test
+    void leavesOrdinaryAccountsAloneWhileDemoModeIsOn() {
+        UserRepository userRepository = mock(UserRepository.class);
+        UserService userService = demoAwareService(userRepository, true);
+        User ordinary = demoAdmin();
+        ordinary.setEmail("someone@example.com");
+        when(userRepository.findById(9L)).thenReturn(Optional.of(ordinary));
+
+        assertDoesNotThrow(() -> userService.changePassword(9L, "DemoAdmin123", "brand-new-pass"));
+
+        assertTrue(verifier.matches("brand-new-pass", ordinary.getPassword()));
+    }
+
+    /** Off a demo deployment the accounts are ordinary rows and nothing is protected. */
+    @Test
+    void appliesNoGuardWhenDemoModeIsOff() {
+        UserRepository userRepository = mock(UserRepository.class);
+        UserService userService = demoAwareService(userRepository, false);
+        User demoAdmin = demoAdmin();
+        when(userRepository.findById(4L)).thenReturn(Optional.of(demoAdmin));
+
+        assertDoesNotThrow(() -> userService.changePassword(4L, "DemoAdmin123", "brand-new-pass"));
+
+        assertTrue(verifier.matches("brand-new-pass", demoAdmin.getPassword()));
+    }
+
+    private UserService demoAwareService(UserRepository userRepository, boolean demoEnabled) {
+        DemoProperties demo = new DemoProperties();
+        demo.setEnabled(demoEnabled);
+        demo.getAdmin().setEmail(DEMO_ADMIN_EMAIL);
+        demo.getUser().setEmail("player@merofutsal.local");
+
+        UserService userService = new UserService();
+        ReflectionTestUtils.setField(userService, "userRepository", userRepository);
+        ReflectionTestUtils.setField(userService, "verificationCodeRepository",
+                mock(VerificationCodeRepository.class));
+        ReflectionTestUtils.setField(userService, "demoProperties", demo);
+        return userService;
+    }
+
+    private User demoAdmin() {
+        User user = new User();
+        user.setUserId(4L);
+        user.setName("Demo Admin");
+        user.setEmail(DEMO_ADMIN_EMAIL);
+        user.setPhone("9800000001");
+        user.setRole(Role.ADMIN);
+        user.setPassword(new BCryptPasswordEncoder().encode("DemoAdmin123"));
+        return user;
     }
 
     private String legacySha256(String password) {
