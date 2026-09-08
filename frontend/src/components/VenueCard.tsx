@@ -1,7 +1,8 @@
 import { ArrowRight, Clock, MapPin, Phone, Star } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { Futsal } from '../types/api';
-import { formatTime, imageForVenue, money, placeName } from '../utils/format';
+import { formatTime, money, placeName } from '../utils/format';
+import { VenueImage } from './VenueImage';
 
 /**
  * `available` is opt-in and means the caller has actually established availability — the Venues
@@ -16,7 +17,7 @@ export function VenueCard({ futsal, available = false, nextFree }: { futsal: Fut
   return (
     <article className="group overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-slate-950/10">
       <div className="relative aspect-[4/3] overflow-hidden bg-slate-100">
-        <img src={imageForVenue(futsal.imageUrl || futsal.imageUrls?.[0], futsal.futsalId)} alt={futsal.name} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" loading="lazy" />
+        <VenueImage url={futsal.imageUrl || futsal.imageUrls?.[0]} seed={futsal.futsalId} alt={futsal.name} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
         {available && (
           <div className="absolute left-4 top-4 rounded-full bg-green-600 px-3 py-1 text-xs font-black text-white">Available</div>
         )}
