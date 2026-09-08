@@ -170,16 +170,30 @@ export function Field({
   required,
   prefix,
   suffix,
+  onClear,
   className = '',
   ...props
-}: Omit<InputHTMLAttributes<HTMLInputElement>, 'prefix' | 'size'> & { label?: string; helper?: string; error?: string; prefix?: ReactNode; suffix?: ReactNode }) {
+}: Omit<InputHTMLAttributes<HTMLInputElement>, 'prefix' | 'size'> & { label?: string; helper?: string; error?: string; prefix?: ReactNode; suffix?: ReactNode; onClear?: () => void }) {
+  // The clear affordance only appears once there is something to clear, and never fights an
+  // explicit suffix the caller has already placed in that slot.
+  const showClear = Boolean(onClear) && String(props.value ?? '').length > 0 && !suffix;
   return (
     <label className={`block ${className}`}>
       {label && <span className="label">{label}{required && <span className="text-red-500"> *</span>}</span>}
       <span className="relative block">
         {prefix && <span className="input-icon input-icon-left pointer-events-none text-slate-400">{prefix}</span>}
-        <input className={`input min-h-12 ${prefix ? 'input-with-prefix' : ''} ${suffix ? 'input-with-suffix' : ''} ${error ? 'border-red-300 focus:border-red-400 focus:ring-red-100' : ''}`} required={required} {...props} />
+        <input className={`input min-h-12 ${prefix ? 'input-with-prefix' : ''} ${suffix || showClear ? 'input-with-suffix' : ''} ${error ? 'border-red-300 focus:border-red-400 focus:ring-red-100' : ''}`} required={required} {...props} />
         {suffix && <span className="input-icon input-icon-right text-slate-400">{suffix}</span>}
+        {showClear && (
+          <button
+            type="button"
+            onClick={onClear}
+            aria-label="Clear"
+            className="input-icon input-icon-right rounded-full text-slate-400 transition hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-green-200"
+          >
+            <X size={16} />
+          </button>
+        )}
       </span>
       {(helper || error) && <span className={`mt-2 block text-xs font-semibold ${error ? 'text-red-600' : 'text-slate-500'}`}>{error || helper}</span>}
     </label>

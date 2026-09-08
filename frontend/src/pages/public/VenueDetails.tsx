@@ -1,6 +1,6 @@
 import { Calendar, ChevronLeft, ChevronRight, Clock, MapPin, Phone, ShieldCheck, Star } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { futsalApi, paymentApi, slotApi } from '../../api/modules';
 import { DemoWalletHint } from '../../components/DemoWalletHint';
 import { EmptyState, LoadingState } from '../../components/State';
@@ -16,10 +16,19 @@ export function VenueDetails() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
   const futsalId = Number(id);
+
+  // The availability board links straight at one slot (`?date=…&slot=…`) so that booking from it
+  // is two taps. Preselection happens once, and never fights a choice the user then makes.
+  const requestedDate = searchParams.get('date');
+  const requestedSlotId = Number(searchParams.get('slot'));
+  const preselected = useRef(false);
   const [futsal, setFutsal] = useState<Futsal | null>(null);
   const [slots, setSlots] = useState<TimeSlot[]>([]);
-  const [selectedDate, setSelectedDate] = useState(todayInput());
+  const [selectedDate, setSelectedDate] = useState(
+    () => (requestedDate && /^\d{4}-\d{2}-\d{2}$/.test(requestedDate) ? requestedDate : todayInput())
+  );
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('CASH_IN_HAND');
   const [notes, setNotes] = useState('');
@@ -59,10 +68,18 @@ export function VenueDetails() {
     setError('');
     setSelectedSlot(null);
     slotApi.public({ futsalId, slotDate: selectedDate, page: 0, size: 80 })
-      .then((data) => setSlots(data.items || []))
+      .then((data) => {
+        const items = data.items || [];
+        setSlots(items);
+        if (!preselected.current && Number.isFinite(requestedSlotId)) {
+          preselected.current = true;
+          const match = items.find((slot) => slot.slotId === requestedSlotId && slot.available);
+          if (match) setSelectedSlot(match);
+        }
+      })
       .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load slots'))
       .finally(() => setLoadingSlots(false));
-  }, [futsalId, selectedDate]);
+  }, [futsalId, selectedDate, requestedSlotId]);
 
   const submitBooking = async () => {
     if (!selectedSlot) return;
@@ -222,7 +239,7 @@ export function VenueDetails() {
                 <span>Futsal fee</span>
                 <span className="text-slate-800">{money(subtotal)}</span>
               </div>
-              {/* A row that always reads "NPR 0" is noise; it returns if a fee is ever charged. */}
+              {/* A line that always reads "NPR 0" is noise; it returns if a fee is ever charged. */}
               {serviceFee > 0 && (
                 <div className="mt-3 flex justify-between text-base font-normal">
                   <span>Service fee</span>

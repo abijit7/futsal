@@ -82,7 +82,7 @@ export function imageForVenue(url?: string) {
   return url || VENUE_PLACEHOLDER_IMAGE;
 }
 
-function minutesFromTime(value?: string) {
+export function minutesFromTime(value?: string) {
   if (!value) return null;
   const [hourRaw, minuteRaw = '0'] = value.split(':');
   const hour = Number(hourRaw);

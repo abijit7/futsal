@@ -8,7 +8,7 @@ import { formatTime, imageForVenue, money, placeName } from '../utils/format';
  * page sets it only when its results were filtered against a date. It used to be an unconditional
  * badge on every card, which made a claim the card could not back.
  */
-export function VenueCard({ futsal, available = false }: { futsal: Futsal; available?: boolean }) {
+export function VenueCard({ futsal, available = false, nextFree }: { futsal: Futsal; available?: boolean; nextFree?: string }) {
   // A venue with no reviews has no rating. Rendering `0.0` beside a filled star read as a bad
   // score rather than an absent one, which on a fresh catalogue is most of the grid.
   const rated = typeof futsal.rating === 'number' && futsal.rating > 0;
@@ -39,7 +39,10 @@ export function VenueCard({ futsal, available = false }: { futsal: Futsal; avail
         <div className="space-y-2 text-sm font-semibold text-slate-500">
           <p className="flex items-center gap-2"><MapPin size={16} className="text-green-600" /> {futsal.address}, {placeName(futsal.city)}</p>
           <p className="flex items-center gap-2"><Phone size={16} className="text-green-600" /> {futsal.phone}</p>
-          <p className="flex items-center gap-2"><Clock size={16} className="text-green-600" /> Opens {formatTime(futsal.openingTime)}</p>
+          {/* Only set when the caller actually checked availability for a date, so it is never a guess. */}
+          {nextFree
+            ? <p className="flex items-center gap-2 text-green-700"><Clock size={16} className="text-green-600" /> Next free {formatTime(nextFree)}</p>
+            : <p className="flex items-center gap-2"><Clock size={16} className="text-green-600" /> Opens {formatTime(futsal.openingTime)}</p>}
         </div>
         <div className="mt-6 flex items-center justify-between">
           <div>
