@@ -1,18 +1,11 @@
 import { useEffect, useState } from 'react';
-import { ArrowRight, Calendar, Clock, MapPin, Search, Shield, Trophy, Users } from 'lucide-react';
+import { ArrowRight, Calendar, Clock, MapPin, Search, Shield, Trophy, Wallet } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import { futsalApi } from '../../api/modules';
+import { futsalApi, slotApi } from '../../api/modules';
 import { VenueCard } from '../../components/VenueCard';
 import { BRAND_NAME, BRAND_TAGLINE, POPULAR_CITIES } from '../../constants/brand';
 import type { Futsal } from '../../types/api';
-import { todayInput } from '../../utils/format';
-
-const HIGHLIGHTS = [
-  { label: 'Live venue listings', value: 'Updated', icon: MapPin },
-  { label: 'Slot availability', value: 'Real-time', icon: Calendar },
-  { label: 'Secure booking', value: 'Instant', icon: Users },
-  { label: 'Cities across Nepal', value: 'Growing', icon: Trophy }
-];
+import { money, todayInput } from '../../utils/format';
 
 const HOW_IT_WORKS = [
   { step: '01', title: 'Find a Venue', desc: 'Search by location, date, and time. Filter by court type, price, and amenities.', icon: Search },
@@ -27,6 +20,8 @@ export function Home() {
   const [searchDate, setSearchDate] = useState('');
   const [featuredVenues, setFeaturedVenues] = useState<Futsal[]>([]);
   const [venueCount, setVenueCount] = useState<number | null>(null);
+  const [slotsToday, setSlotsToday] = useState<number | null>(null);
+  const [priceRange, setPriceRange] = useState<{ low: number; high: number } | null>(null);
   const [loadingVenues, setLoadingVenues] = useState(true);
   const [venueError, setVenueError] = useState('');
 
@@ -59,6 +54,44 @@ export function Home() {
     return () => { active = false; };
   }, []);
 
+  useEffect(() => {
+    let active = true;
+    // Every figure in the row is measured. The three probes settle independently so that one
+    // failing drops its own fact rather than blanking the row or, worse, showing a zero.
+    Promise.allSettled([
+      slotApi.available({ slotDate: todayInput(), page: 0, size: 1 }),
+      futsalApi.list({ page: 0, size: 1, sort: 'price-low' }),
+      futsalApi.list({ page: 0, size: 1, sort: 'price-high' })
+    ]).then(([today, cheapest, dearest]) => {
+      if (!active) return;
+      if (today.status === 'fulfilled' && typeof today.value.totalItems === 'number') {
+        setSlotsToday(today.value.totalItems);
+      }
+      const low = cheapest.status === 'fulfilled' ? cheapest.value.items?.[0]?.hourlyPrice : undefined;
+      const high = dearest.status === 'fulfilled' ? dearest.value.items?.[0]?.hourlyPrice : undefined;
+      if (typeof low === 'number' && typeof high === 'number') setPriceRange({ low, high });
+    });
+    return () => { active = false; };
+  }, []);
+
+  const facts = [
+    venueCount !== null && venueCount > 0
+      ? { value: String(venueCount), label: venueCount === 1 ? 'venue listed' : 'venues listed', icon: MapPin }
+      : null,
+    slotsToday !== null
+      ? { value: String(slotsToday), label: slotsToday === 1 ? 'slot free today' : 'slots free today', icon: Calendar }
+      : null,
+    priceRange
+      ? {
+          value: priceRange.low === priceRange.high
+            ? money(priceRange.low)
+            : `${money(priceRange.low)}\u2013${priceRange.high.toLocaleString('en-NP')}`,
+          label: 'per hour',
+          icon: Wallet
+        }
+      : null
+  ].filter((fact): fact is { value: string; label: string; icon: typeof MapPin } => fact !== null);
+
   return (
     <main>
       {/* Hero */}
@@ -79,13 +112,6 @@ export function Home() {
 
         <div className="container-page relative pb-28 pt-20">
           <div className="max-w-3xl">
-            {venueCount !== null && venueCount > 0 && (
-              <p className="mb-6 inline-flex items-center gap-2 rounded-full border border-green-500/30 bg-green-500/20 px-3 py-1.5 text-xs font-semibold text-green-300">
-                <span className="h-2 w-2 animate-pulse rounded-full bg-green-400" />
-                {venueCount} {venueCount === 1 ? 'venue' : 'venues'} available now
-              </p>
-            )}
-
             <h1
               className="mb-6 uppercase leading-none tracking-tight text-white"
               style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2.75rem, 7vw, 5.5rem)', fontWeight: 800, letterSpacing: '-0.01em' }}
@@ -96,8 +122,8 @@ export function Home() {
             </h1>
 
             <p className="mb-10 max-w-xl text-lg leading-relaxed text-slate-300">
-              Find and book the best futsal courts near you. Real-time availability, instant
-              confirmation, and hassle-free payments.
+              Every listed court&rsquo;s live schedule in one place. Pick a slot, then pay with eSewa
+              or cash at the venue.
             </p>
 
             {/* Search */}
@@ -155,20 +181,21 @@ export function Home() {
         </div>
       </section>
 
-      {/* Highlights */}
-      <section className="container-page -mt-4 mb-16">
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          {HIGHLIGHTS.map(({ label, value, icon: Icon }) => (
-            <div key={label} className="panel p-5 text-center">
-              <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: 'var(--secondary)' }}>
-                <Icon size={18} className="text-green-600" aria-hidden="true" />
+      {/* Measured, or absent */}
+      {facts.length > 0 && (
+        <section className="container-page -mt-4 mb-16">
+          <div className="panel flex flex-wrap items-center gap-x-8 gap-y-4 px-6 py-5">
+            {facts.map(({ value, label, icon: Icon }) => (
+              <div key={label} className="flex items-center gap-3">
+                <Icon size={16} className="shrink-0 text-green-600" aria-hidden="true" />
+                <p className="text-sm text-slate-500">
+                  <span className="text-base font-bold text-slate-950">{value}</span> {label}
+                </p>
               </div>
-              <p className="mb-1 text-2xl font-bold text-slate-950" style={{ fontFamily: 'var(--font-display)' }}>{value}</p>
-              <p className="text-xs text-slate-500">{label}</p>
-            </div>
-          ))}
-        </div>
-      </section>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Featured venues */}
       <section className="container-page mb-20">
