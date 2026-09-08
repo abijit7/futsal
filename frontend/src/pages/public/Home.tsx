@@ -96,19 +96,7 @@ export function Home() {
     <main>
       {/* Hero */}
       <section className="relative overflow-hidden" style={{ background: 'var(--futsal-navy)' }}>
-        <div
-          className="absolute inset-0 opacity-20"
-          style={{
-            backgroundImage: 'url(/venue-placeholder.svg)',
-            backgroundSize: 'cover',
-            backgroundPosition: 'center'
-          }}
-        />
-        <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(13,27,42,0.97) 0%, rgba(13,27,42,0.75) 60%, rgba(22,163,74,0.25) 100%)' }} />
-        <div
-          className="absolute inset-0 opacity-5"
-          style={{ backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 60px, rgba(255,255,255,0.5) 60px, rgba(255,255,255,0.5) 61px), repeating-linear-gradient(90deg, transparent, transparent 60px, rgba(255,255,255,0.5) 60px, rgba(255,255,255,0.5) 61px)' }}
-        />
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, var(--futsal-navy) 0%, var(--futsal-navy-mid) 62%, rgba(22,163,74,0.28) 100%)' }} />
 
         <div className="container-page relative pb-14 pt-14">
           <div className="max-w-3xl">
@@ -173,17 +161,11 @@ export function Home() {
             </div>
           </div>
         </div>
-
-        <div className="absolute bottom-0 left-0 right-0">
-          <svg viewBox="0 0 1440 60" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" style={{ display: 'block', height: 60 }} aria-hidden="true">
-            <path d="M0 60L1440 60L1440 20C1200 60 960 0 720 20C480 40 240 0 0 20V60Z" fill="var(--background)" />
-          </svg>
-        </div>
       </section>
 
       {/* Measured, or absent */}
       {facts.length > 0 && (
-        <section className="container-page -mt-4 mb-16">
+        <section className="container-page mt-12 mb-14">
           <div className="panel flex flex-wrap items-center gap-x-8 gap-y-4 px-6 py-5">
             {facts.map(({ value, label, icon: Icon }) => (
               <div key={label} className="flex items-center gap-3">
@@ -200,12 +182,7 @@ export function Home() {
       {/* Featured venues */}
       <section className="container-page mb-20">
         <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <p className="eyebrow">Recommended</p>
-            <h2 className="mt-2 uppercase text-slate-950" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.75rem, 3vw, 2.5rem)', fontWeight: 700 }}>
-              Featured Venues
-            </h2>
-          </div>
+          <h2 className="text-xl font-semibold text-slate-950">Recommended venues</h2>
           <Link to="/venues" className="inline-flex min-h-11 items-center gap-1 text-sm font-bold text-green-700 transition hover:text-green-800 focus:outline-none focus:ring-4 focus:ring-green-100">
             View all <ArrowRight size={16} />
           </Link>

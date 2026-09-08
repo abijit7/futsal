@@ -246,7 +246,7 @@ export function AdminFutsals() {
               {items.map((item) => (
                 <div key={item.futsalId} className="rounded-2xl border border-slate-200 bg-white p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-green-200 hover:shadow-sm">
                   <div className="grid gap-4 md:grid-cols-[176px_minmax(0,1fr)_auto] md:items-center">
-                    <img src={imageForVenue(item.imageUrl || item.imageUrls?.[0])} alt="" className="h-32 w-full rounded-2xl object-cover md:h-28" />
+                    <img src={imageForVenue(item.imageUrl || item.imageUrls?.[0], item.futsalId)} alt="" className="h-32 w-full rounded-2xl object-cover md:h-28" />
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <h3 className="truncate text-lg font-bold text-slate-900">{item.name}</h3>

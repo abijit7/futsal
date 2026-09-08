@@ -78,8 +78,27 @@ export function placeName(value?: string) {
 // reachable, and so the CSP does not have to allow a remote image origin.
 export const VENUE_PLACEHOLDER_IMAGE = '/venue-placeholder.svg';
 
-export function imageForVenue(url?: string) {
-  return url || VENUE_PLACEHOLDER_IMAGE;
+/**
+ * Four court illustrations rather than one. A grid of venues that have not uploaded photos used to
+ * repeat a single image down the page, which read as a broken loading state rather than as
+ * artwork.
+ */
+const VENUE_PLACEHOLDER_VARIANTS = [
+  '/venue-court-1.svg',
+  '/venue-court-2.svg',
+  '/venue-court-3.svg',
+  '/venue-court-4.svg'
+];
+
+/**
+ * A venue's image, or a fallback court illustration chosen from `seed` (the venue id). The choice
+ * is deterministic so a venue keeps the same artwork across pages, reloads and pagination.
+ */
+export function imageForVenue(url?: string, seed?: number) {
+  if (url) return url;
+  if (!Number.isFinite(seed)) return VENUE_PLACEHOLDER_VARIANTS[0];
+  const index = Math.abs(Math.trunc(seed as number)) % VENUE_PLACEHOLDER_VARIANTS.length;
+  return VENUE_PLACEHOLDER_VARIANTS[index];
 }
 
 export function minutesFromTime(value?: string) {

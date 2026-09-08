@@ -16,16 +16,16 @@ export function VenueCard({ futsal, available = false, nextFree }: { futsal: Fut
   return (
     <article className="group overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-slate-950/10">
       <div className="relative aspect-[4/3] overflow-hidden bg-slate-100">
-        <img src={imageForVenue(futsal.imageUrl || futsal.imageUrls?.[0])} alt={futsal.name} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" loading="lazy" />
+        <img src={imageForVenue(futsal.imageUrl || futsal.imageUrls?.[0], futsal.futsalId)} alt={futsal.name} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" loading="lazy" />
         {available && (
           <div className="absolute left-4 top-4 rounded-full bg-green-600 px-3 py-1 text-xs font-black text-white">Available</div>
         )}
       </div>
       <div className="p-6">
         <div className="mb-3 flex items-start justify-between gap-3">
-          <h3 className="line-clamp-2 text-xl font-black uppercase tracking-tight text-slate-950">{futsal.name}</h3>
+          <h3 className="line-clamp-2 text-lg font-semibold text-slate-950">{futsal.name}</h3>
           {rated ? (
-            <div className="flex shrink-0 items-center gap-1 rounded-full bg-amber-50 px-2 py-1 text-sm font-black text-amber-600">
+            <div className="flex shrink-0 items-center gap-1 rounded-full bg-amber-50 px-2 py-1 text-sm font-bold text-amber-600">
               <Star size={15} fill="currentColor" /> {futsal.rating!.toFixed(1)}
               {/* A score means little without knowing how many people gave it. */}
               {(futsal.reviewCount ?? 0) > 0 && (
@@ -46,8 +46,8 @@ export function VenueCard({ futsal, available = false, nextFree }: { futsal: Fut
         </div>
         <div className="mt-6 flex items-center justify-between">
           <div>
-            <div className="text-xs font-black uppercase text-slate-500">From</div>
-            <div className="text-xl font-black text-slate-950">{money(futsal.hourlyPrice)}<span className="text-sm text-slate-500">/hr</span></div>
+            <div className="text-xs text-slate-500">From</div>
+            <div className="text-xl font-bold text-slate-950">{money(futsal.hourlyPrice)}<span className="text-sm text-slate-500">/hr</span></div>
           </div>
           <Link to={`/venues/${futsal.futsalId}`} className="inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-white transition hover:bg-slate-800 focus:outline-none focus:ring-4 focus:ring-slate-200" aria-label={`View ${futsal.name}`}>
             <ArrowRight />

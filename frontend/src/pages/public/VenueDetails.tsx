@@ -136,20 +136,20 @@ export function VenueDetails() {
           {images.length > 1 ? (
             <>
               <div className="grid gap-3 overflow-hidden rounded-3xl md:grid-cols-4 md:grid-rows-2">
-                <img src={imageForVenue(images[0])} alt={futsal.name} className="h-64 w-full object-cover sm:h-80 md:col-span-2 md:row-span-2 md:h-96" />
+                <img src={imageForVenue(images[0], futsal.futsalId)} alt={futsal.name} className="h-64 w-full object-cover sm:h-80 md:col-span-2 md:row-span-2 md:h-96" />
                 {images.slice(1, 5).map((url, index) => (
-                  <img key={`${url}-${index}`} src={imageForVenue(url)} alt={`${futsal.name} photo ${index + 2}`} className="hidden h-full min-h-44 w-full object-cover md:block" />
+                  <img key={`${url}-${index}`} src={imageForVenue(url, futsal.futsalId + index + 1)} alt={`${futsal.name} photo ${index + 2}`} className="hidden h-full min-h-44 w-full object-cover md:block" />
                 ))}
               </div>
               {/* The extra photos were desktop-only before, so phones saw the cover image alone. */}
               <div className="mt-3 flex gap-3 overflow-x-auto pb-1 md:hidden">
                 {images.slice(1).map((url, index) => (
-                  <img key={`m-${url}-${index}`} src={imageForVenue(url)} alt={`${futsal.name} photo ${index + 2}`} className="h-24 w-32 shrink-0 rounded-2xl object-cover" />
+                  <img key={`m-${url}-${index}`} src={imageForVenue(url, futsal.futsalId + index + 1)} alt={`${futsal.name} photo ${index + 2}`} className="h-24 w-32 shrink-0 rounded-2xl object-cover" />
                 ))}
               </div>
             </>
           ) : (
-            <img src={imageForVenue(images[0])} alt={futsal.name} className="h-64 w-full rounded-3xl object-cover sm:h-80 md:h-96" />
+            <img src={imageForVenue(images[0], futsal.futsalId)} alt={futsal.name} className="h-64 w-full rounded-3xl object-cover sm:h-80 md:h-96" />
           )}
 
           <div className="mt-7">
