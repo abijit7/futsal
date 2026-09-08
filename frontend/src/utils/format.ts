@@ -60,6 +60,20 @@ export function todayInput() {
   return now.toISOString().slice(0, 10);
 }
 
+/**
+ * Title-cases a place name for display only; the stored value is untouched. Venues are typed in by
+ * hand from the admin form, so the same city arrives as both "kathmandu" and "Kathmandu" and the
+ * two sit next to each other in a listing. A word that already carries capitals is left alone, so
+ * "KTM" and other abbreviations survive.
+ */
+export function placeName(value?: string) {
+  if (!value) return '';
+  return value
+    .split(/(\s+)/)
+    .map((word) => (word === word.toLowerCase() ? word.charAt(0).toUpperCase() + word.slice(1) : word))
+    .join('');
+}
+
 // Self-hosted so that a venue without a photo does not depend on a third-party CDN being
 // reachable, and so the CSP does not have to allow a remote image origin.
 export const VENUE_PLACEHOLDER_IMAGE = '/venue-placeholder.svg';

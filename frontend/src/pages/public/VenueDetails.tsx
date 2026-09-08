@@ -6,7 +6,7 @@ import { DemoWalletHint } from '../../components/DemoWalletHint';
 import { EmptyState, LoadingState } from '../../components/State';
 import { useAuth } from '../../context/AuthContext';
 import type { Futsal, PaymentMethod, TimeSlot } from '../../types/api';
-import { formatTime, formatTimeCompact, imageForVenue, money, slotDuration, timeRange, todayInput } from '../../utils/format';
+import { formatTime, formatTimeCompact, imageForVenue, money, placeName, slotDuration, timeRange, todayInput } from '../../utils/format';
 import { handOffToGateway } from '../../utils/gatewayCheckout';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import { VenueReviews } from '../../components/VenueReviews';
@@ -142,7 +142,7 @@ export function VenueDetails() {
             </div>
             <h1 className="mt-3 text-4xl font-black tracking-tight text-slate-950">{futsal.name}</h1>
             <div className="mt-3 flex flex-wrap gap-4 text-sm font-bold text-slate-500">
-              <span className="flex items-center gap-2"><MapPin size={17} className="text-green-600" /> {futsal.address}, {futsal.city}</span>
+              <span className="flex items-center gap-2"><MapPin size={17} className="text-green-600" /> {futsal.address}, {placeName(futsal.city)}</span>
               <span className="flex items-center gap-2"><Phone size={17} className="text-green-600" /> {futsal.phone}</span>
               <span className="flex items-center gap-2"><Clock size={17} className="text-green-600" /> {formatTime(futsal.openingTime)} - {formatTime(futsal.closingTime)}</span>
               <span className="flex items-center gap-2"><Star size={17} className="text-amber-500" fill="currentColor" /> {(futsal.rating ?? 0).toFixed(1)} ({futsal.reviewCount ?? 0})</span>
@@ -222,10 +222,13 @@ export function VenueDetails() {
                 <span>Futsal fee</span>
                 <span className="text-slate-800">{money(subtotal)}</span>
               </div>
-              <div className="mt-3 flex justify-between text-base font-normal">
-                <span>Service fee</span>
-                <span className="text-slate-800">{money(serviceFee)}</span>
-              </div>
+              {/* A row that always reads "NPR 0" is noise; it returns if a fee is ever charged. */}
+              {serviceFee > 0 && (
+                <div className="mt-3 flex justify-between text-base font-normal">
+                  <span>Service fee</span>
+                  <span className="text-slate-800">{money(serviceFee)}</span>
+                </div>
+              )}
               <div className="mt-4 flex justify-between border-t border-slate-200 pt-4 text-lg font-black text-slate-950">
                 <span>Total</span>
                 <span>{money(total)}</span>

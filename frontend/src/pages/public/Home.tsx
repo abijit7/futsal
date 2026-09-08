@@ -174,7 +174,7 @@ export function Home() {
       <section className="container-page mb-20">
         <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="eyebrow">Top rated</p>
+            <p className="eyebrow">Recommended</p>
             <h2 className="mt-2 uppercase text-slate-950" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.75rem, 3vw, 2.5rem)', fontWeight: 700 }}>
               Featured Venues
             </h2>

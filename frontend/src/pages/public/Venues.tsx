@@ -131,7 +131,7 @@ export function Venues() {
         />
       ) : (
         <div className="motion-stagger grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {items.map((item) => <VenueCard key={item.futsalId} futsal={item} />)}
+          {items.map((item) => <VenueCard key={item.futsalId} futsal={item} available={Boolean(date)} />)}
         </div>
       )}
 

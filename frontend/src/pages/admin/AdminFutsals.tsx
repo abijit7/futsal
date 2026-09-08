@@ -5,7 +5,7 @@ import { Pagination } from '../../components/Pagination';
 import { EmptyState, LoadingState } from '../../components/State';
 import { Button, DialogFrame, Field, ModalShell } from '../../components/UI';
 import type { Futsal, FutsalPayload } from '../../types/api';
-import { formatTime, imageForVenue, money } from '../../utils/format';
+import { formatTime, imageForVenue, money, placeName } from '../../utils/format';
 
 type VenueSort = 'recommended' | 'price-low' | 'price-high';
 type FormTab = 'details' | 'location' | 'schedule' | 'media';
@@ -253,7 +253,7 @@ export function AdminFutsals() {
                         {item.verified && <span className="inline-flex rounded-full px-2 py-1 text-xs font-bold ring-1 bg-green-50 text-green-700 ring-green-200">Verified</span>}
                         {item.courtType && <span className="inline-flex rounded-full px-2 py-1 text-xs font-bold ring-1 bg-slate-100 text-slate-700 ring-slate-200">{item.courtType}</span>}
                       </div>
-                      <p className="mt-2 flex items-center gap-2 text-sm font-bold text-slate-500"><MapPin size={15} className="text-green-600" /> {item.address}, {item.city}</p>
+                      <p className="mt-2 flex items-center gap-2 text-sm font-bold text-slate-500"><MapPin size={15} className="text-green-600" /> {item.address}, {placeName(item.city)}</p>
                       <div className="mt-3 flex flex-wrap gap-3 text-sm text-slate-500">
                         <span className="font-bold text-slate-900">{money(item.hourlyPrice)}/hr</span>
                         <span className="flex items-center gap-1"><Clock3 size={15} /> {formatTime(item.openingTime)} - {formatTime(item.closingTime)}</span>
