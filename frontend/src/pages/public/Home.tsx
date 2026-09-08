@@ -1,18 +1,18 @@
 import { useEffect, useState } from 'react';
-import { ArrowRight, Calendar, Clock, MapPin, Search, Shield, Trophy, Wallet } from 'lucide-react';
+import { ArrowRight, Calendar, ChevronRight, MapPin, Search, Wallet } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { futsalApi, slotApi } from '../../api/modules';
 import { VenueCard } from '../../components/VenueCard';
-import { BRAND_NAME, BRAND_TAGLINE, POPULAR_CITIES } from '../../constants/brand';
+import { POPULAR_CITIES } from '../../constants/brand';
 import type { Futsal } from '../../types/api';
 import { money, todayInput } from '../../utils/format';
 
-const HOW_IT_WORKS = [
-  { step: '01', title: 'Find a Venue', desc: 'Search by location, date, and time. Filter by court type, price, and amenities.', icon: Search },
-  { step: '02', title: 'Pick a Slot', desc: 'Choose from real-time available time slots that suit your schedule.', icon: Clock },
-  { step: '03', title: 'Book & Pay', desc: 'Secure checkout with eSewa or cash at the venue.', icon: Shield },
-  { step: '04', title: 'Play!', desc: 'Show up and play. Manage or cancel bookings anytime from your dashboard.', icon: Trophy }
-];
+/**
+ * Booking is four self-evident steps sitting directly under a search box that demonstrates them,
+ * so it gets one line rather than the full-bleed section it used to have. The `how-it-works`
+ * anchor stays because Navbar.tsx links to it.
+ */
+const HOW_IT_WORKS = ['Search', 'Pick a slot', 'Pay with eSewa or cash', 'Play'];
 
 export function Home() {
   const navigate = useNavigate();
@@ -38,7 +38,7 @@ export function Home() {
     let active = true;
     setLoadingVenues(true);
     setVenueError('');
-    futsalApi.list({ page: 0, size: 3, sort: 'recommended' })
+    futsalApi.list({ page: 0, size: 6, sort: 'recommended' })
       .then((data) => {
         if (!active) return;
         setFeaturedVenues(data.items || []);
@@ -110,18 +110,18 @@ export function Home() {
           style={{ backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 60px, rgba(255,255,255,0.5) 60px, rgba(255,255,255,0.5) 61px), repeating-linear-gradient(90deg, transparent, transparent 60px, rgba(255,255,255,0.5) 60px, rgba(255,255,255,0.5) 61px)' }}
         />
 
-        <div className="container-page relative pb-28 pt-20">
+        <div className="container-page relative pb-14 pt-14">
           <div className="max-w-3xl">
             <h1
-              className="mb-6 uppercase leading-none tracking-tight text-white"
-              style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2.75rem, 7vw, 5.5rem)', fontWeight: 800, letterSpacing: '-0.01em' }}
+              className="mb-5 uppercase leading-none tracking-tight text-white"
+              style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2.5rem, 5.5vw, 4.25rem)', fontWeight: 800, letterSpacing: '-0.01em' }}
             >
               Book Your <span className="text-green-400">Futsal</span>
               <br />
               Court Instantly
             </h1>
 
-            <p className="mb-10 max-w-xl text-lg leading-relaxed text-slate-300">
+            <p className="mb-7 max-w-xl text-lg leading-relaxed text-slate-300">
               Every listed court&rsquo;s live schedule in one place. Pick a slot, then pay with eSewa
               or cash at the venue.
             </p>
@@ -212,8 +212,8 @@ export function Home() {
         </div>
 
         {loadingVenues ? (
-          <div className="grid gap-6 md:grid-cols-3">
-            {[1, 2, 3].map((item) => <div key={item} className="panel h-96 animate-pulse" />)}
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {[1, 2, 3, 4, 5, 6].map((item) => <div key={item} className="panel h-96 animate-pulse" />)}
           </div>
         ) : venueError ? (
           <div className="panel border-red-100 bg-red-50 p-8 text-sm font-bold text-red-700">{venueError}</div>
@@ -229,68 +229,16 @@ export function Home() {
         )}
       </section>
 
-      {/* How it works */}
-      <section id="how-it-works" className="scroll-mt-20 py-20" style={{ background: 'var(--futsal-navy)' }}>
-        <div className="container-page">
-          <div className="mb-14 text-center">
-            <p className="mb-2 text-xs font-bold uppercase tracking-widest text-green-400">Simple process</p>
-            <h2 className="uppercase text-white" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.75rem, 3vw, 2.5rem)', fontWeight: 700 }}>
-              Book in 4 Easy Steps
-            </h2>
-          </div>
-          <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
-            {HOW_IT_WORKS.map(({ step, title, desc, icon: Icon }, index) => (
-              <div key={step} className="relative">
-                {index < HOW_IT_WORKS.length - 1 && (
-                  <div className="absolute left-full top-8 hidden h-px w-full bg-green-500/30 lg:block" aria-hidden="true" />
-                )}
-                <div className="relative z-10">
-                  <p className="mb-4 text-5xl font-black leading-none text-green-500/25" style={{ fontFamily: 'var(--font-display)' }}>{step}</p>
-                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-green-500/30 bg-green-500/15">
-                    <Icon size={22} className="text-green-400" aria-hidden="true" />
-                  </div>
-                  <h3 className="mb-2 font-bold text-white">{title}</h3>
-                  {/* slate-400 on navy is 6.8:1; the previous #64748B was 3.7:1. */}
-                  <p className="text-sm leading-relaxed text-slate-400">{desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Closing CTA */}
-      <section className="container-page py-20">
-        <div
-          className="relative overflow-hidden rounded-3xl p-10 md:p-14"
-          style={{ background: 'linear-gradient(135deg, var(--futsal-green-dark) 0%, var(--futsal-green) 100%)' }}
-        >
-          <div className="absolute bottom-0 right-0 top-0 opacity-10" aria-hidden="true">
-            <svg viewBox="0 0 200 200" fill="none" className="h-full w-auto">
-              <circle cx="150" cy="50" r="120" stroke="white" strokeWidth="60" />
-            </svg>
-          </div>
-          <div className="relative max-w-2xl">
-            <h2 className="mb-4 uppercase text-white" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900 }}>
-              Ready to Play?
-            </h2>
-            <p className="mb-8 text-lg leading-relaxed text-white/90">
-              {BRAND_TAGLINE} Create a free {BRAND_NAME} account to book courts, track your
-              reservations, and pay however suits you.
-            </p>
-            <div className="flex flex-wrap gap-3">
-              <Link to="/venues" className="btn-navy">
-                Find a venue <ArrowRight size={16} />
-              </Link>
-              <Link
-                to="/register"
-                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-white/40 bg-white/10 px-5 py-3 font-bold text-white transition hover:bg-white/20 focus:outline-none focus:ring-4 focus:ring-white/30"
-              >
-                Create account
-              </Link>
-            </div>
-          </div>
-        </div>
+      {/* How it works — one line, not a section */}
+      <section id="how-it-works" className="container-page scroll-mt-24 pb-20">
+        <ol className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm font-semibold text-slate-500">
+          {HOW_IT_WORKS.map((step, index) => (
+            <li key={step} className="flex items-center gap-3">
+              {index > 0 && <ChevronRight size={14} className="text-slate-300" aria-hidden="true" />}
+              <span className={index === HOW_IT_WORKS.length - 1 ? 'text-green-700' : undefined}>{step}</span>
+            </li>
+          ))}
+        </ol>
       </section>
     </main>
   );
