@@ -19,6 +19,7 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -63,6 +64,83 @@ class UserServiceTest {
         assertTrue(savedPassword.get());
         assertTrue(verifier.matches("secret123", loggedIn.getPassword()));
         assertTrue(verifier.matches("secret123", user.getPassword()));
+    }
+
+    // ── Registration guards ───────────────────────────────────────────────────
+    // These are the checks that cannot live in a bean-validation annotation, and they are what
+    // stops a caller skipping the sign-up form and POSTing a throwaway account at the endpoint.
+
+    @Test
+    void registerRejectsReservedTestDomains() {
+        UserRepository userRepository = mock(UserRepository.class);
+        UserService userService = serviceWithRepository(userRepository);
+
+        IllegalArgumentException thrown = assertThrows(IllegalArgumentException.class,
+                () -> userService.register(candidate("bibek@example.com", "Futsal7Pitch")));
+
+        assertTrue(thrown.getMessage().contains("reserved test domain"), thrown.getMessage());
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void registerRejectsDisposableMailboxes() {
+        UserRepository userRepository = mock(UserRepository.class);
+        UserService userService = serviceWithRepository(userRepository);
+
+        IllegalArgumentException thrown = assertThrows(IllegalArgumentException.class,
+                () -> userService.register(candidate("bibek@inbox.mailinator.com", "Futsal7Pitch")));
+
+        assertTrue(thrown.getMessage().contains("Disposable email"), thrown.getMessage());
+        verify(userRepository, never()).save(any());
+    }
+
+    /** The case that prompted the rule: eight characters used to be the only bar. */
+    @Test
+    void registerRejectsSequentialAndCommonPasswords() {
+        UserRepository userRepository = mock(UserRepository.class);
+        UserService userService = serviceWithRepository(userRepository);
+
+        assertTrue(assertThrows(IllegalArgumentException.class,
+                () -> userService.register(candidate("bibek@gmail.com", "12345678")))
+                .getMessage().contains("sequence"));
+        assertTrue(assertThrows(IllegalArgumentException.class,
+                () -> userService.register(candidate("bibek@gmail.com", "Password1")))
+                .getMessage().contains("too common"));
+        assertTrue(assertThrows(IllegalArgumentException.class,
+                () -> userService.register(candidate("bibek@gmail.com", "Shrestha99")))
+                .getMessage().contains("your name or email"));
+
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void registerAcceptsARealAddressAndAStrongPassword() {
+        UserRepository userRepository = mock(UserRepository.class);
+        when(userRepository.existsByEmailIgnoreCase(any())).thenReturn(false);
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        UserService userService = serviceWithRepository(userRepository);
+
+        User registered = userService.register(candidate("Bibek@Gmail.com", "Futsal7Pitch"));
+
+        assertEquals("bibek@gmail.com", registered.getEmail());
+        assertTrue(verifier.matches("Futsal7Pitch", registered.getPassword()));
+        assertEquals(Role.USER, registered.getRole());
+        verify(userRepository).save(any(User.class));
+    }
+
+    private UserService serviceWithRepository(UserRepository userRepository) {
+        UserService userService = new UserService();
+        ReflectionTestUtils.setField(userService, "userRepository", userRepository);
+        return userService;
+    }
+
+    private User candidate(String email, String password) {
+        User user = new User();
+        user.setName("Bibek Shrestha");
+        user.setEmail(email);
+        user.setPhone("9800000009");
+        user.setPassword(password);
+        return user;
     }
 
     private UserRepository repositoryReturning(User user, AtomicBoolean savedPassword) {

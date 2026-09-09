@@ -16,6 +16,10 @@ public class UserRegisterRequest {
 
     @Email(message = "Invalid email format")
     @NotBlank(message = "Email is required")
+    @Pattern(
+        regexp = "^[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\\.[A-Za-z0-9-]+)*\\.[A-Za-z]{2,}$",
+        message = "Enter a valid email address, like you@gmail.com."
+    )
     private String email;
 
     @NotBlank(message = "Phone is required")
@@ -26,7 +30,9 @@ public class UserRegisterRequest {
     private String phone;
 
     @NotBlank(message = "Password is required")
-    @Size(min = 6, message = "Password must be at least 6 characters")
+    // 8 matches the reset and change-password endpoints; 72 is where BCrypt stops reading.
+    @Size(min = 8, max = 72, message = "Use at least 8 characters.")
+    @Pattern(regexp = "^(?=.*[A-Za-z])(?=.*\\d).+$", message = "Use at least one letter and one number.")
     private String password;
 
     public String getName() { return name; }

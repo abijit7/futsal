@@ -1,6 +1,7 @@
 package com.futsal.dto;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 public class PasswordChangeRequest {
@@ -9,6 +10,7 @@ public class PasswordChangeRequest {
 
     @NotBlank(message = "New password is required")
     @Size(min = 8, max = 72, message = "New password must be 8-72 characters")
+    @Pattern(regexp = "^(?=.*[A-Za-z])(?=.*\\d).+$", message = "Use at least one letter and one number.")
     private String newPassword;
 
     public String getCurrentPassword() { return currentPassword; }

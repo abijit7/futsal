@@ -20,11 +20,41 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
+import java.util.List;
+import java.util.Set;
 
 @Service
 public class UserService {
 
     private static final BCryptPasswordEncoder PASSWORD_ENCODER = new BCryptPasswordEncoder(12);
+
+    /**
+     * RFC 2606 / RFC 6761 names reserved so they can never resolve. Registration promises a
+     * verification email, so an address here is one the account could never confirm.
+     */
+    private static final List<String> RESERVED_EMAIL_DOMAINS = List.of("example.com", "example.net", "example.org");
+    private static final Set<String> RESERVED_EMAIL_TLDS = Set.of("test", "example", "invalid", "localhost", "local");
+
+    private static final List<String> DISPOSABLE_EMAIL_DOMAINS = List.of(
+            "10minutemail.com", "discard.email", "dispostable.com", "emailondeck.com", "fakeinbox.com",
+            "getairmail.com", "getnada.com", "guerrillamail.com", "mailcatch.com", "maildrop.cc",
+            "mailinator.com", "mailnesia.com", "mohmal.com", "moakt.com", "sharklasers.com",
+            "spam4.me", "spamgourmet.com", "temp-mail.org", "tempmail.com", "tempmailo.com",
+            "throwawaymail.com", "trashmail.com", "yopmail.com", "yopmail.net");
+
+    /**
+     * Base words behind the passwords that top every breach list, plus the ones this product
+     * invites by name. Matched lowercased and again with trailing digits stripped, so one entry
+     * covers {@code password}, {@code Password1} and {@code password2024}. Kept in step with
+     * {@code frontend/src/utils/validation.ts}.
+     */
+    private static final Set<String> COMMON_PASSWORDS = Set.of(
+            "abc", "abcd", "abcdef", "admin", "administrator", "asdfgh", "baseball", "batman",
+            "changeme", "computer", "cricket", "dragon", "facebook", "football", "freedom", "futsal",
+            "google", "hello", "helloworld", "iloveyou", "internet", "jordan", "kathmandu", "letmein",
+            "login", "master", "merofutsal", "michael", "monkey", "nepal", "passw0rd", "password",
+            "princess", "qwerty", "qwertyuiop", "samsung", "secret", "shadow", "sunshine", "superman",
+            "test", "testing", "trustno", "welcome", "whatever", "zxcvbn");
 
     @Autowired
     private UserRepository userRepository;
@@ -56,6 +86,8 @@ public class UserService {
     // ── Register new user ─────────────────────────────────────────────────────
     public User register(User user) {
         user.setEmail(normalizeEmail(user.getEmail()));
+        rejectUnusableEmailDomain(user.getEmail());
+        rejectWeakPassword(user.getPassword(), user.getName(), user.getEmail());
         if (userRepository.existsByEmailIgnoreCase(user.getEmail())) {
             throw new ConflictException("Email is already registered. Please use a different email.");
         }
@@ -226,5 +258,91 @@ public class UserService {
 
     private String normalizeEmail(String email) {
         return email == null ? "" : email.trim().toLowerCase();
+    }
+
+    // ── Registration guards ───────────────────────────────────────────────────
+    // The bean validation on UserRegisterRequest covers shape and length. These two cover the
+    // list lookups an annotation cannot express, and are the reason a caller cannot skip the form
+    // and POST a throwaway address or "12345678" straight at the endpoint. Messages match the
+    // frontend's word for word so both surfaces read the same.
+
+    /** Expects an already-normalized (trimmed, lowercased) address. */
+    private void rejectUnusableEmailDomain(String email) {
+        int at = email.lastIndexOf('@');
+        if (at < 0) {
+            return;
+        }
+        String domain = email.substring(at + 1);
+        String tld = domain.substring(domain.lastIndexOf('.') + 1);
+        if (matchesDomain(domain, RESERVED_EMAIL_DOMAINS) || RESERVED_EMAIL_TLDS.contains(tld)) {
+            throw new IllegalArgumentException(
+                    domain + " is a reserved test domain. Use an address you can actually receive mail at.");
+        }
+        if (matchesDomain(domain, DISPOSABLE_EMAIL_DOMAINS)) {
+            throw new IllegalArgumentException(
+                    "Disposable email addresses aren't accepted - you'll need this address to verify the account.");
+        }
+    }
+
+    /** True when {@code domain} is a listed name itself or a subdomain of one. */
+    private boolean matchesDomain(String domain, List<String> list) {
+        return list.stream().anyMatch(entry -> domain.equals(entry) || domain.endsWith("." + entry));
+    }
+
+    private void rejectWeakPassword(String password, String name, String email) {
+        if (password == null) {
+            return;
+        }
+        if (isRun(password)) {
+            throw new IllegalArgumentException("That's a sequence, not a password. Mix it up.");
+        }
+        if (isCommonPassword(password)) {
+            throw new IllegalArgumentException("That password is too common. Pick something harder to guess.");
+        }
+        if (reusesPersonalDetails(password, name, email)) {
+            throw new IllegalArgumentException("Don't use your name or email address in your password.");
+        }
+    }
+
+    /**
+     * Catches the whole-string runs a blocklist would never keep up with: {@code 12345678},
+     * {@code 87654321}, {@code abcdefgh}, {@code aaaaaaaa}.
+     */
+    private boolean isRun(String value) {
+        if (value.length() < 3) {
+            return false;
+        }
+        boolean ascending = true;
+        boolean descending = true;
+        boolean repeated = true;
+        for (int i = 1; i < value.length(); i++) {
+            int step = value.charAt(i) - value.charAt(i - 1);
+            if (step != 1) ascending = false;
+            if (step != -1) descending = false;
+            if (step != 0) repeated = false;
+        }
+        return ascending || descending || repeated;
+    }
+
+    private boolean isCommonPassword(String password) {
+        String lowered = password.toLowerCase();
+        if (COMMON_PASSWORDS.contains(lowered)) {
+            return true;
+        }
+        String withoutTrailingDigits = lowered.replaceAll("\\d+$", "");
+        return withoutTrailingDigits.length() >= 3 && COMMON_PASSWORDS.contains(withoutTrailingDigits);
+    }
+
+    /** Name words and the email local part, long enough that finding them in a password is telling. */
+    private boolean reusesPersonalDetails(String password, String name, String email) {
+        String lowered = password.toLowerCase();
+        String local = email == null ? "" : email.split("@")[0];
+        String[] tokens = (name == null ? "" : name).toLowerCase().trim().split("\\s+");
+        for (String token : tokens) {
+            if (token.length() >= 4 && lowered.contains(token)) {
+                return true;
+            }
+        }
+        return local.length() >= 4 && lowered.contains(local.toLowerCase());
     }
 }

@@ -1,4 +1,4 @@
-import { CheckCircle2, Eye, EyeOff, KeyRound, LockKeyhole, Mail, Phone, RefreshCw, Save, ShieldCheck, UserRound, XCircle } from 'lucide-react';
+import { CheckCircle2, LockKeyhole, Mail, Phone, RefreshCw, Save, ShieldCheck, UserRound } from 'lucide-react';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -6,9 +6,11 @@ import { userApi } from '../../api/modules';
 import { EmptyState, ErrorState, LoadingState } from '../../components/State';
 import { Button, Chip, Field, ModalShell, PageHero } from '../../components/UI';
 import { StatusBadge } from '../../components/StatusBadge';
+import { PasswordField, PasswordRequirements } from '../../components/PasswordControls';
 import { useAuth } from '../../context/AuthContext';
 import type { User } from '../../types/api';
 import { formatDate } from '../../utils/format';
+import { validateName, validatePassword, validatePhone } from '../../utils/validation';
 
 type VerificationChannel = 'email' | 'phone';
 
@@ -32,8 +34,6 @@ type PasswordForm = {
 
 const emptyVerification: VerificationState = { code: '', devCode: '', message: '', loading: false };
 const emptyPasswords: PasswordForm = { currentPassword: '', newPassword: '', confirmPassword: '' };
-const phonePattern = /^(98|97|96)\d{8}$/;
-const namePattern = /^[A-Za-z]{2,}(?: [A-Za-z]{2,})+$/;
 
 const settingsLinks = [
   ['Summary', 'summary'],
@@ -57,9 +57,6 @@ export function Profile() {
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [savingProfile, setSavingProfile] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
-  const [showCurrent, setShowCurrent] = useState(false);
-  const [showNew, setShowNew] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
 
   const mergeUser = (updated: User) => {
@@ -95,12 +92,10 @@ export function Profile() {
 
   const profileErrors = useMemo(() => {
     const next: Partial<Record<keyof ProfileForm, string>> = {};
-    const name = profile.name.trim();
-    const phone = profile.phone.trim();
-    if (!name) next.name = 'Full name is required.';
-    else if (name.length < 5 || name.length > 50 || !namePattern.test(name)) next.name = 'Use first and last name, letters only, 5-50 characters.';
-    if (!phone) next.phone = 'Phone number is required.';
-    else if (!phonePattern.test(phone)) next.phone = 'Enter a valid 10-digit phone number starting with 98, 97, or 96.';
+    const name = validateName(profile.name);
+    const phone = validatePhone(profile.phone);
+    if (name) next.name = name;
+    if (phone) next.phone = phone;
     return next;
   }, [profile]);
 
@@ -108,12 +103,12 @@ export function Profile() {
     const next: Partial<Record<keyof PasswordForm, string>> = {};
     if (!passwordDirty) return next;
     if (!passwords.currentPassword) next.currentPassword = 'Current password is required by the backend.';
-    if (!passwords.newPassword) next.newPassword = 'New password is required.';
-    else if (passwords.newPassword.length < 8 || passwords.newPassword.length > 72) next.newPassword = 'Use 8-72 characters.';
+    const newPassword = validatePassword(passwords.newPassword, { name: profile.name, email: user?.email });
+    if (newPassword) next.newPassword = newPassword;
     if (!passwords.confirmPassword) next.confirmPassword = 'Confirm your new password.';
     else if (passwords.newPassword !== passwords.confirmPassword) next.confirmPassword = 'Passwords do not match.';
     return next;
-  }, [passwordDirty, passwords]);
+  }, [passwordDirty, passwords, profile.name, user?.email]);
 
   const profileValid = Object.keys(profileErrors).length === 0;
   const passwordValid = passwordDirty && Object.keys(passwordErrors).length === 0;
@@ -294,11 +289,11 @@ export function Profile() {
             <SectionCard id="security" eyebrow="Security" title="Password and security" description="Change your password using the backend password endpoint. Leave this section blank to keep your current password.">
               <form onSubmit={changePassword} className="grid gap-5">
                 <div className="grid gap-5 lg:grid-cols-3">
-                  <PasswordField label="Current password" value={passwords.currentPassword} visible={showCurrent} onToggle={() => setShowCurrent((value) => !value)} onChange={(value) => setPasswords({ ...passwords, currentPassword: value })} error={passwordErrors.currentPassword} />
-                  <PasswordField label="New password" value={passwords.newPassword} visible={showNew} onToggle={() => setShowNew((value) => !value)} onChange={(value) => setPasswords({ ...passwords, newPassword: value })} error={passwordErrors.newPassword} />
-                  <PasswordField label="Confirm new password" value={passwords.confirmPassword} visible={showConfirm} onToggle={() => setShowConfirm((value) => !value)} onChange={(value) => setPasswords({ ...passwords, confirmPassword: value })} error={passwordErrors.confirmPassword} />
+                  <PasswordField label="Current password" autoComplete="current-password" value={passwords.currentPassword} onChange={(value) => setPasswords({ ...passwords, currentPassword: value })} error={passwordErrors.currentPassword} />
+                  <PasswordField label="New password" autoComplete="new-password" value={passwords.newPassword} onChange={(value) => setPasswords({ ...passwords, newPassword: value })} error={passwordErrors.newPassword} />
+                  <PasswordField label="Confirm new password" autoComplete="new-password" value={passwords.confirmPassword} onChange={(value) => setPasswords({ ...passwords, confirmPassword: value })} error={passwordErrors.confirmPassword} />
                 </div>
-                <PasswordRequirements password={passwords.newPassword} matches={passwords.newPassword === passwords.confirmPassword && Boolean(passwords.confirmPassword)} />
+                <PasswordRequirements password={passwords.newPassword} context={{ name: profile.name, email: user?.email }} matches={passwords.newPassword === passwords.confirmPassword && Boolean(passwords.confirmPassword)} />
                 <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
                   <Button type="button" variant="outline" disabled={!passwordDirty || savingPassword} onClick={() => setPasswords(emptyPasswords)}>
                     Clear
@@ -447,47 +442,6 @@ function SaveBar({ dirty, valid, loading, onReset }: { dirty: boolean; valid: bo
         </div>
       </div>
     </div>
-  );
-}
-
-function PasswordField({ label, value, visible, onToggle, onChange, error }: { label: string; value: string; visible: boolean; onToggle: () => void; onChange: (value: string) => void; error?: string }) {
-  return (
-    <div>
-      <Field
-        label={label}
-        type={visible ? 'text' : 'password'}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        error={error}
-        prefix={<KeyRound size={18} />}
-        suffix={(
-          <button type="button" className="rounded-full p-1 text-slate-500 hover:text-slate-950 focus:outline-none focus:ring-4 focus:ring-green-100" aria-label={visible ? `Hide ${label}` : `Show ${label}`} onClick={onToggle}>
-            {visible ? <EyeOff size={17} /> : <Eye size={17} />}
-          </button>
-        )}
-        aria-invalid={Boolean(error)}
-      />
-    </div>
-  );
-}
-
-function PasswordRequirements({ password, matches }: { password: string; matches: boolean }) {
-  return (
-    <div className="grid gap-2 rounded-3xl bg-slate-50 p-4 text-sm font-semibold text-slate-600 sm:grid-cols-2">
-      <Requirement met={password.length >= 8}>At least 8 characters</Requirement>
-      <Requirement met={password.length <= 72}>72 characters or fewer</Requirement>
-      <Requirement met={/[A-Za-z]/.test(password)}>Contains letters</Requirement>
-      <Requirement met={matches}>Confirmation matches</Requirement>
-    </div>
-  );
-}
-
-function Requirement({ met, children }: { met: boolean; children: ReactNode }) {
-  return (
-    <span className={`inline-flex items-center gap-2 ${met ? 'text-green-700' : 'text-slate-500'}`}>
-      {met ? <CheckCircle2 size={16} /> : <XCircle size={16} />}
-      {children}
-    </span>
   );
 }
 
