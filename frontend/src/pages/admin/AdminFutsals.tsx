@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { Clock3, ImageIcon, MapPin, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
+import { Clock3, ImageIcon, MapPin, Pencil, Plus, Search, ShieldCheck, ShieldOff, Trash2, X } from 'lucide-react';
 import { futsalApi, uploadApi } from '../../api/modules';
 import { Pagination } from '../../components/Pagination';
 import { EmptyState, LoadingState } from '../../components/State';
@@ -21,10 +21,7 @@ const emptyForm: FutsalPayload = {
   closingTime: '22:00:00',
   imageUrl: '',
   imageUrls: [],
-  verified: false,
   courtType: '',
-  rating: 0,
-  reviewCount: 0,
   description: ''
 };
 
@@ -50,6 +47,7 @@ export function AdminFutsals() {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [verifyingId, setVerifyingId] = useState<number | null>(null);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
@@ -96,10 +94,7 @@ export function AdminFutsals() {
       closingTime: toTimeInput(item.closingTime),
       imageUrl: item.imageUrl || urls[0] || '',
       imageUrls: urls,
-      verified: Boolean(item.verified),
       courtType: item.courtType || '',
-      rating: item.rating ?? 0,
-      reviewCount: item.reviewCount ?? 0,
       description: item.description || ''
     });
     setDrawerOpen(true);
@@ -130,6 +125,24 @@ export function AdminFutsals() {
       setError(err instanceof Error ? err.message : 'Save failed');
     } finally {
       setSaving(false);
+    }
+  };
+
+  // Verification is a separate call, not part of the venue payload: the server owns `verified`
+  // and only an admin may change it.
+  const toggleVerified = async (item: Futsal) => {
+    setError('');
+    setMessage('');
+    setVerifyingId(item.futsalId);
+    try {
+      const next = !item.verified;
+      await futsalApi.setVerified(item.futsalId, next);
+      setMessage(next ? `${item.name} is now verified.` : `${item.name} is no longer verified.`);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not change verification');
+    } finally {
+      setVerifyingId(null);
     }
   };
 
@@ -266,6 +279,10 @@ export function AdminFutsals() {
                         <Pencil size={16} />
                         Edit
                       </Button>
+                      <Button type="button" variant="outline" size="sm" className="flex-1 md:flex-none" disabled={verifyingId === item.futsalId} onClick={() => toggleVerified(item)}>
+                        {item.verified ? <ShieldOff size={16} /> : <ShieldCheck size={16} />}
+                        {verifyingId === item.futsalId ? 'Saving...' : item.verified ? 'Unverify' : 'Verify'}
+                      </Button>
                       <Button type="button" variant="destructive" size="sm" className="flex-1 md:flex-none" disabled={deletingId === item.futsalId} onClick={() => setDeleteTarget(item)}>
                         <Trash2 size={16} />
                         {deletingId === item.futsalId ? 'Deleting...' : 'Delete'}
@@ -322,10 +339,6 @@ export function AdminFutsals() {
                   <label className="block"><span className="label">Venue name</span><input className="input" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} required minLength={3} maxLength={80} placeholder="Rave futsal" /></label>
                   <label className="block"><span className="label">Surface type</span><input className="input" value={form.courtType || ''} onChange={(event) => setForm({ ...form, courtType: event.target.value })} maxLength={60} placeholder="Indoor turf" /></label>
                   <label className="block"><span className="label">Description</span><textarea className="input min-h-28" maxLength={250} value={form.description || ''} onChange={(event) => setForm({ ...form, description: event.target.value })} placeholder="Parking, lighting, facilities, or short venue note" /></label>
-                  <label className="flex items-center justify-between rounded-2xl bg-slate-50 p-4 font-bold text-slate-700">
-                    <span>Verified venue</span>
-                    <input type="checkbox" checked={Boolean(form.verified)} onChange={(event) => setForm({ ...form, verified: event.target.checked })} />
-                  </label>
                 </div>
               )}
 
@@ -430,8 +443,6 @@ function normalizePayload(form: FutsalPayload): FutsalPayload {
     openingTime: withSeconds(form.openingTime),
     closingTime: withSeconds(form.closingTime),
     imageUrl: imageUrls[0] || form.imageUrl || '',
-    imageUrls,
-    rating: Number(form.rating || 0),
-    reviewCount: Number(form.reviewCount || 0)
+    imageUrls
   };
 }

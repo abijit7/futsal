@@ -12,6 +12,7 @@ import com.futsal.security.SecurityAuth;
 import com.futsal.dto.DtoMapper;
 import com.futsal.dto.FutsalRequest;
 import com.futsal.dto.FutsalResponse;
+import com.futsal.dto.FutsalVerificationRequest;
 import com.futsal.dto.PagedResponse;
 
 import java.util.HashMap;
@@ -56,6 +57,22 @@ public class FutsalController {
         securityAuth.requireAdmin();
         Futsal entity = DtoMapper.toFutsal(futsal);
         return ResponseEntity.ok(DtoMapper.toFutsalResponse(futsalService.update(id, entity)));
+    }
+
+    /**
+     * Approves a venue, or withdraws approval. Admin only, and deliberately separate from
+     * {@link #update} - verification is the platform's judgement about a venue, not one of the
+     * venue's own details, and it is the only path that writes {@code verified}.
+     *
+     * <p>Already covered by the admin-only {@code PUT /api/futsals/**} matcher in SecurityConfig;
+     * the {@code requireAdmin()} below is the imperative half of the same guard, matching how every
+     * other administrative action in this controller is written.
+     */
+    @PutMapping("/{id}/verification")
+    public ResponseEntity<FutsalResponse> setVerification(@PathVariable Long id,
+                                                          @Valid @RequestBody FutsalVerificationRequest body) {
+        securityAuth.requireAdmin();
+        return ResponseEntity.ok(DtoMapper.toFutsalResponse(futsalService.setVerified(id, body.getVerified())));
     }
 
     @DeleteMapping("/{id}")

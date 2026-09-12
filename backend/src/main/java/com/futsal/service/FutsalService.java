@@ -60,14 +60,26 @@ public class FutsalService {
         existing.setHourlyPrice(updated.getHourlyPrice());
         existing.setOpeningTime(updated.getOpeningTime());
         existing.setClosingTime(updated.getClosingTime());
-        existing.setVerified(updated.isVerified());
         existing.setCourtType(updated.getCourtType());
-        existing.setRating(updated.getRating());
-        existing.setReviewCount(updated.getReviewCount());
+        // verified, rating and reviewCount are intentionally not copied from the incoming entity:
+        // they are owned by setVerified() and ReviewService respectively, and an update must leave
+        // whatever is already on the row. See the note in DtoMapper.toFutsal.
         validateSchedule(existing);
         syncImages(existing, updated);
         existing.setDescription(updated.getDescription());
         return futsalRepository.save(existing);
+    }
+
+    /**
+      * Approves or un-approves a venue. The only way {@code verified} is ever written.
+      *
+      * <p>Touches that one column and nothing else, so approving a venue can never disturb its
+      * schedule, price or images - and so an approval cannot be smuggled in alongside an edit.
+      */
+    public Futsal setVerified(Long id, boolean verified) {
+        Futsal futsal = getById(id);
+        futsal.setVerified(verified);
+        return futsalRepository.save(futsal);
     }
 
     private void validateSchedule(Futsal futsal) {
