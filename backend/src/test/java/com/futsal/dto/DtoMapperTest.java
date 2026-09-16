@@ -35,10 +35,7 @@ class DtoMapperTest {
         request.setClosingTime(LocalTime.of(22, 0));
         request.setImageUrl("/uploads/cover.jpg");
         request.setImageUrls(List.of("/uploads/cover.jpg", "/uploads/side.jpg"));
-        request.setVerified(true);
         request.setCourtType("Indoor turf");
-        request.setRating(new BigDecimal("4.7"));
-        request.setReviewCount(18);
         request.setDescription("Parking available");
 
         Futsal futsal = DtoMapper.toFutsal(request);
@@ -47,10 +44,29 @@ class DtoMapperTest {
         assertEquals(LocalTime.of(6, 0), futsal.getOpeningTime());
         assertEquals(LocalTime.of(22, 0), futsal.getClosingTime());
         assertEquals(List.of("/uploads/cover.jpg", "/uploads/side.jpg"), futsal.getImageUrls());
-        assertTrue(futsal.isVerified());
         assertEquals("Indoor turf", futsal.getCourtType());
-        assertEquals(new BigDecimal("4.7"), futsal.getRating());
-        assertEquals(18, futsal.getReviewCount());
+    }
+
+    /**
+     * A venue must not be able to declare itself approved or well-reviewed.
+     *
+     * <p>FutsalRequest carries no verified/rating/reviewCount fields at all, so this asserts the
+     * mapper leaves the entity on its own defaults - an unapproved venue with no reputation - no
+     * matter what the caller sent. Before this, all three were mapped straight through, which was
+     * harmless only for as long as admins were the sole callers.
+     */
+    @Test
+    void doesNotLetTheRequestSetVerificationOrReputation() {
+        FutsalRequest request = new FutsalRequest();
+        request.setName("Prime Arena");
+        request.setOpeningTime(LocalTime.of(6, 0));
+        request.setClosingTime(LocalTime.of(22, 0));
+
+        Futsal futsal = DtoMapper.toFutsal(request);
+
+        assertFalse(futsal.isVerified(), "a mapped venue must start unapproved");
+        assertNull(futsal.getRating(), "rating is an aggregate, never a request field");
+        assertEquals(0, futsal.getReviewCount(), "reviewCount is an aggregate, never a request field");
     }
 
     @Test

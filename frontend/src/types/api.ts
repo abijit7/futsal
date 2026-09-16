@@ -79,7 +79,13 @@ export type ReviewPayload = {
   comment?: string;
 };
 
-export type FutsalPayload = Omit<Futsal, 'futsalId' | 'createdAt' | 'images'>;
+// verified, rating and reviewCount are readable on a Futsal but are not the client's to send.
+// The server ignores them on create/update: verification is its own admin-only endpoint
+// (futsalApi.setVerified) and the two review aggregates are recomputed server-side.
+export type FutsalPayload = Omit<
+  Futsal,
+  'futsalId' | 'createdAt' | 'images' | 'verified' | 'rating' | 'reviewCount'
+>;
 
 export type TimeSlot = {
   slotId: number;

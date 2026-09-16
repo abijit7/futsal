@@ -1,14 +1,22 @@
 import { Link } from 'react-router-dom';
 import { BrandMark } from './BrandMark';
-import { BRAND_DISPLAY, BRAND_TAGLINE, POPULAR_CITIES } from '../constants/brand';
+import { BRAND_DISPLAY, BRAND_TAGLINE, EVENING_FROM, POPULAR_CITIES } from '../constants/brand';
 import { useAuth } from '../context/AuthContext';
 
 /**
  * Site-wide footer.
  *
- * <p>Every link here points at a route that exists - the previous footer was fifteen `href="#"`
- * placeholders. Text colours are held at or above 4.5:1 on the navy ground: slate-300 is 11.7:1
- * and slate-400 is 6.8:1, where the old #475569 was 2.3:1 and effectively invisible.
+ * <p>Shaped around the one thing a footer on this site can usefully do: someone has reached the
+ * bottom of a page without booking, so give them the shortest way back in. That is the evening
+ * link and the city list, which are the loudest things here; the navigation columns are quiet
+ * beside them.
+ *
+ * <p>Every link points at a route that exists. An earlier version of this footer was fifteen
+ * `href="#"` placeholders, and the sparseness of the real link set is not a reason to return to
+ * that - it is a reason to give the space to the links that do work.
+ *
+ * <p>Text colours are held at or above 4.5:1 on the navy ground: slate-300 is 11.7:1 and slate-400
+ * is 6.8:1, where the old #475569 was 2.3:1 and effectively invisible.
  */
 export function SiteFooter() {
   const year = new Date().getFullYear();
@@ -30,7 +38,10 @@ export function SiteFooter() {
   return (
     <footer className="border-t border-white/10" style={{ background: 'var(--futsal-navy)' }}>
       <div className="container-page py-12">
-        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr]">
+        {/* The link columns are an auto-width pair rather than a fraction of the container, so the
+            gap between them stops growing with the viewport. Stretching two links and three links
+            across a 1280px row is what left them stranded. */}
+        <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_auto] lg:gap-16">
           <div>
             <div className="flex items-center gap-2">
               <BrandMark size={28} />
@@ -38,32 +49,67 @@ export function SiteFooter() {
                 {BRAND_DISPLAY}
               </span>
             </div>
-            <p className="mt-4 max-w-xs text-sm leading-relaxed text-slate-400">{BRAND_TAGLINE}</p>
-            <div className="mt-5 flex flex-wrap gap-2">
-              {POPULAR_CITIES.map((city) => (
-                <Link
-                  key={city}
-                  to={`/venues?q=${encodeURIComponent(city)}`}
-                  className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-300 transition hover:border-green-400/40 hover:text-white focus:outline-none focus:ring-2 focus:ring-green-400/60"
-                >
-                  {city}
-                </Link>
-              ))}
-            </div>
+
+            <p
+              className="mt-6 uppercase leading-none tracking-tight text-white"
+              style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.75rem, 3.2vw, 2.5rem)', fontWeight: 800 }}
+            >
+              Playing tonight?
+            </p>
+            <p className="mt-2 max-w-sm text-sm leading-relaxed text-slate-300">{BRAND_TAGLINE}</p>
+
+            {/* Venues.tsx reads a `from` with no `date` as today, so this single parameter is a
+                complete "courts free this evening" query. Worded as what it shows, not as a
+                promise that something is free. */}
+            <Link
+              to={`/venues?from=${EVENING_FROM}`}
+              className="btn-primary mt-5 min-h-11 w-full rounded-xl px-5 py-3 text-sm sm:w-auto"
+            >
+              See this evening's courts
+            </Link>
           </div>
 
-          <FooterColumn
-            title="Book"
-            links={[
-              { label: 'Find venues', to: '/venues' },
-              { label: 'How it works', to: '/#how-it-works' }
-            ]}
-          />
-          <FooterColumn title="Account" links={accountLinks} />
+          <div className="grid grid-cols-2 gap-10 sm:gap-14">
+            <FooterColumn
+              title="Book"
+              links={[
+                { label: 'Find venues', to: '/venues' },
+                { label: 'How it works', to: '/#how-it-works' }
+              ]}
+            />
+            <FooterColumn title="Account" links={accountLinks} />
+          </div>
         </div>
 
-        <div className="mt-10 border-t border-white/10 pt-6">
+        <nav className="mt-10 flex flex-wrap gap-2" aria-label="Cities we cover">
+          {POPULAR_CITIES.map((city) => (
+            <Link
+              key={city}
+              to={`/venues?q=${encodeURIComponent(city)}`}
+              className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-slate-300 transition hover:border-green-400/40 hover:text-white focus:outline-none focus:ring-2 focus:ring-green-400/60"
+              style={{ background: 'var(--futsal-navy-mid)' }}
+            >
+              {city}
+            </Link>
+          ))}
+        </nav>
+
+        <div className="mt-10 flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-t border-white/10 pt-6">
           <p className="text-xs text-slate-400">© {year} {BRAND_DISPLAY}. All rights reserved.</p>
+          <div className="flex gap-6">
+            <Link
+              to="/terms"
+              className="text-xs text-slate-400 transition hover:text-white focus:outline-none focus:ring-2 focus:ring-green-400/60"
+            >
+              Terms
+            </Link>
+            <Link
+              to="/privacy"
+              className="text-xs text-slate-400 transition hover:text-white focus:outline-none focus:ring-2 focus:ring-green-400/60"
+            >
+              Privacy
+            </Link>
+          </div>
         </div>
       </div>
     </footer>

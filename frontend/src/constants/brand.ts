@@ -10,11 +10,20 @@ export const POPULAR_CITIES = ['Kathmandu', 'Lalitpur', 'Bhaktapur', 'Pokhara', 
  * after, so `''` means no time filter at all. Coarse on purpose: nobody browsing for a game
  * wants to pick between 7:00 and 7:30, they want "sometime this evening".
  */
+/**
+ * The earliest-start value meaning "this evening".
+ *
+ * <p>Named because two places depend on it: the venue search below, and the footer's link to
+ * tonight's courts. Venues.tsx treats a `from` with no `date` as today, so `/venues?from=17:00`
+ * is a complete "courts free this evening" query on its own.
+ */
+export const EVENING_FROM = '17:00';
+
 export const TIME_WINDOWS = [
   { value: '', label: 'Any time' },
   { value: '06:00', label: 'Morning · 6 AM onwards' },
   { value: '12:00', label: 'Afternoon · 12 PM onwards' },
-  { value: '17:00', label: 'Evening · 5 PM onwards' },
+  { value: EVENING_FROM, label: 'Evening · 5 PM onwards' },
   { value: '20:00', label: 'Late · 8 PM onwards' }
 ] as const;
 

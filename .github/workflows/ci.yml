@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 
 # A newer push to the same branch makes an in-flight run redundant.
 concurrency:
@@ -38,6 +39,12 @@ jobs:
           path: backend/target/surefire-reports/
           if-no-files-found: ignore
 
+      - name: Upload jar for deployment
+        uses: actions/upload-artifact@v4
+        with:
+          name: java-app
+          path: backend/target/*.jar
+
   frontend:
     name: Frontend (Vite)
     runs-on: ubuntu-latest
@@ -67,3 +74,21 @@ jobs:
       - name: Build
         working-directory: frontend
         run: npm run build
+
+  deploy:
+    name: Deploy backend to Azure
+    needs: backend
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
+    steps:
+      - name: Download jar artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: java-app
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: 'merofutsal'
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: '*.jar'

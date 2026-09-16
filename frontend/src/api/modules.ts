@@ -36,7 +36,11 @@ export const futsalApi = {
   get: (id: number) => api.get<Futsal>(`/futsals/${id}`).then((res) => res.data),
   create: (payload: FutsalPayload) => api.post<Futsal>('/futsals', payload).then((res) => res.data),
   update: (id: number, payload: FutsalPayload) => api.put<Futsal>(`/futsals/${id}`, payload).then((res) => res.data),
-  delete: (id: number) => api.delete(`/futsals/${id}`).then((res) => res.data)
+  delete: (id: number) => api.delete(`/futsals/${id}`).then((res) => res.data),
+  // Approval is a platform decision about a venue, so it has its own admin-only endpoint rather
+  // than travelling in the venue body where a venue could set it about itself.
+  setVerified: (id: number, verified: boolean) =>
+    api.put<Futsal>(`/futsals/${id}/verification`, { verified }).then((res) => res.data)
 };
 
 export const uploadApi = {

@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import { ArrowRight, Calendar, ChevronRight, MapPin, Search, Wallet } from 'lucide-react';
+import { ArrowRight, Calendar, ChevronRight, MapPin, Search } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import { futsalApi, slotApi } from '../../api/modules';
+import { futsalApi } from '../../api/modules';
 import { VenueCard } from '../../components/VenueCard';
 import { POPULAR_CITIES } from '../../constants/brand';
 import type { Futsal } from '../../types/api';
-import { money, todayInput } from '../../utils/format';
+import { todayInput } from '../../utils/format';
 
 /**
  * Booking is four self-evident steps sitting directly under a search box that demonstrates them,
@@ -19,9 +19,6 @@ export function Home() {
   const [searchLocation, setSearchLocation] = useState('');
   const [searchDate, setSearchDate] = useState('');
   const [featuredVenues, setFeaturedVenues] = useState<Futsal[]>([]);
-  const [venueCount, setVenueCount] = useState<number | null>(null);
-  const [slotsToday, setSlotsToday] = useState<number | null>(null);
-  const [priceRange, setPriceRange] = useState<{ low: number; high: number } | null>(null);
   const [loadingVenues, setLoadingVenues] = useState(true);
   const [venueError, setVenueError] = useState('');
 
@@ -42,8 +39,6 @@ export function Home() {
       .then((data) => {
         if (!active) return;
         setFeaturedVenues(data.items || []);
-        // The hero badge reports the catalogue's real size rather than a hardcoded claim.
-        setVenueCount(typeof data.totalItems === 'number' ? data.totalItems : null);
       })
       .catch((err) => {
         if (active) setVenueError(err instanceof Error ? err.message : 'Failed to load venues');
@@ -53,44 +48,6 @@ export function Home() {
       });
     return () => { active = false; };
   }, []);
-
-  useEffect(() => {
-    let active = true;
-    // Every figure in the row is measured. The three probes settle independently so that one
-    // failing drops its own fact rather than blanking the row or, worse, showing a zero.
-    Promise.allSettled([
-      slotApi.available({ slotDate: todayInput(), page: 0, size: 1 }),
-      futsalApi.list({ page: 0, size: 1, sort: 'price-low' }),
-      futsalApi.list({ page: 0, size: 1, sort: 'price-high' })
-    ]).then(([today, cheapest, dearest]) => {
-      if (!active) return;
-      if (today.status === 'fulfilled' && typeof today.value.totalItems === 'number') {
-        setSlotsToday(today.value.totalItems);
-      }
-      const low = cheapest.status === 'fulfilled' ? cheapest.value.items?.[0]?.hourlyPrice : undefined;
-      const high = dearest.status === 'fulfilled' ? dearest.value.items?.[0]?.hourlyPrice : undefined;
-      if (typeof low === 'number' && typeof high === 'number') setPriceRange({ low, high });
-    });
-    return () => { active = false; };
-  }, []);
-
-  const facts = [
-    venueCount !== null && venueCount > 0
-      ? { value: String(venueCount), label: venueCount === 1 ? 'venue listed' : 'venues listed', icon: MapPin }
-      : null,
-    slotsToday !== null
-      ? { value: String(slotsToday), label: slotsToday === 1 ? 'slot free today' : 'slots free today', icon: Calendar }
-      : null,
-    priceRange
-      ? {
-          value: priceRange.low === priceRange.high
-            ? money(priceRange.low)
-            : `${money(priceRange.low)}\u2013${priceRange.high.toLocaleString('en-NP')}`,
-          label: 'per hour',
-          icon: Wallet
-        }
-      : null
-  ].filter((fact): fact is { value: string; label: string; icon: typeof MapPin } => fact !== null);
 
   return (
     <main>
@@ -163,24 +120,9 @@ export function Home() {
         </div>
       </section>
 
-      {/* Measured, or absent */}
-      {facts.length > 0 && (
-        <section className="container-page mt-12 mb-14">
-          <div className="panel flex flex-wrap items-center gap-x-8 gap-y-4 px-6 py-5">
-            {facts.map(({ value, label, icon: Icon }) => (
-              <div key={label} className="flex items-center gap-3">
-                <Icon size={16} className="shrink-0 text-green-600" aria-hidden="true" />
-                <p className="text-sm text-slate-500">
-                  <span className="text-base font-bold text-slate-950">{value}</span> {label}
-                </p>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Featured venues */}
-      <section className="container-page mb-20">
+      {/* Featured venues. Carries its own top margin: the measured-stats row that used to sit
+          between it and the hero was providing that gap. */}
+      <section className="container-page mt-14 mb-20">
         <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
           <h2 className="text-xl font-semibold text-slate-950">Recommended venues</h2>
           <Link to="/venues" className="inline-flex min-h-11 items-center gap-1 text-sm font-bold text-green-700 transition hover:text-green-800 focus:outline-none focus:ring-4 focus:ring-green-100">

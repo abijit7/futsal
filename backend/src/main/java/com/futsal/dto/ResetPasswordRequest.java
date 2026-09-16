@@ -16,6 +16,7 @@ public class ResetPasswordRequest {
 
     @NotBlank(message = "New password is required")
     @Size(min = 8, max = 72, message = "New password must be 8-72 characters")
+    @Pattern(regexp = "^(?=.*[A-Za-z])(?=.*\\d).+$", message = "Use at least one letter and one number.")
     private String newPassword;
 
     public String getEmail() { return email; }

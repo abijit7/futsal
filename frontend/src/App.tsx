@@ -29,6 +29,9 @@ const AdminSlots = lazy(() => import('./pages/admin/AdminSlots').then((m) => ({ 
 const AdminBookings = lazy(() => import('./pages/admin/AdminBookings').then((m) => ({ default: m.AdminBookings })));
 const AdminUsers = lazy(() => import('./pages/admin/AdminUsers').then((m) => ({ default: m.AdminUsers })));
 const AdminRefunds = lazy(() => import('./pages/admin/AdminRefunds').then((m) => ({ default: m.AdminRefunds })));
+// Linked from every page but opened by almost nobody, so they stay out of the entry bundle.
+const Terms = lazy(() => import('./pages/public/Terms').then((m) => ({ default: m.Terms })));
+const Privacy = lazy(() => import('./pages/public/Privacy').then((m) => ({ default: m.Privacy })));
 
 export default function App() {
   return (
@@ -46,6 +49,8 @@ export default function App() {
             <Route path="/venues/:id" element={<VenueDetails />} />
             <Route path="/payment/success" element={<PaymentSuccess />} />
             <Route path="/payment/failure" element={<PaymentFailure />} />
+            <Route path="/terms" element={<Terms />} />
+            <Route path="/privacy" element={<Privacy />} />
             <Route element={<ProtectedRoute />}>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/booking" element={<BookingPage />} />
@@ -81,6 +86,8 @@ const ROUTE_TITLES: ReadonlyArray<readonly [string, string]> = [
   ['/venues', 'Futsal venues'],
   ['/payment/success', 'Payment'],
   ['/payment/failure', 'Payment'],
+  ['/terms', 'Terms of use'],
+  ['/privacy', 'Privacy'],
   ['/dashboard', 'My bookings'],
   ['/my-bookings', 'My bookings'],
   ['/profile', 'Profile'],

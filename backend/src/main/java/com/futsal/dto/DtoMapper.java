@@ -29,11 +29,15 @@ public class DtoMapper {
         futsal.setClosingTime(request.getClosingTime());
         futsal.setImageUrl(request.getImageUrl());
         futsal.setImageUrls(request.getImageUrls());
-        futsal.setVerified(request.isVerified());
         futsal.setCourtType(request.getCourtType());
-        futsal.setRating(request.getRating());
-        futsal.setReviewCount(request.getReviewCount());
         futsal.setDescription(request.getDescription());
+        // verified, rating and reviewCount are deliberately absent, and FutsalRequest no longer
+        // carries them. They are not the caller's to set:
+        //   * verified is the platform's approval of a venue, granted through
+        //     PUT /api/futsals/{id}/verification, which is admin-only.
+        //   * rating and reviewCount are aggregates, recomputed by ReviewService from the reviews
+        //     table. A request that set them would be overwritten by the next review anyway, and in
+        //     the meantime would reorder the public catalogue, which sorts on both.
         return futsal;
     }
 
