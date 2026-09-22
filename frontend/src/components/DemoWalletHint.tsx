@@ -36,7 +36,7 @@ export function DemoWalletHint() {
     <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
       <div className="flex items-center gap-2">
         <Wallet size={16} className="text-green-700" />
-        <p className="text-xs font-black uppercase tracking-wide text-slate-900">eSewa test wallet</p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-900">eSewa test wallet</p>
       </div>
       <p className="mt-1.5 text-xs leading-5 text-slate-500">
         This is eSewa's sandbox. Use these details on the payment screen - no real money moves.

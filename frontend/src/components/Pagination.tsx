@@ -15,7 +15,7 @@ export function Pagination({ page, totalPages, onPage }: { page: number; totalPa
               type="button"
               aria-current={active ? 'page' : undefined}
               aria-label={`Page ${pageNumber}`}
-              className={`inline-flex h-10 min-w-10 items-center justify-center rounded-xl px-3 text-sm font-black transition focus:outline-none focus:ring-4 focus:ring-green-100 ${
+              className={`inline-flex h-10 min-w-10 items-center justify-center rounded-xl px-3 text-sm font-semibold tabular-nums transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-green-100 ${
                 active
                   ? 'bg-slate-950 text-white shadow-lg shadow-slate-950/15'
                   : 'border border-slate-200 bg-white text-slate-700 hover:border-green-200 hover:text-green-700'

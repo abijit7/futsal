@@ -65,7 +65,7 @@ export function VenueReviews({ futsalId, onChanged }: { futsalId: number; onChan
   return (
     <section className="panel p-6" aria-labelledby="reviews-heading">
       <div className="mb-4 flex items-baseline justify-between gap-4">
-        <h2 id="reviews-heading" className="text-xl font-black text-slate-950">
+        <h2 id="reviews-heading" className="text-lg font-semibold text-slate-950">
           Reviews{totalItems > 0 && <span className="ml-2 text-sm font-bold text-slate-500">({totalItems})</span>}
         </h2>
       </div>

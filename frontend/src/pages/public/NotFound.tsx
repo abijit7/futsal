@@ -11,7 +11,7 @@ export function NotFound() {
             <Search size={32} />
           </div>
         </div>
-        <h1 className="mb-2 text-4xl font-black text-slate-950">404</h1>
+        <h1 className="mb-2 text-4xl font-bold tabular-nums text-slate-950">404</h1>
         <p className="mb-2 text-lg font-semibold text-slate-600">Page Not Found</p>
         <p className="mb-6 text-sm text-slate-500">
           Sorry, we couldn&apos;t find the page you&apos;re looking for. The path <code className="bg-slate-100 px-1.5 py-0.5 rounded text-red-600 font-mono text-xs">{location.pathname}</code> doesn&apos;t exist.

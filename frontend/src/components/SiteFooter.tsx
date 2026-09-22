@@ -36,12 +36,11 @@ export function SiteFooter() {
       ];
 
   return (
-    <footer className="border-t border-white/10" style={{ background: 'var(--futsal-navy)' }}>
-      <div className="container-page py-12">
-        {/* The link columns are an auto-width pair rather than a fraction of the container, so the
-            gap between them stops growing with the viewport. Stretching two links and three links
-            across a 1280px row is what left them stranded. */}
-        <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_auto] lg:gap-16">
+    <footer className="border-t border-white/10 bg-navy">
+      <div className="container-page py-14">
+        {/* Brand column plus three link groups. The brand column is the widest because it carries
+            the one thing this footer is really for: the way back into a booking. */}
+        <div className="grid gap-10 lg:grid-cols-[minmax(0,1.5fr)_repeat(3,minmax(0,1fr))] lg:gap-12">
           <div>
             <div className="flex items-center gap-2">
               <BrandMark size={28} />
@@ -69,16 +68,27 @@ export function SiteFooter() {
             </Link>
           </div>
 
-          <div className="grid grid-cols-2 gap-10 sm:gap-14">
-            <FooterColumn
-              title="Book"
-              links={[
-                { label: 'Find venues', to: '/venues' },
-                { label: 'How it works', to: '/#how-it-works' }
-              ]}
-            />
-            <FooterColumn title="Account" links={accountLinks} />
-          </div>
+          <FooterColumn
+            title="Book"
+            links={[
+              { label: 'Find venues', to: '/venues' },
+              { label: 'How it works', to: '/#how-it-works' },
+              { label: 'Terms of service', to: '/terms' }
+            ]}
+          />
+
+          {/* Owner routes are guarded, so a visitor without an owner account is sent to sign in
+              rather than to a page that pretends to be theirs. */}
+          <FooterColumn
+            title="For owners"
+            links={[
+              { label: 'Owner dashboard', to: '/admin' },
+              { label: 'Publish slots', to: '/admin/slots' },
+              { label: 'Manage bookings', to: '/admin/bookings' }
+            ]}
+          />
+
+          <FooterColumn title="Account" links={accountLinks} />
         </div>
 
         <nav className="mt-10 flex flex-wrap gap-2" aria-label="Cities we cover">
@@ -86,7 +96,7 @@ export function SiteFooter() {
             <Link
               key={city}
               to={`/venues?q=${encodeURIComponent(city)}`}
-              className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-slate-300 transition hover:border-green-400/40 hover:text-white focus:outline-none focus:ring-2 focus:ring-green-400/60"
+              className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-slate-300 transition hover:border-green-400/40 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-400/60"
               style={{ background: 'var(--futsal-navy-mid)' }}
             >
               {city}
@@ -99,13 +109,13 @@ export function SiteFooter() {
           <div className="flex gap-6">
             <Link
               to="/terms"
-              className="text-xs text-slate-400 transition hover:text-white focus:outline-none focus:ring-2 focus:ring-green-400/60"
+              className="text-xs text-slate-400 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-400/60"
             >
               Terms
             </Link>
             <Link
               to="/privacy"
-              className="text-xs text-slate-400 transition hover:text-white focus:outline-none focus:ring-2 focus:ring-green-400/60"
+              className="text-xs text-slate-400 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-400/60"
             >
               Privacy
             </Link>
@@ -119,13 +129,13 @@ export function SiteFooter() {
 function FooterColumn({ title, links }: { title: string; links: { label: string; to: string }[] }) {
   return (
     <div>
-      <h2 className="text-sm font-bold text-white">{title}</h2>
+      <h2 className="text-sm font-semibold text-white">{title}</h2>
       <ul className="mt-4 space-y-3">
         {links.map(({ label, to }) => (
           <li key={to}>
             <Link
               to={to}
-              className="inline-flex min-h-6 items-center text-sm text-slate-300 transition hover:text-white focus:outline-none focus:ring-2 focus:ring-green-400/60"
+              className="inline-flex min-h-6 items-center text-sm text-slate-300 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-400/60"
             >
               {label}
             </Link>

@@ -55,6 +55,30 @@
   background: var(--background);
 }
 
+/* The :root block above stays the source of truth. This only re-exports those values into
+   Tailwind's namespaces so the app can say `bg-navy` or `rounded-card` instead of reaching
+   for inline style={{ background: 'var(--futsal-navy)' }}, which was how every navy surface
+   and all seven competing radius values got in. */
+@theme inline {
+  --color-navy: var(--futsal-navy);
+  --color-navy-mid: var(--futsal-navy-mid);
+  --color-navy-light: var(--futsal-navy-light);
+  --color-brand: var(--futsal-green);
+  --color-brand-light: var(--futsal-green-light);
+  --color-brand-dark: var(--futsal-green-dark);
+  --color-page: var(--surface-page);
+  --color-card: var(--surface-card);
+  --color-muted: var(--muted-foreground);
+  --color-on-navy: var(--on-navy);
+  --color-on-navy-muted: var(--on-navy-muted);
+  --color-hairline: var(--border);
+
+  /* Three tiers only, as the comment above always claimed: controls, cards, panels. */
+  --radius-control: var(--radius-sm);
+  --radius-card: var(--radius-md);
+  --radius-panel: var(--radius-lg);
+}
+
 body {
   margin: 0;
   min-width: 320px;
@@ -113,20 +137,20 @@ textarea:disabled,
 }
 
 .btn-primary {
-  @apply inline-flex items-center justify-center gap-2 rounded-2xl bg-green-600 px-5 py-3 font-bold text-white shadow-lg shadow-green-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-green-700 focus:outline-none focus:ring-4 focus:ring-green-200 active:translate-y-0 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:active:scale-100;
+  @apply inline-flex items-center justify-center gap-2 rounded-2xl bg-green-600 px-5 py-3 font-semibold text-white shadow-lg shadow-green-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-green-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-green-200 active:translate-y-0 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:active:scale-100;
 }
 
 .btn-navy {
-  @apply inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 py-3 font-bold text-white shadow-lg shadow-slate-950/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-800 focus:outline-none focus:ring-4 focus:ring-slate-200 active:translate-y-0 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:active:scale-100;
+  @apply inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 py-3 font-semibold text-white shadow-lg shadow-slate-950/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-200 active:translate-y-0 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:active:scale-100;
 }
 
 .btn-soft {
-  @apply inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 font-bold text-slate-700 transition-all duration-200 hover:-translate-y-0.5 hover:border-green-200 hover:text-green-700 focus:outline-none focus:ring-4 focus:ring-green-100 active:translate-y-0 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:active:scale-100;
+  @apply inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 font-semibold text-slate-700 transition-all duration-200 hover:-translate-y-0.5 hover:border-green-200 hover:text-green-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-green-100 active:translate-y-0 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:active:scale-100;
 }
 
 .input {
   min-height: var(--control-md);
-  @apply w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition-all duration-200 placeholder:text-slate-400 focus:-translate-y-0.5 focus:border-green-400 focus:ring-4 focus:ring-green-100 disabled:bg-slate-100 disabled:text-slate-400;
+  @apply w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition-all duration-200 placeholder:text-slate-400 focus:border-green-400 focus:ring-4 focus:ring-green-100 disabled:bg-slate-100 disabled:text-slate-400;
 }
 
 /* Utilities like `min-h-28` lose to `.input`, which is emitted later with equal specificity.
@@ -207,7 +231,7 @@ input[type="file"].input::file-selector-button {
   background: #f1f5f9;
   color: #0f172a;
   cursor: pointer;
-  font-weight: 800;
+  font-weight: 600;
   padding: 0.55rem 0.9rem;
   transition: background 160ms ease, color 160ms ease;
 }
@@ -222,11 +246,11 @@ input[type="checkbox"] {
 }
 
 .label {
-  @apply mb-2 block text-sm font-bold text-slate-700;
+  @apply mb-2 block text-sm font-semibold text-slate-700;
 }
 
 .eyebrow {
-  @apply text-xs font-black uppercase tracking-[0.24em] text-green-700;
+  @apply text-xs font-semibold uppercase tracking-[0.18em] text-green-700;
 }
 
 /* Admin surfaces are denser and flatter than the public .panel: tighter radius, no drop shadow. */

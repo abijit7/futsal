@@ -48,7 +48,7 @@ export function PaymentFailure() {
               <AlertCircle size={32} />
             </div>
           </div>
-          <h1 className="mb-2 text-2xl font-black text-slate-950">Payment Failed</h1>
+          <h1 className="mb-2 text-2xl font-bold text-slate-950">Payment Failed</h1>
           <p className="mb-6 text-slate-600">
             {reportedStatus
               ? `eSewa did not complete this payment (reported status: ${reportedStatus}). Your slot has not been charged.`

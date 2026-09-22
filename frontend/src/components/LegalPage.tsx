@@ -17,7 +17,7 @@ export function LegalPage({ title, updated, intro, children }: {
   return (
     <main className="container-page py-12 lg:py-16">
       <div className="mx-auto w-full max-w-2xl">
-        <h1 className="text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">{title}</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">{title}</h1>
         <p className="mt-3 text-sm font-semibold text-slate-500">Last updated {updated}</p>
         <p className="mt-6 text-base leading-relaxed text-slate-600">{intro}</p>
         <div className="mt-10 space-y-10">{children}</div>

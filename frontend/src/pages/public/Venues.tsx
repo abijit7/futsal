@@ -3,7 +3,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { futsalApi, slotApi } from '../../api/modules';
 import { Pagination } from '../../components/Pagination';
-import { EmptyState, ErrorState, LoadingState } from '../../components/State';
+import { EmptyState, ErrorState, VenueGridSkeleton } from '../../components/State';
 import { Button, Chip, Field, PageHero, SelectField } from '../../components/UI';
 import { VenueCard } from '../../components/VenueCard';
 import { TIME_WINDOWS, timeWindowLabel } from '../../constants/brand';
@@ -102,7 +102,7 @@ export function Venues() {
     <main className="container-page py-10">
       <PageHero eyebrow="Book a court" title="Venues" description="Browse live venues and book an available slot." />
 
-      <form className="panel mb-4 grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_165px_195px_185px_auto] lg:items-end" onSubmit={submit}>
+      <form className="panel mb-4 grid gap-3 p-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-[minmax(0,1fr)_165px_195px_185px_auto] lg:items-end" onSubmit={submit}>
         <Field
           label="Search"
           value={search}
@@ -120,7 +120,7 @@ export function Venues() {
           <option value="price-low">Price: low to high</option>
           <option value="price-high">Price: high to low</option>
         </SelectField>
-        <Button className="w-full px-6" type="submit">Search</Button>
+        <Button className="w-full px-6 sm:col-span-2 md:col-span-3 lg:col-span-1" type="submit">Search</Button>
       </form>
 
       {hasFilters && (
@@ -137,16 +137,16 @@ export function Venues() {
       )}
 
       {!loading && !error && items.length > 0 && (
-        <p className="mb-4 text-sm text-slate-500">
-          <span className="font-bold text-slate-900">{totalItems}</span> {totalItems === 1 ? 'venue' : 'venues'} found
+        <p className="mb-4 text-sm text-muted">
+          <span className="font-semibold tabular-nums text-slate-900">{totalItems}</span> {totalItems === 1 ? 'venue' : 'venues'} found
           {effectiveDate ? ' with free slots' : ''}
         </p>
       )}
 
-      {error && <div className="mb-5"><ErrorState message={error} retry={() => setRetryKey((key) => key + 1)} /></div>}
-
-      {loading ? (
-        <LoadingState label={effectiveDate ? 'Checking availability for this date' : 'Loading venues'} />
+      {error ? (
+        <ErrorState message={error} retry={() => setRetryKey((key) => key + 1)} />
+      ) : loading ? (
+        <VenueGridSkeleton count={6} label={effectiveDate ? 'Checking availability for this date' : 'Loading venues'} />
       ) : items.length === 0 ? (
         <EmptyState
           title="No venues found"

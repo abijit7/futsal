@@ -20,5 +20,5 @@ const fallbackStyle = 'bg-slate-100 text-slate-600 ring-slate-200';
 export function StatusBadge({ status, label }: { status: StatusValue; label?: string }) {
   // A status the backend adds later must still render as a badge, not as `undefined`.
   const tone = styles[status] || fallbackStyle;
-  return <span className={`inline-flex rounded-full px-3 py-1 text-xs font-black uppercase tracking-wide ring-1 ${tone}`}>{label || status}</span>;
+  return <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ring-1 ${tone}`}>{label || status}</span>;
 }

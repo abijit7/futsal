@@ -1,4 +1,4 @@
-import { X } from 'lucide-react';
+import { Loader2, X } from 'lucide-react';
 import { useEffect, useId, useRef } from 'react';
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from 'react';
 import { createPortal } from 'react-dom';
@@ -11,6 +11,14 @@ const toneClasses: Record<Tone, string> = {
   amber: 'bg-amber-50 text-amber-700 ring-amber-100',
   red: 'bg-red-50 text-red-700 ring-red-100',
   slate: 'bg-slate-100 text-slate-700 ring-slate-200'
+};
+
+const noticeTones: Record<Tone, string> = {
+  green: 'border-green-100 bg-green-50 text-green-800',
+  navy: 'border-slate-800 bg-slate-950 text-white',
+  amber: 'border-amber-100 bg-amber-50 text-amber-800',
+  red: 'border-red-100 bg-red-50 text-red-700',
+  slate: 'border-slate-200 bg-slate-50 text-slate-700'
 };
 
 type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive';
@@ -41,11 +49,13 @@ export function Button({
 }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: ButtonVariant; size?: Size; loading?: boolean }) {
   return (
     <button
-      className={`inline-flex items-center justify-center gap-2 font-bold transition-all duration-200 hover:-translate-y-0.5 focus:outline-none focus:ring-4 active:translate-y-0 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:active:scale-100 ${buttonVariants[variant]} ${buttonSizes[size]} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 font-semibold transition-all duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-4 active:translate-y-0 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:active:scale-100 ${buttonVariants[variant]} ${buttonSizes[size]} ${className}`}
       disabled={disabled || loading}
+      aria-busy={loading || undefined}
       {...props}
     >
-      {loading ? 'Loading...' : children}
+      {loading && <Loader2 size={16} className="animate-spin" aria-hidden="true" />}
+      {children}
     </button>
   );
 }
@@ -60,7 +70,7 @@ export function IconButton({
     <button
       aria-label={label}
       title={label}
-      className={`inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:-translate-y-0.5 hover:border-green-200 hover:text-green-700 focus:outline-none focus:ring-4 focus:ring-green-100 disabled:cursor-not-allowed disabled:opacity-60 ${className}`}
+      className={`inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:-translate-y-0.5 hover:border-green-200 hover:text-green-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-green-100 disabled:cursor-not-allowed disabled:opacity-60 ${className}`}
       {...props}
     >
       {children}
@@ -82,16 +92,16 @@ export function PageHero({
   icon?: ReactNode;
 }) {
   return (
-    <section className="mb-8 overflow-hidden rounded-3xl bg-slate-950 p-7 text-white shadow-xl shadow-slate-950/10 md:p-9">
-      <div className="grid items-center gap-5 md:grid-cols-[1fr_auto]">
+    <section className="mb-8 border-b border-slate-200 pb-6">
+      <div className="grid items-end gap-4 md:grid-cols-[1fr_auto]">
         <div>
-          <p className="text-xs font-black uppercase tracking-[0.24em] text-green-300">{eyebrow}</p>
-          <h1 className="mt-3 text-4xl font-black tracking-tight md:text-5xl">{title}</h1>
-          {description && <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300 md:text-base">{description}</p>}
+          <p className="eyebrow">{eyebrow}</p>
+          <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950 md:text-4xl">{title}</h1>
+          {description && <p className="mt-2 max-w-2xl text-base leading-relaxed text-muted">{description}</p>}
         </div>
         {(action || icon) && (
           <div className="flex items-center gap-3 md:justify-end">
-            {icon && <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-white/10 text-green-300 ring-1 ring-white/10">{icon}</div>}
+            {icon && <div className="flex h-12 w-12 items-center justify-center rounded-card bg-green-50 text-green-700 ring-1 ring-green-100">{icon}</div>}
             {action}
           </div>
         )}
@@ -141,13 +151,21 @@ export function MetricCard({ label, value, icon, tone = 'green', hint }: { label
   );
 }
 
+export function Notice({ tone = 'green', children, className = '' }: { tone?: Tone; children: ReactNode; className?: string }) {
+  return (
+    <p role={tone === 'red' ? 'alert' : 'status'} className={`rounded-card border px-4 py-3 text-sm ${noticeTones[tone]} ${className}`}>
+      {children}
+    </p>
+  );
+}
+
 export function FilterBar({ children, className = '' }: { children: ReactNode; className?: string }) {
   return <div className={`admin-card grid gap-3 p-4 ${className}`}>{children}</div>;
 }
 
 export function Chip({ children, tone = 'slate', onRemove }: { children: ReactNode; tone?: Tone; onRemove?: () => void }) {
   return (
-    <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-black ring-1 ${toneClasses[tone]}`}>
+    <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ring-1 ${toneClasses[tone]}`}>
       {children}
       {onRemove && (
         <button
@@ -189,7 +207,7 @@ export function Field({
             type="button"
             onClick={onClear}
             aria-label="Clear"
-            className="input-icon input-icon-right rounded-full text-slate-400 transition hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-green-200"
+            className="input-icon input-icon-right rounded-full text-slate-400 transition hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-200"
           >
             <X size={16} />
           </button>
@@ -344,8 +362,8 @@ export function ModalShell({
         <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
           <div>
             {eyebrow && <p className="eyebrow">{eyebrow}</p>}
-            <h3 id={titleId} className="mt-1 text-2xl font-black text-slate-950">{title}</h3>
-            {description && <p className="mt-1 text-sm font-semibold leading-6 text-slate-500">{description}</p>}
+            <h3 id={titleId} className="mt-1 text-xl font-semibold text-slate-950">{title}</h3>
+            {description && <p className="mt-1 text-sm leading-6 text-muted">{description}</p>}
           </div>
           <IconButton label="Close modal" onClick={onClose}><X size={20} /></IconButton>
         </div>

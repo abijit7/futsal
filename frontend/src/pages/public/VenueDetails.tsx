@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { futsalApi, paymentApi, slotApi } from '../../api/modules';
 import { DemoWalletHint } from '../../components/DemoWalletHint';
+import { Notice } from '../../components/UI';
 import { VenueImage } from '../../components/VenueImage';
 import { EmptyState, LoadingState } from '../../components/State';
 import { useAuth } from '../../context/AuthContext';
@@ -45,6 +46,7 @@ export function VenueDetails() {
   const images = useMemo(() => imageUrls(futsal), [futsal]);
   const dates = useMemo(() => nextDates(7), []);
   const selectedHours = selectedSlot ? slotHours(selectedSlot) : 1;
+  const rated = typeof futsal?.rating === 'number' && futsal.rating > 0;
   const serviceFee = 0;
   const subtotal = Number(futsal?.hourlyPrice || 0) * selectedHours;
   const total = subtotal + serviceFee;
@@ -129,7 +131,7 @@ export function VenueDetails() {
   return (
     <main className="container-page py-8">
       <div className="mb-5">
-        <Link to="/venues" className="inline-flex items-center gap-2 text-sm font-black text-slate-500 hover:text-green-700"><ChevronLeft size={17} /> Back to venues</Link>
+        <Link to="/venues" className="inline-flex items-center gap-2 text-sm font-semibold text-muted hover:text-green-700"><ChevronLeft size={17} /> Back to venues</Link>
       </div>
 
       <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
@@ -155,45 +157,47 @@ export function VenueDetails() {
 
           <div className="mt-7">
             <div className="flex flex-wrap items-center gap-2">
-              {futsal.verified && <span className="rounded-full bg-green-50 px-3 py-1 text-xs font-black text-green-700">Verified</span>}
-              {futsal.courtType && <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-600">{futsal.courtType}</span>}
+              {futsal.verified && <span className="rounded-full bg-green-50 px-3 py-1 text-xs font-semibold text-green-700 ring-1 ring-green-100">Verified</span>}
+              {futsal.courtType && <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600 ring-1 ring-slate-200">{futsal.courtType}</span>}
             </div>
-            <h1 className="mt-3 text-4xl font-black tracking-tight text-slate-950">{futsal.name}</h1>
-            <div className="mt-3 flex flex-wrap gap-4 text-sm font-bold text-slate-500">
+            <h1 className="mt-3 text-3xl font-bold tracking-tight text-slate-950 md:text-4xl">{futsal.name}</h1>
+            <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm text-muted">
               <span className="flex items-center gap-2"><MapPin size={17} className="text-green-600" /> {futsal.address}, {placeName(futsal.city)}</span>
               <span className="flex items-center gap-2"><Phone size={17} className="text-green-600" /> {futsal.phone}</span>
               <span className="flex items-center gap-2"><Clock size={17} className="text-green-600" /> {formatTime(futsal.openingTime)} - {formatTime(futsal.closingTime)}</span>
-              <span className="flex items-center gap-2"><Star size={17} className="text-amber-500" fill="currentColor" /> {(futsal.rating ?? 0).toFixed(1)} ({futsal.reviewCount ?? 0})</span>
+              {rated
+                ? <span className="flex items-center gap-2 tabular-nums"><Star size={17} className="text-amber-500" fill="currentColor" /> {futsal.rating!.toFixed(1)} ({futsal.reviewCount ?? 0})</span>
+                : <span className="flex items-center gap-2">No reviews yet</span>}
             </div>
-            {futsal.description && <p className="mt-5 max-w-3xl text-slate-600">{futsal.description}</p>}
+            {futsal.description && <p className="mt-5 max-w-2xl text-base leading-relaxed text-slate-600">{futsal.description}</p>}
           </div>
 
           <section className="panel mt-7 p-6">
-            <h2 className="flex items-center gap-3 text-2xl font-black text-slate-950"><Calendar className="text-green-600" size={24} /> Select Date</h2>
+            <h2 className="flex items-center gap-2.5 text-lg font-semibold text-slate-950"><Calendar className="text-green-600" size={18} aria-hidden="true" /> Select a date</h2>
             <div className="motion-stagger mt-6 flex gap-3 overflow-x-auto pb-2">
               {dates.map((date) => (
                 <button
                   key={date.value}
                   type="button"
                   aria-pressed={selectedDate === date.value}
-                  className={`flex min-h-28 min-w-24 shrink-0 flex-col items-center justify-center rounded-2xl border px-5 py-4 text-center font-black transition-all duration-200 hover:-translate-y-0.5 focus:outline-none focus:ring-4 focus:ring-green-100 active:translate-y-0 active:scale-[0.98] ${selectedDate === date.value ? 'border-slate-950 bg-slate-950 text-white' : 'border-slate-200 bg-slate-100 text-slate-600 hover:border-green-300'}`}
+                  className={`flex min-h-28 min-w-24 shrink-0 flex-col items-center justify-center rounded-2xl border px-5 py-4 text-center font-semibold transition-all duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-green-100 active:translate-y-0 active:scale-[0.98] ${selectedDate === date.value ? 'border-slate-950 bg-slate-950 text-white' : 'border-slate-200 bg-slate-100 text-slate-600 hover:border-green-300'}`}
                   onClick={() => setSelectedDate(date.value)}
                 >
-                  <span className="text-sm uppercase">{date.weekday}</span>
-                  <span className={`mt-2 text-2xl ${selectedDate === date.value ? 'text-white' : 'text-slate-950'}`}>{date.day}</span>
-                  <span className="text-sm">{date.month}</span>
-                  {date.isToday && <span className={`mt-1 text-sm ${selectedDate === date.value ? 'text-green-300' : 'text-green-700'}`}>Today</span>}
+                  <span className="text-xs uppercase tracking-wide">{date.weekday}</span>
+                  <span className={`mt-1.5 text-2xl tabular-nums ${selectedDate === date.value ? 'text-white' : 'text-slate-950'}`}>{date.day}</span>
+                  <span className="text-xs">{date.month}</span>
+                  {date.isToday && <span className={`mt-1 text-xs ${selectedDate === date.value ? 'text-green-300' : 'text-green-700'}`}>Today</span>}
                 </button>
               ))}
             </div>
           </section>
 
-          <section className="panel mt-5 p-6">
-            <h2 className="flex items-center gap-3 text-2xl font-black text-slate-950"><Clock className="text-green-600" size={24} /> Available Time Slots</h2>
-            <div className="mt-6 flex flex-wrap items-center gap-5 text-sm font-bold text-slate-500">
-              <span className="inline-flex items-center gap-2"><span className="h-4 w-4 rounded-md bg-green-50 ring-1 ring-green-200" /> Available</span>
-              <span className="inline-flex items-center gap-2"><span className="h-4 w-4 rounded-md bg-slate-200" /> Booked</span>
-              <span className="inline-flex items-center gap-2"><span className="h-4 w-4 rounded-md bg-slate-950" /> Selected</span>
+          <section id="slots" className="panel mt-5 scroll-mt-24 p-6">
+            <h2 className="flex items-center gap-2.5 text-lg font-semibold text-slate-950"><Clock className="text-green-600" size={18} aria-hidden="true" /> Time slots</h2>
+            <div className="mt-4 flex flex-wrap items-center gap-5 text-sm text-muted">
+              <span className="inline-flex items-center gap-2"><span className="h-4 w-4 rounded-md bg-green-50 ring-1 ring-green-200" aria-hidden="true" /> Available</span>
+              <span className="inline-flex items-center gap-2"><span className="h-4 w-4 rounded-md bg-slate-200" aria-hidden="true" /> <span className="line-through">Booked</span></span>
+              <span className="inline-flex items-center gap-2"><span className="h-4 w-4 rounded-md bg-slate-950" aria-hidden="true" /> Selected</span>
             </div>
             <div className="mt-6">
               {loadingSlots ? <LoadingState /> : slots.length === 0 ? <EmptyState title="No slots for this date" description="Nothing has been published for this day yet. Try another date above." /> : (
@@ -205,10 +209,11 @@ export function VenueDetails() {
                         key={slot.slotId}
                         disabled={!slot.available}
                         aria-pressed={active}
-                        className={`min-h-14 rounded-2xl px-4 py-4 text-center text-base font-black transition-all duration-200 hover:-translate-y-0.5 focus:outline-none focus:ring-4 focus:ring-green-100 active:translate-y-0 active:scale-[0.98] disabled:hover:translate-y-0 disabled:active:scale-100 ${active ? 'bg-slate-950 text-white shadow-lg shadow-slate-950/15' : slot.available ? 'bg-green-50 text-green-700 ring-1 ring-green-200 hover:bg-green-100' : 'cursor-not-allowed bg-slate-200 text-slate-600'}`}
+                        className={`min-h-14 rounded-2xl px-4 py-3 text-center text-base font-semibold transition-all duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-green-100 active:translate-y-0 active:scale-[0.98] disabled:hover:translate-y-0 disabled:active:scale-100 ${active ? 'bg-slate-950 text-white shadow-lg shadow-slate-950/15' : slot.available ? 'bg-green-50 text-green-700 ring-1 ring-green-200 hover:bg-green-100' : 'cursor-not-allowed bg-slate-200 text-slate-600'}`}
                         onClick={() => setSelectedSlot(active ? null : slot)}
                       >
-                        {formatTimeCompact(slot.startTime)}
+                        <span className={`block tabular-nums ${slot.available ? '' : 'line-through'}`}>{formatTimeCompact(slot.startTime)}</span>
+                        {!slot.available && <span className="mt-0.5 block text-xs font-normal">Booked</span>}
                       </button>
                     );
                   })}
@@ -218,38 +223,40 @@ export function VenueDetails() {
           </section>
         </div>
 
-        <aside className="panel h-max overflow-hidden lg:sticky lg:top-24">
+        <aside id="booking-panel" className="panel h-max scroll-mt-24 overflow-hidden lg:sticky lg:top-24">
           <div className="bg-slate-950 p-6 text-white">
-            <div className="text-4xl font-black">{money(futsal.hourlyPrice)}<span className="text-lg font-bold text-slate-400">/hour</span></div>
-            <p className="mt-3 flex items-center gap-2 text-sm font-black"><Star size={16} className="text-amber-500" fill="currentColor" /> {(futsal.rating ?? 0).toFixed(1)} <span className="font-bold text-slate-400">({futsal.reviewCount ?? 0} reviews)</span></p>
+            <div className="text-3xl font-semibold tabular-nums">{money(futsal.hourlyPrice)}<span className="text-base font-normal text-slate-400">/hour</span></div>
+            {rated
+              ? <p className="mt-3 flex items-center gap-2 text-sm tabular-nums"><Star size={16} className="text-amber-500" fill="currentColor" aria-hidden="true" /> {futsal.rating!.toFixed(1)} <span className="text-slate-400">({futsal.reviewCount ?? 0} reviews)</span></p>
+              : <p className="mt-3 text-sm text-slate-400">No reviews yet</p>}
           </div>
           <div className="p-6">
-            <p className="text-xs font-black uppercase text-slate-500">Selected slot</p>
-            <div className="mt-3 flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-100 px-4 py-4 text-base font-black text-slate-500">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Selected slot</p>
+            <div className="mt-3 flex items-center gap-3 rounded-card border border-slate-200 bg-slate-100 px-4 py-4 text-base font-semibold tabular-nums text-slate-700">
               <Clock size={18} />
               <span>{selectedSlot ? timeRange(selectedSlot.startTime, selectedSlot.endTime) : 'Select a time slot'}</span>
             </div>
 
-            <p className="mt-6 text-xs font-black uppercase text-slate-500">Duration</p>
+            <p className="mt-6 text-xs font-semibold uppercase tracking-wide text-slate-500">Duration</p>
             <div className="mt-3 flex items-center justify-between">
-              <span className="font-black text-slate-950">{selectedSlot ? slotDuration(selectedSlot.startTime, selectedSlot.endTime) || '1 hr' : 'Select a slot'}</span>
+              <span className="font-semibold text-slate-950">{selectedSlot ? slotDuration(selectedSlot.startTime, selectedSlot.endTime) || '1 hr' : 'Select a slot'}</span>
             </div>
 
             <div className="mt-6 rounded-3xl bg-slate-100 p-5 text-slate-600">
               <div className="flex justify-between text-base font-normal">
                 <span>Futsal fee</span>
-                <span className="text-slate-800">{money(subtotal)}</span>
+                <span className="tabular-nums text-slate-800">{money(subtotal)}</span>
               </div>
               {/* A line that always reads "NPR 0" is noise; it returns if a fee is ever charged. */}
               {serviceFee > 0 && (
                 <div className="mt-3 flex justify-between text-base font-normal">
                   <span>Service fee</span>
-                  <span className="text-slate-800">{money(serviceFee)}</span>
+                  <span className="tabular-nums text-slate-800">{money(serviceFee)}</span>
                 </div>
               )}
-              <div className="mt-4 flex justify-between border-t border-slate-200 pt-4 text-lg font-black text-slate-950">
+              <div className="mt-4 flex justify-between border-t border-slate-200 pt-4 text-base font-semibold text-slate-950">
                 <span>Total</span>
-                <span>{money(total)}</span>
+                <span className="tabular-nums">{money(total)}</span>
               </div>
             </div>
 
@@ -265,8 +272,8 @@ export function VenueDetails() {
               <label className="label" htmlFor="booking-notes">Notes</label>
               <textarea id="booking-notes" className="input min-h-24" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional booking notes" />
             </div>
-            {message && <p className="mt-4 rounded-2xl bg-green-50 p-3 text-sm font-bold text-green-700">{message}</p>}
-            {error && <p className="mt-4 rounded-2xl bg-red-50 p-3 text-sm font-bold text-red-700">{error}</p>}
+            {message && <Notice tone="green" className="mt-4">{message}</Notice>}
+            {error && <Notice tone="red" className="mt-4">{error}</Notice>}
             <button className="btn-primary mt-5 w-full py-4" disabled={!selectedSlot || booking} onClick={submitBooking}>
               {booking
                 ? 'Processing...'
@@ -276,7 +283,7 @@ export function VenueDetails() {
                     ? 'Confirm booking'
                     : 'Pay with eSewa'}
             </button>
-            <p className="mt-5 flex items-center justify-center gap-2 text-sm font-bold text-slate-500"><ShieldCheck size={16} className="text-green-600" /> Free cancellation up to 2 hours before</p>
+            <p className="mt-5 flex items-center justify-center gap-2 text-sm text-muted"><ShieldCheck size={16} className="text-green-600" aria-hidden="true" /> Free cancellation up to 2 hours before</p>
           </div>
         </aside>
       </section>
@@ -285,6 +292,26 @@ export function VenueDetails() {
       <section className="container-page pb-12">
         <VenueReviews futsalId={futsal.futsalId} onChanged={loadVenue} />
       </section>
+
+      <div className="sticky bottom-0 z-30 -mx-4 border-t border-slate-200 bg-white/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 lg:hidden">
+        <div className="flex items-center gap-3">
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold tabular-nums text-slate-950">
+              {money(futsal.hourlyPrice)}<span className="font-normal text-muted">/hour</span>
+            </p>
+            <p className="truncate text-xs tabular-nums text-muted">
+              {selectedSlot ? timeRange(selectedSlot.startTime, selectedSlot.endTime) : 'No slot selected'}
+            </p>
+          </div>
+          <button
+            type="button"
+            className="btn-primary ml-auto shrink-0"
+            onClick={() => document.getElementById(selectedSlot ? 'booking-panel' : 'slots')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+          >
+            {selectedSlot ? 'Review and book' : 'Choose a slot'}
+          </button>
+        </div>
+      </div>
     </main>
   );
 }
