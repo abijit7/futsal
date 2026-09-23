@@ -1,6 +1,5 @@
 package com.futsal.service;
 
-import com.futsal.config.DemoProperties;
 import com.futsal.error.ConflictException;
 import com.futsal.model.User;
 import com.futsal.model.enums.Role;
@@ -168,67 +167,6 @@ class UserServiceTest {
         );
     }
 
-    // ── Demo account protection ──────────────────────────────────────────────
-    //
-    // Demo mode publishes a working admin login to anyone who visits. Without these guards one
-    // visitor could change that password, or delete the account, and lock every later visitor out
-    // until the next seed.
-
-    private static final String DEMO_ADMIN_EMAIL = "admin@merofutsal.local";
-
-    @Test
-    void refusesToChangeTheDemoAccountPassword() {
-        UserRepository userRepository = mock(UserRepository.class);
-        UserService userService = demoAwareService(userRepository, true);
-        User demoAdmin = demoAdmin();
-        when(userRepository.findById(4L)).thenReturn(Optional.of(demoAdmin));
-
-        ConflictException thrown = assertThrows(ConflictException.class,
-                () -> userService.changePassword(4L, "DemoAdmin123", "hijacked123"));
-
-        assertTrue(thrown.getMessage().contains("shared demo account"));
-        assertTrue(verifier.matches("DemoAdmin123", demoAdmin.getPassword()));
-        verify(userRepository, never()).save(any(User.class));
-    }
-
-    @Test
-    void refusesToDeleteTheDemoAccount() {
-        UserRepository userRepository = mock(UserRepository.class);
-        UserService userService = demoAwareService(userRepository, true);
-        when(userRepository.findById(4L)).thenReturn(Optional.of(demoAdmin()));
-
-        assertThrows(ConflictException.class, () -> userService.deleteUser(4L));
-
-        verify(userRepository, never()).delete(any(User.class));
-    }
-
-    /** The guard is scoped to the two advertised logins; every other account behaves normally. */
-    @Test
-    void leavesOrdinaryAccountsAloneWhileDemoModeIsOn() {
-        UserRepository userRepository = mock(UserRepository.class);
-        UserService userService = demoAwareService(userRepository, true);
-        User ordinary = demoAdmin();
-        ordinary.setEmail("someone@example.com");
-        when(userRepository.findById(9L)).thenReturn(Optional.of(ordinary));
-
-        assertDoesNotThrow(() -> userService.changePassword(9L, "DemoAdmin123", "brand-new-pass"));
-
-        assertTrue(verifier.matches("brand-new-pass", ordinary.getPassword()));
-    }
-
-    /** Off a demo deployment the accounts are ordinary rows and nothing is protected. */
-    @Test
-    void appliesNoGuardWhenDemoModeIsOff() {
-        UserRepository userRepository = mock(UserRepository.class);
-        UserService userService = demoAwareService(userRepository, false);
-        User demoAdmin = demoAdmin();
-        when(userRepository.findById(4L)).thenReturn(Optional.of(demoAdmin));
-
-        assertDoesNotThrow(() -> userService.changePassword(4L, "DemoAdmin123", "brand-new-pass"));
-
-        assertTrue(verifier.matches("brand-new-pass", demoAdmin.getPassword()));
-    }
-
     // ── Deleting a user with history ─────────────────────────────────────────
 
     /**
@@ -261,19 +199,6 @@ class UserServiceTest {
         verify(userRepository).delete(customer);
     }
 
-    /** A demo account is refused as a demo account, not for happening to have bookings. */
-    @Test
-    void theDemoGuardStillRunsBeforeTheBookingGuard() {
-        UserRepository userRepository = mock(UserRepository.class);
-        UserService userService = serviceWithBookings(userRepository, 3L);
-        ReflectionTestUtils.setField(userService, "demoProperties", enabledDemo());
-
-        when(userRepository.findById(4L)).thenReturn(Optional.of(demoAdmin()));
-
-        ConflictException ex = assertThrows(ConflictException.class, () -> userService.deleteUser(4L));
-        assertTrue(ex.getMessage().contains("shared demo account"));
-    }
-
     private UserService serviceWithBookings(UserRepository userRepository, long bookingCount) {
         BookingRepository bookings = mock(BookingRepository.class);
         when(bookings.countByUser(any(User.class))).thenReturn(bookingCount);
@@ -286,45 +211,12 @@ class UserServiceTest {
         return userService;
     }
 
-    private DemoProperties enabledDemo() {
-        DemoProperties demo = new DemoProperties();
-        demo.setEnabled(true);
-        demo.getAdmin().setEmail(DEMO_ADMIN_EMAIL);
-        demo.getUser().setEmail("player@merofutsal.local");
-        return demo;
-    }
-
     private User ordinaryUser() {
         User user = new User();
         user.setUserId(9L);
         user.setName("Ordinary Customer");
         user.setEmail("customer@example.com");
         user.setRole(Role.USER);
-        return user;
-    }
-
-    private UserService demoAwareService(UserRepository userRepository, boolean demoEnabled) {
-        DemoProperties demo = new DemoProperties();
-        demo.setEnabled(demoEnabled);
-        demo.getAdmin().setEmail(DEMO_ADMIN_EMAIL);
-        demo.getUser().setEmail("player@merofutsal.local");
-
-        UserService userService = new UserService();
-        ReflectionTestUtils.setField(userService, "userRepository", userRepository);
-        ReflectionTestUtils.setField(userService, "verificationCodeRepository",
-                mock(VerificationCodeRepository.class));
-        ReflectionTestUtils.setField(userService, "demoProperties", demo);
-        return userService;
-    }
-
-    private User demoAdmin() {
-        User user = new User();
-        user.setUserId(4L);
-        user.setName("Demo Admin");
-        user.setEmail(DEMO_ADMIN_EMAIL);
-        user.setPhone("9800000001");
-        user.setRole(Role.ADMIN);
-        user.setPassword(new BCryptPasswordEncoder().encode("DemoAdmin123"));
         return user;
     }
 

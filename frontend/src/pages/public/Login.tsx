@@ -1,26 +1,22 @@
 import { FormEvent, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Lock, Mail, PlayCircle } from 'lucide-react';
+import { Lock, Mail } from 'lucide-react';
 import { BrandMark } from '../../components/BrandMark';
 import { Button, Field } from '../../components/UI';
 import { BRAND_DISPLAY } from '../../constants/brand';
 import { useAuth } from '../../context/AuthContext';
-import { useDemoInfo } from '../../hooks/useDemoInfo';
 
 export function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [demoPending, setDemoPending] = useState('');
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const successMessage = (location.state as { message?: string } | null)?.message;
-  const demo = useDemoInfo();
 
-  // Both the form and the demo shortcuts go through here, so the post-login redirect cannot drift
-  // between them.
+  // Kept separate from `submit` so the redirect decision has one home.
   const signIn = async (withEmail: string, withPassword: string) => {
     setError('');
     try {
@@ -39,15 +35,6 @@ export function Login() {
       await signIn(email, password);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const signInAsDemo = async (account: { email: string; password: string }) => {
-    setDemoPending(account.email);
-    try {
-      await signIn(account.email, account.password);
-    } finally {
-      setDemoPending('');
     }
   };
 
@@ -114,37 +101,6 @@ export function Login() {
             New here? <Link className="font-bold text-green-700 hover:text-green-800" to="/register">Create account</Link>
           </p>
 
-          {/* Shown only on a demo deployment: GET /api/demo returns nothing otherwise. */}
-          {demo && (
-            <section className="mt-7 rounded-2xl border border-slate-200 bg-slate-50 p-5" aria-labelledby="demo-heading">
-              <div className="flex items-center gap-2">
-                <PlayCircle size={18} className="text-green-700" />
-                <h2 id="demo-heading" className="text-sm font-black uppercase tracking-wide text-slate-900">Try the demo</h2>
-              </div>
-              <p className="mt-2 text-sm leading-6 text-slate-500">
-                Shared accounts, no sign-up. Everything here is sample data and no real money moves.
-              </p>
-              <div className="mt-4 grid gap-3">
-                {demo.accounts.map((account) => (
-                  <div key={account.email} className="rounded-xl border border-slate-200 bg-white p-3">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="w-full"
-                      loading={demoPending === account.email}
-                      disabled={loading || (demoPending !== '' && demoPending !== account.email)}
-                      onClick={() => signInAsDemo(account)}
-                    >
-                      Sign in as {account.label}
-                    </Button>
-                    <p className="mt-2 break-all text-center text-xs text-slate-500">
-                      {account.email} &middot; <span className="font-mono">{account.password}</span>
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
         </form>
       </div>
     </main>

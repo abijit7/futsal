@@ -3,15 +3,9 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { Login } from './Login';
-import { resetDemoInfoCache } from '../../hooks/useDemoInfo';
 
-const info = vi.fn();
 const login = vi.fn();
 const navigate = vi.fn();
-
-vi.mock('../../api/modules', () => ({
-  demoApi: { info: () => info() }
-}));
 
 vi.mock('../../context/AuthContext', () => ({
   useAuth: () => ({ login })
@@ -22,71 +16,59 @@ vi.mock('react-router-dom', async () => {
   return { ...actual, useNavigate: () => navigate };
 });
 
-const demoInfo = {
-  enabled: true,
-  accounts: [
-    { role: 'ADMIN', label: 'Venue owner', email: 'admin@merofutsal.local', password: 'DemoAdmin123' },
-    { role: 'USER', label: 'Player', email: 'player@merofutsal.local', password: 'DemoPlayer123' }
-  ],
-  payment: null
-};
-
 const renderLogin = () => render(<MemoryRouter><Login /></MemoryRouter>);
+
+const signInWith = async (email: string, password: string) => {
+  await userEvent.type(screen.getByLabelText(/email/i), email);
+  await userEvent.type(screen.getByLabelText(/password/i), password);
+  await userEvent.click(screen.getByRole('button', { name: /^sign in$/i }));
+};
 
 describe('Login', () => {
   beforeEach(() => {
-    info.mockReset();
     login.mockReset();
     navigate.mockReset();
-    resetDemoInfoCache();
   });
 
-  it('offers both demo accounts when the deployment is a demo', async () => {
-    info.mockResolvedValue(demoInfo);
+  it('renders the sign-in form', () => {
     renderLogin();
 
-    expect(await screen.findByRole('button', { name: /sign in as venue owner/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /sign in as player/i })).toBeInTheDocument();
-    // The password is shown deliberately, for anyone who would rather type it.
-    expect(screen.getByText('DemoAdmin123')).toBeInTheDocument();
+    expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^sign in$/i })).toBeInTheDocument();
   });
 
-  /** A real deployment must never advertise accounts, so nothing renders on enabled: false. */
-  it('hides the demo panel when demo mode is off', async () => {
-    info.mockResolvedValue({ enabled: false, accounts: [], payment: null });
-    renderLogin();
-
-    await screen.findByRole('button', { name: /^sign in$/i });
-    expect(screen.queryByText(/try the demo/i)).not.toBeInTheDocument();
-  });
-
-  /** A demo hint is decoration: an unreachable endpoint must not stop anyone signing in. */
-  it('still renders the sign-in form when the demo endpoint fails', async () => {
-    info.mockRejectedValue(new Error('Backend unreachable'));
-    renderLogin();
-
-    expect(await screen.findByRole('button', { name: /^sign in$/i })).toBeInTheDocument();
-    expect(screen.queryByText(/try the demo/i)).not.toBeInTheDocument();
-  });
-
-  it('signs in with the demo credentials and redirects an admin to the admin area', async () => {
-    info.mockResolvedValue(demoInfo);
+  /**
+   * The two roles land in different places, and the redirect is the one thing a sign-in page has
+   * to get right: an admin sent to the customer dashboard looks like a permissions bug.
+   */
+  it('sends an admin to the admin area', async () => {
     login.mockResolvedValue({ role: 'ADMIN' });
     renderLogin();
 
-    await userEvent.click(await screen.findByRole('button', { name: /sign in as venue owner/i }));
+    await signInWith('owner@example.com', 'CorrectHorse1');
 
-    expect(login).toHaveBeenCalledWith('admin@merofutsal.local', 'DemoAdmin123');
+    expect(login).toHaveBeenCalledWith('owner@example.com', 'CorrectHorse1');
     await waitFor(() => expect(navigate).toHaveBeenCalledWith('/admin', { replace: true }));
   });
 
-  it('sends a demo player to the customer dashboard', async () => {
-    info.mockResolvedValue(demoInfo);
+  it('sends a player to the customer dashboard', async () => {
     login.mockResolvedValue({ role: 'USER' });
     renderLogin();
 
-    await userEvent.click(await screen.findByRole('button', { name: /sign in as player/i }));
+    await signInWith('player@example.com', 'CorrectHorse1');
 
     await waitFor(() => expect(navigate).toHaveBeenCalledWith('/dashboard', { replace: true }));
+  });
+
+  /** A failure has to stay on the page and say why, rather than navigating anywhere. */
+  it('reports a failed sign-in without redirecting', async () => {
+    login.mockRejectedValue(new Error('Invalid email or password'));
+    renderLogin();
+
+    await signInWith('player@example.com', 'wrong-password');
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Invalid email or password');
+    expect(navigate).not.toHaveBeenCalled();
   });
 });

@@ -317,7 +317,7 @@ public class PaymentGatewayService {
      *
      * <p>Called through the injected {@code bookingService} proxy rather than from inside
      * {@code settleGatewayPayment}, which would self-invoke {@code updateStatus} and bypass the
-     * proxy — the trap {@code DemoDataSeeder} documents.
+     * proxy.
      *
      * <p>Never throws. The money is already gone by this point, so a booking that cannot be approved
      * must still produce a successful payment response; it stays PENDING for a human instead. That

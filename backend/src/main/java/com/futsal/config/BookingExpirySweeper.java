@@ -17,7 +17,7 @@ import java.util.List;
  * not cancel it because the cancellation window had closed, and any money taken was never recorded
  * as owed. This sweep resolves them to EXPIRED, which releases the slot and marks the refund.
  *
- * <p>Separate from {@link BookingService} for the same reason {@link DemoDataSeeder} is separate
+ * <p>Separate from {@link BookingService} for the same reason the other scheduled jobs are separate
  * from its service: {@code updateStatus} is {@code @Transactional}, and a self-invoked call would
  * silently run outside a transaction. Going through the injected proxy also gives every booking its
  * own unit of work, so one bad row cannot roll the whole batch back.

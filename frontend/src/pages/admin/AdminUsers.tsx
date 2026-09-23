@@ -48,8 +48,8 @@ export function AdminUsers() {
       await userApi.delete(id);
       await load();
     } catch (err) {
-      // The API explains why - a user with bookings, or a protected demo account. Replacing that
-      // with a generic line is what made the same failure on bookings take a stack trace to find.
+      // The API explains why - a user with bookings cannot be deleted. Replacing that with a
+      // generic line is what made the same failure take a stack trace to find.
       setError(err instanceof Error && err.message ? err.message : 'User could not be deleted.');
     }
   };

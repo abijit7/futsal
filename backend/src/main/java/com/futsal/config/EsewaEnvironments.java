@@ -5,10 +5,8 @@ import java.util.List;
 /**
  * Tells eSewa's sandbox apart from its live environment.
  *
- * <p>Shared so that the two places that care cannot drift apart: {@link PaymentCredentialsValidator}
- * refuses to start prod against the sandbox (and refuses to start demo mode against the live
- * gateway), and the demo endpoint only hands out eSewa's test wallet when checkout actually points
- * at that sandbox.
+ * <p>Shared so that the places that care cannot drift apart: {@link PaymentCredentialsValidator}
+ * refuses to start the prod profile against the sandbox.
  */
 public final class EsewaEnvironments {
 

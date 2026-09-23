@@ -2,7 +2,6 @@ import { Calendar, ChevronLeft, ChevronRight, Clock, MapPin, Phone, ShieldCheck,
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { futsalApi, paymentApi, slotApi } from '../../api/modules';
-import { DemoWalletHint } from '../../components/DemoWalletHint';
 import { Notice } from '../../components/UI';
 import { VenueImage } from '../../components/VenueImage';
 import { EmptyState, LoadingState } from '../../components/State';
@@ -266,7 +265,6 @@ export function VenueDetails() {
                 <option value="CASH_IN_HAND">Cash in hand</option>
                 <option value="ESEWA">Esewa</option>
               </select>
-              {paymentMethod === 'ESEWA' && <DemoWalletHint />}
             </div>
             <div className="mt-4">
               <label className="label" htmlFor="booking-notes">Notes</label>

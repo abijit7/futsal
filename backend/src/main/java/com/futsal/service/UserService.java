@@ -1,6 +1,5 @@
 package com.futsal.service;
 
-import com.futsal.config.DemoProperties;
 import com.futsal.dto.UserUpdateRequest;
 import com.futsal.error.ConflictException;
 import com.futsal.error.NotFoundException;
@@ -61,13 +60,6 @@ public class UserService {
 
     @Autowired
     private VerificationCodeRepository verificationCodeRepository;
-
-    /**
-     * Present only when the deployment is a demo. Optional so that unit tests can still build this
-     * service with {@code new UserService()}, matching how BookingService takes RefundService.
-     */
-    @Autowired(required = false)
-    private DemoProperties demoProperties;
 
     /** Only to guard deletion. Optional for the same reason as above: the unit tests build this
      * service with {@code new UserService()}. */
@@ -150,7 +142,6 @@ public class UserService {
 
     public void changePassword(Long id, String currentPassword, String newPassword) {
         User existing = getUserById(id);
-        rejectIfDemoAccount(existing);
         if (!passwordMatches(currentPassword, existing.getPassword())) {
             throw new IllegalArgumentException("Current password is incorrect");
         }
@@ -161,7 +152,6 @@ public class UserService {
     }
 
     public void resetPassword(User user, String newPassword) {
-        rejectIfDemoAccount(user);
         setNewPassword(user, newPassword);
     }
 
@@ -178,7 +168,6 @@ public class UserService {
     public void deleteUser(Long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("User not found"));
-        rejectIfDemoAccount(user);
         rejectIfUserHasBookings(user);
         verificationCodeRepository.deleteByUser(user);
         userRepository.delete(user);
@@ -207,28 +196,6 @@ public class UserService {
             throw new ConflictException(
                     "This user has " + bookings + " booking(s) and cannot be deleted. "
                             + "Cancel or delete those bookings first.");
-        }
-    }
-
-    /**
-     * Keeps the advertised demo logins usable for the next visitor.
-     *
-     * <p>Demo mode hands a working admin account to anyone who asks, so without this one visitor
-     * could change its password - or delete it outright - and lock everyone else out until the
-     * next seed. Only the credentials are protected: name and phone stay editable, and every other
-     * admin action, including deleting other users, is left alone so the demo still shows the real
-     * system.
-     */
-    private void rejectIfDemoAccount(User user) {
-        if (demoProperties == null || !demoProperties.isEnabled() || user == null) {
-            return;
-        }
-        String email = normalizeEmail(user.getEmail());
-        if (email.equals(normalizeEmail(demoProperties.getAdmin().getEmail()))
-                || email.equals(normalizeEmail(demoProperties.getUser().getEmail()))) {
-            throw new ConflictException(
-                    "This is a shared demo account, so its password cannot be changed and it cannot "
-                            + "be deleted. Register your own account to try these actions.");
         }
     }
 
